@@ -1,0 +1,9 @@
+node_modules
+.next
+dist
+*.log
+.env.local
+.env.production
+prisma/dev.db*
+.DS_Store
+.vscode

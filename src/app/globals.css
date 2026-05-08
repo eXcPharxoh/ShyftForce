@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 250 251 253;
+    --foreground: 15 23 42;
+    --muted: 241 245 249;
+    --border: 226 232 240;
+  }
+  html, body { height: 100%; }
+  body {
+    background: rgb(var(--background));
+    color: rgb(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+  }
+  * { border-color: rgb(var(--border)); }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl border border-ink-200 shadow-card;
+  }
+  .card-hover {
+    @apply transition-shadow hover:shadow-md;
+  }
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-orange { @apply badge bg-brand-50 text-brand-700; }
+  .badge-green  { @apply badge bg-emerald-50 text-emerald-700; }
+  .badge-red    { @apply badge bg-rose-50 text-rose-700; }
+  .badge-blue   { @apply badge bg-sky-50 text-sky-700; }
+  .badge-gray   { @apply badge bg-ink-100 text-ink-700; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors;
+  }
+  .btn-primary { @apply btn bg-brand-500 text-white hover:bg-brand-600; }
+  .btn-ghost   { @apply btn text-ink-700 hover:bg-ink-100; }
+  .btn-outline { @apply btn border border-ink-200 hover:bg-ink-50; }
+  .input {
+    @apply block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500;
+  }
+  .label { @apply text-xs font-medium text-ink-600 mb-1 block; }
+  .h-section { @apply text-base font-semibold text-ink-900; }
+}
+
+/* Hide scrollbar in widget grids while keeping scroll */
+.scroll-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }

@@ -1,0 +1,374 @@
+import { requireUser } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
+import { addDays, dateLabel, fmtMoney, initials, relTime, startOfWeek, timeLabel } from "@/lib/utils";
+import { WidgetCard } from "@/components/widgets/widget-card";
+import { LiveClock } from "@/components/widgets/live-clock";
+import { AttendanceTracker } from "@/components/widgets/attendance-tracker";
+import { SurveyProgress } from "@/components/widgets/survey-progress";
+import Link from "next/link";
+import { AlertCircle, Cake, CheckCircle2, FileText, Gift, MessageCircle, Sparkles, Users } from "lucide-react";
+
+export default async function Dashboard() {
+  const u = await requireUser();
+  const orgId = u.organizationId;
+  const now = new Date();
+  const weekStart = startOfWeek(now);
+  const weekEnd = addDays(weekStart, 7);
+
+  const [
+    locations, members,
+    payPeriod, openShifts, dayNotes, kudos, hrReminders, billboardUnreadCount,
+    activeSurveys, totalMembers, unpublishedShifts, conflicts,
+  ] = await Promise.all([
+    prisma.location.findMany({ where: { organizationId: orgId } }),
+    prisma.member.findMany({ where: { organizationId: orgId, status: "active" }, include: { user: true, location: true } }),
+    prisma.payPeriod.findFirst({ where: { organizationId: orgId, status: "open" }, include: { entries: true } }),
+    prisma.shift.findMany({ where: { isOpen: true, location: { organizationId: orgId }, startsAt: { gte: now } }, orderBy: { startsAt: "asc" }, take: 5, include: { location: true } }),
+    prisma.dayNote.findMany({ where: { organizationId: orgId, date: { gte: weekStart, lt: weekEnd } }, orderBy: { date: "asc" }, take: 6, include: { author: { include: { user: true } } } }),
+    prisma.kudos.findMany({ orderBy: { createdAt: "desc" }, take: 4, include: { from: { include: { user: true } }, to: { include: { user: true } } } }),
+    prisma.hRReminder.findMany({ where: { organizationId: orgId, done: false }, orderBy: { dueOn: "asc" }, take: 5 }),
+    prisma.billboardPost.count({ where: { organizationId: orgId } }),
+    prisma.survey.findMany({ where: { organizationId: orgId, status: "active" }, include: { responses: true } }),
+    prisma.member.count({ where: { organizationId: orgId, status: "active" } }),
+    prisma.shift.count({ where: { status: "draft", location: { organizationId: orgId }, startsAt: { gte: weekStart, lt: weekEnd } } }),
+    prisma.timeOffRequest.count({ where: { member: { organizationId: orgId }, status: "pending" } }),
+  ]);
+
+  const flagged = payPeriod?.entries.filter(e => e.flagged).length ?? 0;
+  const unapproved = payPeriod?.entries.filter(e => !e.approved).length ?? 0;
+  const daysRemaining = payPeriod ? Math.max(0, Math.ceil((+payPeriod.endsOn - +now) / 86400000)) : 0;
+
+  // Per-location timesheet alerts
+  const tsByLocation = locations.map(loc => {
+    const memberIds = members.filter(m => m.locationId === loc.id).map(m => m.id);
+    const alerts = (payPeriod?.entries ?? []).filter(e => memberIds.includes(e.memberId) && (e.flagged || !e.approved)).length;
+    const manager = members.find(m => m.locationId === loc.id && m.role === "MANAGER");
+    return { id: loc.id, name: loc.name, alerts, manager: manager?.user.name ?? "—", weeklyBudget: loc.weeklyBudget ?? 0, projected: loc.projectedRevenue ?? 0 };
+  });
+
+  // Live attendance stats
+  const allLogs = await prisma.attendanceLog.findMany({
+    where: { member: { organizationId: orgId } },
+    orderBy: { at: "asc" },
+  });
+  const memberStatus = new Map<string, "in" | "break" | "out">();
+  for (const l of allLogs) {
+    if (l.type === "clock_in") memberStatus.set(l.memberId, "in");
+    else if (l.type === "break_start") memberStatus.set(l.memberId, "break");
+    else if (l.type === "break_end") memberStatus.set(l.memberId, "in");
+    else if (l.type === "clock_out") memberStatus.set(l.memberId, "out");
+  }
+  const working = [...memberStatus.values()].filter(v => v === "in").length;
+  const onBreak = [...memberStatus.values()].filter(v => v === "break").length;
+
+  // Upcoming anniversaries / birthdays (next 14 days)
+  const upcomingPeople = members
+    .map(m => {
+      const candidates: { type: "birthday" | "anniversary"; date: Date }[] = [];
+      if (m.birthday) {
+        const next = nextOccurrence(m.birthday); candidates.push({ type: "birthday", date: next });
+      }
+      const next = nextOccurrence(m.hireDate); candidates.push({ type: "anniversary", date: next });
+      const closest = candidates.sort((a,b) => +a.date - +b.date)[0];
+      const daysOut = Math.round((+closest.date - +now) / 86400000);
+      const yearsAt = closest.type === "anniversary" ? new Date().getFullYear() - new Date(m.hireDate).getFullYear() : 0;
+      return { m, type: closest.type, date: closest.date, daysOut, yearsAt };
+    })
+    .filter(x => x.daysOut >= 0 && x.daysOut <= 14)
+    .sort((a,b) => a.daysOut - b.daysOut)
+    .slice(0, 5);
+
+  // Open shift requests count
+  const openShiftRequestsPending = await prisma.openShiftRequest.count({ where: { status: "pending", shift: { location: { organizationId: orgId } } } });
+
+  return (
+    <div className="space-y-5">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Welcome back, {u.name.split(" ")[0]} 👋</h1>
+          <p className="text-sm text-ink-500 mt-0.5">{u.organizationName} · {locations.length} locations · {totalMembers} active members</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select className="input h-9 w-44">
+            <option>All Locations</option>
+            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+          <select className="input h-9 w-44">
+            <option>All Positions</option>
+            <option>Security Officer</option>
+            <option>Site Manager</option>
+            <option>Patrol</option>
+            <option>Dispatcher</option>
+          </select>
+          <button className="btn-outline h-9">Customize</button>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* 1 — Date / Time */}
+        <WidgetCard title="Date / Time"><LiveClock /></WidgetCard>
+
+        {/* 2 — Pay Period Summary */}
+        <WidgetCard title="Pay Period Summary" action="Open" actionHref="/attendance">
+          <div className="grid grid-cols-3 gap-3">
+            <Stat label="Days left" value={daysRemaining} tone="ink" />
+            <Stat label="Discrepancies" value={flagged} tone="rose" />
+            <Stat label="Unapproved" value={unapproved} tone="amber" />
+          </div>
+          <div className="mt-3 text-[11px] text-ink-500">
+            {payPeriod ? `${dateLabel(payPeriod.startsOn)} → ${dateLabel(payPeriod.endsOn)}` : "No active pay period"}
+          </div>
+        </WidgetCard>
+
+        {/* 3 — Schedule Conflicts */}
+        <WidgetCard title="Schedule Conflicts" action="View" actionHref="/schedule">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${conflicts > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold">{conflicts}</div>
+              <div className="text-xs text-ink-500">Pending conflicts this week</div>
+            </div>
+          </div>
+        </WidgetCard>
+
+        {/* 4 — Upcoming Anniversaries */}
+        <WidgetCard title="Upcoming Anniversaries" action="All" actionHref="/hr/members">
+          <ul className="space-y-2">
+            {upcomingPeople.length === 0 && <li className="text-xs text-ink-500">Nothing coming up.</li>}
+            {upcomingPeople.map(({ m, type, date, daysOut, yearsAt }) => (
+              <li key={m.id} className="flex items-center gap-2.5">
+                <Avatar name={m.user.name} src={m.user.avatar ?? undefined} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{m.user.name}</div>
+                  <div className="text-[11px] text-ink-500 truncate">
+                    {type === "birthday" ? "🎂 Birthday" : `🎉 ${yearsAt}-yr anniversary`} · {date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </div>
+                </div>
+                <span className="badge-gray">{daysOut === 0 ? "today" : `in ${daysOut}d`}</span>
+              </li>
+            ))}
+          </ul>
+        </WidgetCard>
+
+        {/* 5 — My Space */}
+        <WidgetCard title="My Space" action="Open" actionHref="/dashboard">
+          <ul className="space-y-2 text-sm">
+            <MyItem icon={<FileText className="w-4 h-4" />} label="Document requests" count={2} />
+            <MyItem icon={<CheckCircle2 className="w-4 h-4" />} label="Upcoming shifts" count={3} />
+            <MyItem icon={<Users className="w-4 h-4" />} label="Schedule requests" count={0} />
+            <MyItem icon={<Gift className="w-4 h-4" />} label="Time-off requests" count={1} />
+            <MyItem icon={<MessageCircle className="w-4 h-4" />} label="News feed" count={billboardUnreadCount > 7 ? 7 : billboardUnreadCount} />
+          </ul>
+        </WidgetCard>
+
+        {/* 6 — Pending Requests (open shifts) */}
+        <WidgetCard title="Pending Requests" action="See all" actionHref="/schedule">
+          <div className="text-xs text-ink-500 mb-2">{openShifts.length} open shifts · {openShiftRequestsPending} self-assign requests</div>
+          <ul className="space-y-2">
+            {openShifts.slice(0, 4).map(s => (
+              <li key={s.id} className="flex items-center justify-between text-sm">
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{s.position ?? "Open shift"}</div>
+                  <div className="text-[11px] text-ink-500 truncate">{s.location.name} · {dateLabel(s.startsAt)} {timeLabel(s.startsAt)}</div>
+                </div>
+                <span className="badge-orange">Open</span>
+              </li>
+            ))}
+            {openShifts.length === 0 && <li className="text-xs text-ink-500">No pending open shifts.</li>}
+          </ul>
+        </WidgetCard>
+
+        {/* 7 — Day Notes */}
+        <WidgetCard title="Day Notes" action="Add" actionHref="/schedule">
+          <ul className="space-y-2">
+            {dayNotes.length === 0 && <li className="text-xs text-ink-500">No notes this week.</li>}
+            {dayNotes.map(n => (
+              <li key={n.id} className="text-sm">
+                <div className="text-[11px] text-ink-500">{dateLabel(n.date)} · {n.author.user.name}</div>
+                <div className="line-clamp-2">{n.body}</div>
+              </li>
+            ))}
+          </ul>
+        </WidgetCard>
+
+        {/* 8 — High Fives */}
+        <WidgetCard title="High Fives" action="Send" actionHref="/hr/kudos" span={2}>
+          <ul className="space-y-3">
+            {kudos.map(k => (
+              <li key={k.id} className="flex items-start gap-3">
+                <Avatar name={k.from.user.name} src={k.from.user.avatar ?? undefined} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm">
+                    <span className="font-medium">{k.from.user.name}</span>
+                    <span className="text-ink-500"> high-fived </span>
+                    <span className="font-medium">{k.to.user.name}</span>
+                    <span className="ml-1">{k.emoji}</span>
+                  </div>
+                  <div className="text-sm text-ink-700 mt-0.5">"{k.message}"</div>
+                  <div className="text-[11px] text-ink-500 mt-0.5">{relTime(k.createdAt)}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </WidgetCard>
+
+        {/* 9 — Attendance Tracker (LIVE) */}
+        <WidgetCard title="Attendance Tracker" action="Live" actionHref="/attendance">
+          <AttendanceTracker initial={{ working, onBreak, lateOrAbsent: 0 }} />
+        </WidgetCard>
+
+        {/* 10 — Unpublished Schedules */}
+        <WidgetCard title="Unpublished Schedules" action="Publish" actionHref="/schedule">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${unpublishedShifts > 0 ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold">{unpublishedShifts}</div>
+              <div className="text-xs text-ink-500">draft shifts this week</div>
+            </div>
+          </div>
+        </WidgetCard>
+
+        {/* 11 — Shift Tasks */}
+        <WidgetCard title="Shift Tasks" action="Today" actionHref="/schedule">
+          <ul className="space-y-1.5 text-sm">
+            <Task done text="Patrol perimeter (every 2h)" />
+            <Task done text="Check entry logs at 12:00" />
+            <Task text="Submit incident report" />
+            <Task text="Confirm overnight handoff" />
+          </ul>
+        </WidgetCard>
+
+        {/* 12 — Employee Onboarding */}
+        <WidgetCard title="Employee Onboarding" action="Configure" actionHref="/hr/members">
+          <p className="text-sm text-ink-700 mb-2">Customize your onboarding workflow — checklists, documents, training.</p>
+          <Link href="/hr/members" className="btn-outline text-xs">Configure workflow</Link>
+        </WidgetCard>
+
+        {/* 13 — Timesheet Approval (per location) */}
+        <WidgetCard title="Timesheet Approval" action="Open" actionHref="/attendance" span={2}>
+          <table className="w-full text-sm">
+            <thead className="text-[11px] uppercase text-ink-500">
+              <tr>
+                <th className="text-left font-medium pb-2">Location</th>
+                <th className="text-left font-medium pb-2">Manager</th>
+                <th className="text-left font-medium pb-2">Alerts</th>
+                <th className="text-right font-medium pb-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {tsByLocation.map(l => (
+                <tr key={l.id} className="border-t border-ink-100">
+                  <td className="py-2 font-medium">{l.name}</td>
+                  <td className="py-2 text-ink-700">{l.manager}</td>
+                  <td className="py-2"><span className={l.alerts > 0 ? "badge-rose badge bg-rose-50 text-rose-700" : "badge-green"}>{l.alerts} alerts</span></td>
+                  <td className="py-2 text-right"><button className="btn-ghost text-xs">Send a Reminder</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </WidgetCard>
+
+        {/* 14 — Weekly Budget */}
+        <WidgetCard title="Weekly Budget">
+          <ul className="space-y-2.5">
+            {tsByLocation.map(l => {
+              const pct = l.weeklyBudget > 0 ? Math.min(120, (l.projected / l.weeklyBudget) * 100) : 0;
+              const over = l.projected > l.weeklyBudget;
+              return (
+                <li key={l.id}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium truncate">{l.name}</span>
+                    <span className={over ? "text-rose-600 font-semibold" : "text-emerald-700 font-semibold"}>
+                      {fmtMoney(l.projected)} / {fmtMoney(l.weeklyBudget)}
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-ink-100 overflow-hidden">
+                    <div className={`h-full ${over ? "bg-rose-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </WidgetCard>
+
+        {/* 15 — Surveys */}
+        <WidgetCard title="Surveys" action="View" actionHref="/hr/surveys">
+          {activeSurveys[0]
+            ? <SurveyProgress responses={activeSurveys[0].responses.length} total={66} title={activeSurveys[0].title} />
+            : <div className="text-xs text-ink-500">No active surveys.</div>}
+        </WidgetCard>
+
+        {/* 16 — HR Reminders */}
+        <WidgetCard title="HR Reminders" action="See all" actionHref="/hr">
+          <ul className="space-y-1.5">
+            {hrReminders.map(r => (
+              <li key={r.id} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="rounded border-ink-300 text-brand-500 focus:ring-brand-500" />
+                <span className="flex-1 truncate">{r.title}</span>
+                <span className="badge-gray">{dateLabel(r.dueOn)}</span>
+              </li>
+            ))}
+          </ul>
+        </WidgetCard>
+      </div>
+
+      <div className="rounded-2xl bg-gradient-to-br from-brand-500 via-brand-600 to-rose-500 text-white p-5 flex items-center justify-between">
+        <div>
+          <div className="text-sm opacity-90">New feature</div>
+          <h3 className="text-lg font-bold">Tip Management — automated tip calc & distribution</h3>
+        </div>
+        <Link href="/attendance" className="bg-white text-brand-700 hover:bg-white/90 btn">Set up tipping</Link>
+      </div>
+    </div>
+  );
+}
+
+function nextOccurrence(d: Date): Date {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const cand = new Date(today.getFullYear(), d.getMonth(), d.getDate());
+  if (cand < today) cand.setFullYear(cand.getFullYear() + 1);
+  return cand;
+}
+
+function Stat({ label, value, tone }: { label: string; value: number; tone: "ink" | "rose" | "amber" | "emerald" }) {
+  const colors: Record<string, string> = {
+    ink: "text-ink-900",
+    rose: "text-rose-600",
+    amber: "text-amber-600",
+    emerald: "text-emerald-600",
+  };
+  return (
+    <div>
+      <div className={`text-2xl font-bold ${colors[tone]}`}>{value}</div>
+      <div className="text-[11px] text-ink-500 font-medium">{label}</div>
+    </div>
+  );
+}
+
+function MyItem({ icon, label, count }: { icon: React.ReactNode; label: string; count: number }) {
+  return (
+    <li className="flex items-center gap-2.5">
+      <span className="w-7 h-7 rounded-lg bg-ink-50 text-ink-600 flex items-center justify-center">{icon}</span>
+      <span className="flex-1">{label}</span>
+      <span className={count > 0 ? "badge-orange" : "badge-gray"}>{count}</span>
+    </li>
+  );
+}
+
+function Task({ text, done }: { text: string; done?: boolean }) {
+  return (
+    <li className="flex items-center gap-2">
+      <input type="checkbox" defaultChecked={done} className="rounded border-ink-300 text-brand-500 focus:ring-brand-500" />
+      <span className={done ? "text-ink-400 line-through" : ""}>{text}</span>
+    </li>
+  );
+}
+
+function Avatar({ name, src }: { name: string; src?: string }) {
+  if (src) return <img src={src} alt={name} className="w-8 h-8 rounded-full" />;
+  return <div className="w-8 h-8 rounded-full bg-ink-200 text-ink-700 text-xs font-semibold flex items-center justify-center">{initials(name)}</div>;
+}

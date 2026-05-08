@@ -1,0 +1,154 @@
+import { requireUser } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
+import { addDays, dateLabel, initials, startOfWeek, timeLabel } from "@/lib/utils";
+import { ScheduleControls } from "@/components/schedule/schedule-controls";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import Link from "next/link";
+
+export default async function SchedulePage({ searchParams }: { searchParams: Promise<{ w?: string }> }) {
+  const u = await requireUser();
+  const sp = await searchParams;
+  const weekOffset = parseInt(sp.w ?? "0", 10);
+  const weekStart = addDays(startOfWeek(new Date()), weekOffset * 7);
+  const weekEnd = addDays(weekStart, 7);
+
+  const [members, shifts, locations] = await Promise.all([
+    prisma.member.findMany({
+      where: { organizationId: u.organizationId, status: "active" },
+      include: { user: true, location: true },
+      orderBy: [{ role: "asc" }, { user: { name: "asc" } }],
+    }),
+    prisma.shift.findMany({
+      where: { location: { organizationId: u.organizationId }, startsAt: { gte: weekStart, lt: weekEnd } },
+      include: { member: { include: { user: true } }, location: true },
+    }),
+    prisma.location.findMany({ where: { organizationId: u.organizationId } }),
+  ]);
+
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const totalHours = shifts.reduce((acc, s) => acc + (+s.endsAt - +s.startsAt) / 3600000, 0);
+  const openShifts = shifts.filter(s => s.isOpen);
+  const drafts = shifts.filter(s => s.status === "draft");
+
+  // Group shifts by member then day
+  const byMemberDay = new Map<string, Map<number, typeof shifts>>();
+  for (const s of shifts) {
+    if (!s.memberId) continue;
+    const dayIdx = Math.floor((+s.startsAt - +weekStart) / 86400000);
+    if (!byMemberDay.has(s.memberId)) byMemberDay.set(s.memberId, new Map());
+    const m = byMemberDay.get(s.memberId)!;
+    if (!m.has(dayIdx)) m.set(dayIdx, [] as any);
+    (m.get(dayIdx) as any).push(s);
+  }
+
+  return (
+    <div className="space-y-5">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Schedule</h1>
+          <p className="text-sm text-ink-500">{dateLabel(weekStart)} → {dateLabel(addDays(weekEnd, -1))} · {shifts.length} shifts · {totalHours.toFixed(0)}h scheduled</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href={`/schedule?w=${weekOffset - 1}`} className="btn-outline h-9"><ChevronLeft className="w-4 h-4" /></Link>
+          <Link href="/schedule" className="btn-outline h-9 text-xs">This week</Link>
+          <Link href={`/schedule?w=${weekOffset + 1}`} className="btn-outline h-9"><ChevronRight className="w-4 h-4" /></Link>
+          <button className="btn-primary h-9"><Plus className="w-4 h-4" /> Publish week</button>
+        </div>
+      </header>
+
+      <ScheduleControls locations={locations} totalShifts={shifts.length} openShifts={openShifts.length} drafts={drafts.length} />
+
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm min-w-[1000px]">
+          <thead>
+            <tr className="border-b border-ink-200 bg-ink-50/60">
+              <th className="text-left p-3 w-56 font-medium text-ink-600 text-xs uppercase">Employee</th>
+              {days.map(d => (
+                <th key={+d} className="p-3 text-center font-medium text-ink-700">
+                  <div className="text-[11px] uppercase text-ink-500">{d.toLocaleDateString("en-US", { weekday: "short" })}</div>
+                  <div className="text-base">{d.getDate()}</div>
+                </th>
+              ))}
+              <th className="p-3 text-right font-medium text-ink-600 text-xs uppercase">Hrs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map(m => {
+              const memberShifts = byMemberDay.get(m.id);
+              const mh = shifts.filter(s => s.memberId === m.id).reduce((a, s) => a + (+s.endsAt - +s.startsAt)/3600000, 0);
+              return (
+                <tr key={m.id} className="border-b border-ink-100 hover:bg-ink-50/40">
+                  <td className="p-3">
+                    <div className="flex items-center gap-2">
+                      {m.user.avatar
+                        ? <img src={m.user.avatar} className="w-7 h-7 rounded-full" alt="" />
+                        : <div className="w-7 h-7 rounded-full bg-ink-200 text-[11px] font-semibold flex items-center justify-center">{initials(m.user.name)}</div>}
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{m.user.name}</div>
+                        <div className="text-[11px] text-ink-500 truncate">{m.position} · {m.location?.name}</div>
+                      </div>
+                    </div>
+                  </td>
+                  {days.map((_, i) => {
+                    const items = memberShifts?.get(i) ?? [];
+                    return (
+                      <td key={i} className="p-2 align-top">
+                        <div className="space-y-1">
+                          {items.map((s: any) => (
+                            <div key={s.id} className={`rounded-lg px-2 py-1.5 text-[11px] ${s.status === "draft" ? "bg-amber-50 text-amber-800 border border-amber-200" : "bg-brand-50 text-brand-800 border border-brand-200"}`}>
+                              <div className="font-semibold">{timeLabel(s.startsAt)} – {timeLabel(s.endsAt)}</div>
+                              <div className="opacity-80 truncate">{s.location.name}</div>
+                            </div>
+                          ))}
+                          {items.length === 0 && <div className="h-7" />}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="p-3 text-right font-medium text-ink-700">{mh.toFixed(1)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <section className="card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold">Open Shifts ({openShifts.length})</h3>
+            <Link href="/schedule" className="text-xs text-brand-600 font-medium">All open shifts →</Link>
+          </div>
+          <ul className="space-y-2">
+            {openShifts.length === 0 && <li className="text-xs text-ink-500">None this week.</li>}
+            {openShifts.map(s => (
+              <li key={s.id} className="flex items-center justify-between p-2.5 rounded-lg border border-ink-200 hover:border-brand-300 hover:bg-brand-50/40">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">{s.position ?? "Open shift"}</div>
+                  <div className="text-[11px] text-ink-500">{s.location.name} · {dateLabel(s.startsAt)} {timeLabel(s.startsAt)} – {timeLabel(s.endsAt)}</div>
+                </div>
+                <button className="btn-outline text-xs">Assign</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="card p-4">
+          <h3 className="text-sm font-semibold mb-3">Unpublished Drafts ({drafts.length})</h3>
+          <ul className="space-y-2">
+            {drafts.length === 0 && <li className="text-xs text-ink-500">All shifts are published. 🎉</li>}
+            {drafts.slice(0, 8).map(s => (
+              <li key={s.id} className="flex items-center justify-between p-2.5 rounded-lg border border-amber-200 bg-amber-50/40">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">{s.member?.user.name ?? "Unassigned"} · {s.position}</div>
+                  <div className="text-[11px] text-ink-500">{s.location.name} · {dateLabel(s.startsAt)} {timeLabel(s.startsAt)}–{timeLabel(s.endsAt)}</div>
+                </div>
+                <span className="badge bg-amber-100 text-amber-800">Draft</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </div>
+  );
+}

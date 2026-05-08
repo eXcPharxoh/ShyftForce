@@ -1,0 +1,310 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  createdAt   DateTime @default(now())
+
+  locations       Location[]
+  members         Member[]
+  payPeriods      PayPeriod[]
+  surveys         Survey[]
+  documents       Document[]
+  billboardPosts  BillboardPost[]
+  dayNotes        DayNote[]
+  hrReminders     HRReminder[]
+}
+
+model Location {
+  id              String   @id @default(uuid())
+  organizationId  String
+  name            String
+  weeklyBudget    Float?
+  projectedRevenue Float?
+  createdAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      Member[]
+  shifts       Shift[]
+}
+
+model User {
+  id        String  @id @default(uuid())
+  email     String  @unique
+  name      String
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now())
+
+  member Member?
+}
+
+// SQLite has no enums — Role is a string: "ADMIN" | "MANAGER" | "EMPLOYEE"
+model Member {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  organizationId  String
+  locationId      String?
+  role            String   @default("EMPLOYEE")
+  position        String?
+  hourlyRate      Float?
+  hireDate        DateTime @default(now())
+  birthday        DateTime?
+  status          String   @default("active")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location        Location? @relation(fields: [locationId], references: [id])
+
+  shifts            Shift[]
+  timeOffRequests   TimeOffRequest[]
+  expenseRequests   ExpenseRequest[]
+  timesheetEntries  TimesheetEntry[]
+  attendanceLogs    AttendanceLog[]
+  kudosSent         Kudos[] @relation("KudosFrom")
+  kudosReceived     Kudos[] @relation("KudosTo")
+  surveyResponses   SurveyResponse[]
+  documentRequests  DocumentRequest[]
+  messagesSent      Message[] @relation("MsgFrom")
+  messagesReceived  Message[] @relation("MsgTo")
+  billboardReads    BillboardRead[]
+  billboardPosts    BillboardPost[] @relation("PostAuthor")
+  dayNotesAuthored  DayNote[] @relation("NoteAuthor")
+  documents         Document[]
+}
+
+model Shift {
+  id          String   @id @default(uuid())
+  locationId  String
+  memberId    String?
+  startsAt    DateTime
+  endsAt      DateTime
+  position    String?
+  notes       String?
+  status      String   @default("draft")
+  isOpen      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  member   Member?  @relation(fields: [memberId], references: [id])
+  tasks    ShiftTask[]
+  openRequests OpenShiftRequest[]
+}
+
+model ShiftTask {
+  id      String  @id @default(uuid())
+  shiftId String
+  task    String
+  done    Boolean @default(false)
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+}
+
+model OpenShiftRequest {
+  id        String   @id @default(uuid())
+  shiftId   String
+  memberId  String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+}
+
+model TimeOffRequest {
+  id        String   @id @default(uuid())
+  memberId  String
+  startsOn  DateTime
+  endsOn    DateTime
+  reason    String?
+  category  String   @default("vacation")
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model ExpenseRequest {
+  id        String   @id @default(uuid())
+  memberId  String
+  amount    Float
+  currency  String   @default("USD")
+  category  String?
+  notes     String?
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model Kudos {
+  id        String   @id @default(uuid())
+  fromId    String
+  toId      String
+  message   String
+  emoji     String?
+  createdAt DateTime @default(now())
+
+  from Member @relation("KudosFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Member @relation("KudosTo",   fields: [toId],   references: [id], onDelete: Cascade)
+}
+
+model PayPeriod {
+  id              String   @id @default(uuid())
+  organizationId  String
+  startsOn        DateTime
+  endsOn          DateTime
+  status          String   @default("open")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entries TimesheetEntry[]
+}
+
+model TimesheetEntry {
+  id          String   @id @default(uuid())
+  payPeriodId String
+  memberId    String
+  date        DateTime
+  hours       Float
+  approved    Boolean  @default(false)
+  flagged     Boolean  @default(false)
+  notes       String?
+
+  payPeriod PayPeriod @relation(fields: [payPeriodId], references: [id], onDelete: Cascade)
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model AttendanceLog {
+  id       String   @id @default(uuid())
+  memberId String
+  type     String
+  at       DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id              String   @id @default(uuid())
+  organizationId  String
+  memberId        String?
+  name            String
+  url             String
+  category        String?
+  uploadedAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       Member?      @relation(fields: [memberId], references: [id])
+}
+
+model DocumentRequest {
+  id            String   @id @default(uuid())
+  memberId      String
+  documentName  String
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model Survey {
+  id              String   @id @default(uuid())
+  organizationId  String
+  title           String
+  description     String?
+  status          String   @default("active")
+  createdAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  questions    SurveyQuestion[]
+  responses    SurveyResponse[]
+}
+
+model SurveyQuestion {
+  id        String  @id @default(uuid())
+  surveyId  String
+  question  String
+  type      String  @default("scale")
+  order     Int     @default(0)
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+}
+
+model SurveyResponse {
+  id          String   @id @default(uuid())
+  surveyId    String
+  memberId    String
+  answers     String
+  submittedAt DateTime @default(now())
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  fromId    String
+  toId      String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  from Member @relation("MsgFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Member @relation("MsgTo",   fields: [toId],   references: [id], onDelete: Cascade)
+}
+
+model BillboardPost {
+  id              String   @id @default(uuid())
+  organizationId  String
+  authorId        String
+  title           String
+  body            String
+  category        String?
+  publishedAt     DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       Member       @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  reads        BillboardRead[]
+}
+
+model BillboardRead {
+  id       String   @id @default(uuid())
+  postId   String
+  memberId String
+  readAt   DateTime @default(now())
+
+  post   BillboardPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  member Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, memberId])
+}
+
+model DayNote {
+  id              String   @id @default(uuid())
+  organizationId  String
+  locationId      String?
+  date            DateTime
+  body            String
+  authorId        String
+  createdAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       Member       @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model HRReminder {
+  id              String   @id @default(uuid())
+  organizationId  String
+  title           String
+  body            String?
+  dueOn           DateTime
+  done            Boolean  @default(false)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
