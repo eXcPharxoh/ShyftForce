@@ -4,21 +4,22 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Home, Calendar, Moon, Clock, CreditCard, Users, FolderClosed,
-  MessageSquare, Megaphone, MoreHorizontal, BarChart3,
+  MessageSquare, Megaphone, MoreHorizontal, BarChart3, ShieldCheck,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/dashboard",   label: "Home",      icon: Home,           badge: null },
-  { href: "/schedule",    label: "Schedule",  icon: Calendar,       badge: 14 },
-  { href: "/time-off",    label: "Time Off",  icon: Moon,           badge: null },
-  { href: "/attendance",  label: "Attendance",icon: Clock,          badge: null },
-  { href: "/expenses",    label: "Expenses",  icon: CreditCard,     badge: null },
-  { href: "/hr",          label: "HR",        icon: Users,          badge: null },
-  { href: "/documents",   label: "Documents", icon: FolderClosed,   badge: null },
-  { href: "/messenger",   label: "Messenger", icon: MessageSquare,  badge: null },
-  { href: "/billboard",   label: "News Feed", icon: Megaphone,      badge: 7 },
-  { href: "/reports",     label: "Reports",   icon: BarChart3,      badge: null },
-  { href: "/more",        label: "More",      icon: MoreHorizontal, badge: null },
+  { href: "/dashboard",   label: "Home",       icon: Home,           badge: null },
+  { href: "/schedule",    label: "Schedule",   icon: Calendar,       badge: 14 },
+  { href: "/time-off",    label: "Time Off",   icon: Moon,           badge: null },
+  { href: "/attendance",  label: "Attendance", icon: Clock,          badge: null },
+  { href: "/expenses",    label: "Expenses",   icon: CreditCard,     badge: null },
+  { href: "/compliance",  label: "Compliance", icon: ShieldCheck,    badge: null },
+  { href: "/hr",          label: "HR",         icon: Users,          badge: null },
+  { href: "/documents",   label: "Documents",  icon: FolderClosed,   badge: null },
+  { href: "/messenger",   label: "Messenger",  icon: MessageSquare,  badge: null },
+  { href: "/billboard",   label: "News Feed",  icon: Megaphone,      badge: 7 },
+  { href: "/reports",     label: "Reports",    icon: BarChart3,      badge: null },
+  { href: "/more",        label: "More",       icon: MoreHorizontal, badge: null },
 ];
 
 export function Sidebar({ orgName }: { orgName: string }) {

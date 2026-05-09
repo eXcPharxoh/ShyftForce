@@ -2,6 +2,8 @@ import type { Tool } from "@anthropic-ai/sdk/resources/messages";
 import { prisma } from "@/lib/prisma";
 import type { SessionUser } from "@/lib/session";
 import { addDays, dateLabel, fmtMoney, startOfWeek, timeLabel } from "@/lib/utils";
+import { checkCompliance } from "@/lib/compliance/engine";
+import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 
 // ---------- Schemas surfaced to Claude ----------
 export const TOOLS: Tool[] = [
@@ -121,6 +123,17 @@ export const TOOLS: Tool[] = [
         emoji:        { type: "string" },
       },
       required: ["toMemberName", "message"],
+    },
+  },
+  {
+    name: "check_compliance",
+    description: "Run the labor compliance engine over a date range and return all violations (overtime, rest gaps, consecutive days, meal breaks, predictive scheduling). Use when the user asks 'are we in compliance', 'any OT issues', 'who's overworked', etc.",
+    input_schema: {
+      type: "object",
+      properties: {
+        from: { type: "string", description: "ISO YYYY-MM-DD. Defaults to last week." },
+        to:   { type: "string", description: "ISO YYYY-MM-DD. Defaults to two weeks out." },
+      },
     },
   },
 ];
@@ -364,6 +377,36 @@ export async function runTool(name: string, input: any, user: SessionUser) {
         data: { fromId: user.memberId, toId: m.id, message: input.message, emoji: input.emoji ?? "🙌" },
       });
       return { posted: true, to: m.user.name, message: input.message, emoji: k.emoji };
+    }
+
+    case "check_compliance": {
+      const from = input.from ? new Date(input.from) : addDays(startOfWeek(new Date()), -7);
+      const to   = input.to   ? new Date(input.to)   : addDays(startOfWeek(new Date()), 14);
+      const [shifts, members, settings] = await Promise.all([
+        prisma.shift.findMany({
+          where: { location: { organizationId: orgId }, startsAt: { gte: from, lt: to }, memberId: { not: null } },
+        }),
+        prisma.member.findMany({ where: { organizationId: orgId }, include: { user: true } }),
+        getOrCreateComplianceSettings(orgId),
+      ]);
+      const violations = checkCompliance({
+        shifts: shifts.map(s => ({ id: s.id, memberId: s.memberId, startsAt: s.startsAt, endsAt: s.endsAt, status: s.status })),
+        members: members.map(m => ({ id: m.id, name: m.user.name })),
+        settings,
+      });
+      return {
+        from: from.toISOString().slice(0,10), to: to.toISOString().slice(0,10),
+        settings,
+        summary: {
+          total: violations.length,
+          errors:   violations.filter(v => v.severity === "error").length,
+          warnings: violations.filter(v => v.severity === "warning").length,
+        },
+        violations: violations.slice(0, 25).map(v => ({
+          rule: v.ruleLabel, severity: v.severity, member: v.memberName,
+          message: v.message, recommendation: v.recommendation,
+        })),
+      };
     }
 
     default:

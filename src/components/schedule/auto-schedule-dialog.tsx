@@ -48,8 +48,23 @@ export function AutoScheduleDialog({
   // Proposal
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  const [violations, setViolations] = useState<{ rule: string; ruleLabel: string; severity: "error" | "warning"; message: string; recommendation?: string }[]>([]);
 
-  useEffect(() => { if (!open) { setStep("config"); setError(null); setProposal(null); setExcluded(new Set()); } }, [open]);
+  useEffect(() => { if (!open) { setStep("config"); setError(null); setProposal(null); setExcluded(new Set()); setViolations([]); } }, [open]);
+
+  // Run compliance check whenever proposal or exclusions change
+  useEffect(() => {
+    if (!proposal) return;
+    const ctrl = new AbortController();
+    const shifts = proposal.shifts
+      .filter((_, i) => !excluded.has(i))
+      .map(s => ({ memberId: s.memberId || null, date: s.date, startTime: s.startTime, endTime: s.endTime }));
+    fetch("/api/compliance/check-proposal", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shifts }), signal: ctrl.signal,
+    }).then(r => r.json()).then(d => setViolations(d.violations ?? [])).catch(() => {});
+    return () => ctrl.abort();
+  }, [proposal, excluded]);
 
   async function generate() {
     setStep("loading"); setError(null);
@@ -187,7 +202,7 @@ export function AutoScheduleDialog({
           )}
 
           {step === "review" && proposal && (
-            <ReviewView proposal={proposal} excluded={excluded} setExcluded={setExcluded} />
+            <ReviewView proposal={proposal} excluded={excluded} setExcluded={setExcluded} violations={violations} />
           )}
         </div>
 
@@ -229,8 +244,13 @@ function CovInput({ v, onChange }: { v: number; onChange: (n: number) => void })
 }
 
 function ReviewView({
-  proposal, excluded, setExcluded,
-}: { proposal: Proposal; excluded: Set<number>; setExcluded: (s: Set<number>) => void }) {
+  proposal, excluded, setExcluded, violations,
+}: {
+  proposal: Proposal;
+  excluded: Set<number>;
+  setExcluded: (s: Set<number>) => void;
+  violations: { rule: string; ruleLabel: string; severity: "error" | "warning"; message: string; recommendation?: string }[];
+}) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(new Date(proposal.weekStart), i));
   const byDay = new Map<string, { shift: ProposedShift; idx: number }[]>();
   proposal.shifts.forEach((s, idx) => {
@@ -275,6 +295,30 @@ function ReviewView({
         <Stat label="Hours"        value={`${keptHours.toFixed(0)}h`}  />
         <Stat label="Open shifts"  value={proposal.shifts.filter((s, i) => !s.memberId && !excluded.has(i)).length} tone={proposal.stats.openShifts > 0 ? "amber" : "emerald"} />
       </div>
+
+      {violations.length > 0 && (
+        <div className="card p-3 border-amber-200 bg-amber-50/60">
+          <div className="flex items-center gap-1.5 mb-2">
+            <AlertTriangle className="w-4 h-4 text-amber-700" />
+            <div className="font-semibold text-sm text-amber-900">Compliance check ({violations.length})</div>
+          </div>
+          <ul className="space-y-1 text-xs">
+            {violations.slice(0, 5).map((v, i) => (
+              <li key={i} className="flex items-start gap-1.5">
+                <span className={v.severity === "error" ? "badge bg-rose-100 text-rose-700 shrink-0" : "badge bg-amber-100 text-amber-800 shrink-0"}>{v.ruleLabel}</span>
+                <span className="flex-1 text-ink-800">{v.message}</span>
+              </li>
+            ))}
+            {violations.length > 5 && <li className="text-[11px] text-ink-500 ml-1">+ {violations.length - 5} more — fix or save anyway</li>}
+          </ul>
+        </div>
+      )}
+      {violations.length === 0 && proposal && (
+        <div className="card p-2.5 border-emerald-200 bg-emerald-50/60 flex items-center gap-2 text-xs text-emerald-800">
+          <span className="w-5 h-5 rounded-full bg-emerald-200 text-emerald-700 flex items-center justify-center text-[11px] font-bold">✓</span>
+          <span>Compliance check passed — no violations on the kept shifts.</span>
+        </div>
+      )}
 
       <div className="space-y-2">
         {days.map((d, i) => {

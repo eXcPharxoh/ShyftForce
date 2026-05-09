@@ -6,7 +6,9 @@ import { LiveClock } from "@/components/widgets/live-clock";
 import { AttendanceTracker } from "@/components/widgets/attendance-tracker";
 import { SurveyProgress } from "@/components/widgets/survey-progress";
 import Link from "next/link";
-import { AlertCircle, Cake, CheckCircle2, FileText, Gift, MessageCircle, Sparkles, Users } from "lucide-react";
+import { AlertCircle, Cake, CheckCircle2, FileText, Gift, MessageCircle, Sparkles, Users, ShieldCheck, AlertOctagon, AlertTriangle } from "lucide-react";
+import { checkCompliance } from "@/lib/compliance/engine";
+import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 
 export default async function Dashboard() {
   const u = await requireUser();
@@ -81,6 +83,21 @@ export default async function Dashboard() {
   // Open shift requests count
   const openShiftRequestsPending = await prisma.openShiftRequest.count({ where: { status: "pending", shift: { location: { organizationId: orgId } } } });
 
+  // Compliance snapshot
+  const [complianceSettings, allWeekShifts] = await Promise.all([
+    getOrCreateComplianceSettings(orgId),
+    prisma.shift.findMany({
+      where: { location: { organizationId: orgId }, startsAt: { gte: addDays(weekStart, -7), lt: addDays(weekEnd, 7) }, memberId: { not: null } },
+    }),
+  ]);
+  const complianceViolations = checkCompliance({
+    shifts: allWeekShifts.map(s => ({ id: s.id, memberId: s.memberId, startsAt: s.startsAt, endsAt: s.endsAt, status: s.status })),
+    members: members.map(m => ({ id: m.id, name: m.user.name })),
+    settings: complianceSettings,
+  });
+  const complianceErrors   = complianceViolations.filter(v => v.severity === "error").length;
+  const complianceWarnings = complianceViolations.filter(v => v.severity === "warning").length;
+
   return (
     <div className="space-y-5">
       <header className="flex items-center justify-between">
@@ -131,6 +148,37 @@ export default async function Dashboard() {
               <div className="text-xs text-ink-500">Pending conflicts this week</div>
             </div>
           </div>
+        </WidgetCard>
+
+        {/* 3b — Compliance */}
+        <WidgetCard title="Compliance" action="Review" actionHref="/compliance">
+          {complianceViolations.length === 0 ? (
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-base font-semibold text-emerald-700">All clear</div>
+                <div className="text-xs text-ink-500">No violations detected</div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                {complianceErrors > 0 && (
+                  <span className="badge bg-rose-50 text-rose-700 flex items-center gap-1">
+                    <AlertOctagon className="w-3 h-3" /> {complianceErrors} error{complianceErrors === 1 ? "" : "s"}
+                  </span>
+                )}
+                {complianceWarnings > 0 && (
+                  <span className="badge bg-amber-50 text-amber-700 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" /> {complianceWarnings} warning{complianceWarnings === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-ink-600 line-clamp-2">{complianceViolations[0].message}</div>
+            </div>
+          )}
         </WidgetCard>
 
         {/* 4 — Upcoming Anniversaries */}

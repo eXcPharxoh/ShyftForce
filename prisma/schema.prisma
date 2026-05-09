@@ -21,6 +21,21 @@ model Organization {
   billboardPosts  BillboardPost[]
   dayNotes        DayNote[]
   hrReminders     HRReminder[]
+  complianceSettings ComplianceSettings?
+}
+
+model ComplianceSettings {
+  id                          String  @id @default(uuid())
+  organizationId              String  @unique
+  maxWeeklyHours              Float   @default(40)
+  maxDailyHours               Float   @default(12)
+  minRestGapHours             Float   @default(8)
+  mealBreakRequiredAfterHours Float   @default(5)
+  maxConsecutiveDays          Int     @default(6)
+  predictiveSchedulingDays    Int     @default(0)
+  jurisdiction                String  @default("default")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
 model Location {
