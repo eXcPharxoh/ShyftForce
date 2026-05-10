@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Award, Bell, BookOpen, BrainCircuit, Building2, CalendarX, CreditCard, FileBarChart, FileText, Gift, KeyRound, Plane, Receipt, Repeat, Settings, ShieldCheck, Wrench } from "lucide-react";
+import { Award, Bell, BookOpen, BrainCircuit, Building2, CalendarX, CreditCard, FileBarChart, FileText, Gift, KeyRound, Plane, Receipt, Repeat, Settings, ShieldAlert, ShieldCheck, Wrench } from "lucide-react";
 
 const ITEMS = [
   { href: "/settings/billing",          label: "Billing & plan",        icon: CreditCard },
@@ -7,6 +7,7 @@ const ITEMS = [
   { href: "/settings/pto",              label: "Time-off policies",     icon: Plane },
   { href: "/settings/recurring-shifts", label: "Recurring patterns",    icon: Repeat },
   { href: "/settings/availability",     label: "My availability",       icon: CalendarX },
+  { href: "/schedule/coverage",         label: "Coverage Center",       icon: ShieldAlert },
   { href: "/settings/integrations",     label: "Integrations",          icon: Wrench },
   { href: "/settings/audit",            label: "Audit log",             icon: FileText },
   { href: "/attendance#tipping",        label: "Tip management",        icon: Receipt },

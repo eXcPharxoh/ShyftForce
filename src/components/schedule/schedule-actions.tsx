@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  Copy, Printer, Repeat, Loader2, Check, AlertCircle, MoreHorizontal,
+  Copy, Printer, Repeat, Loader2, Check, AlertCircle, MoreHorizontal, ShieldAlert,
 } from "lucide-react";
 
 export function ScheduleActions({ weekStart }: { weekStart: string }) {
@@ -57,6 +58,13 @@ export function ScheduleActions({ weekStart }: { weekStart: string }) {
             <Action onClick={copyWeek}        icon={Copy}    label="Copy from last week"   busy={busy === "copy"} desc="Duplicate last week's published shifts as drafts" />
             <Action onClick={applyRecurring}  icon={Repeat}  label="Apply recurring patterns" busy={busy === "recurring"} desc="Generate shifts from saved weekly patterns" />
             <Action onClick={print}           icon={Printer} label="Print this week"          desc="Open a print-friendly view in a new tab" />
+            <Link href="/schedule/coverage" onClick={() => setOpen(false)} className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition flex items-start gap-2.5">
+              <ShieldAlert className="w-4 h-4 mt-0.5 text-rose-500 dark:text-rose-400 shrink-0" />
+              <div>
+                <div className="text-sm font-semibold text-ink-900 dark:text-ink-100">Coverage Center</div>
+                <div className="text-[11px] text-ink-500 dark:text-ink-400">Live no-show + open-shift autopilot status</div>
+              </div>
+            </Link>
           </div>
         </>
       )}
