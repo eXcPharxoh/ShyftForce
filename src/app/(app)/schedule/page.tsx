@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { addDays, dateLabel, initials, startOfWeek, timeLabel } from "@/lib/utils";
 import { ScheduleControls } from "@/components/schedule/schedule-controls";
 import { AutoScheduleButton } from "@/components/schedule/auto-schedule-button";
+import { ScheduleActions } from "@/components/schedule/schedule-actions";
 import { ShiftCell } from "@/components/schedule/shift-cell";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
@@ -55,7 +56,10 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           <Link href="/schedule" className="btn-outline h-9 text-xs">This week</Link>
           <Link href={`/schedule?w=${weekOffset + 1}`} className="btn-outline h-9"><ChevronRight className="w-4 h-4" /></Link>
           {(u.role === "ADMIN" || u.role === "MANAGER") && (
-            <AutoScheduleButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />
+            <>
+              <ScheduleActions weekStart={weekStart.toISOString().slice(0,10)} />
+              <AutoScheduleButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />
+            </>
           )}
           <button className="btn-primary h-9"><Plus className="w-4 h-4" /> Publish week</button>
         </div>

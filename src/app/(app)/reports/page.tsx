@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { addDays, fmtHours, fmtMoney, startOfWeek } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
+import { ExportButton } from "@/components/reports/export-button";
 import { BarChart3 } from "lucide-react";
 
 export default async function ReportsPage() {
@@ -50,7 +51,10 @@ export default async function ReportsPage() {
         icon={BarChart3}
         title="Reports"
         subtitle={period ? `Live snapshot · ${period.startsOn.toLocaleDateString("en-US", { month: "short", day: "numeric" })} → ${period.endsOn.toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "No active pay period"}
-      />
+      >
+        <ExportButton type="timesheets" label="Timesheets CSV" />
+        <ExportButton type="shifts"     label="Shifts CSV" />
+      </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Stat label="Total hours"     value={fmtHours(totalHours)} />

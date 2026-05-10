@@ -1,16 +1,18 @@
 import Link from "next/link";
-import { Award, Bell, BookOpen, BrainCircuit, Building2, CreditCard, FileBarChart, FileText, Gift, KeyRound, Plane, Receipt, Settings, ShieldCheck, Wrench } from "lucide-react";
+import { Award, Bell, BookOpen, BrainCircuit, Building2, CalendarX, CreditCard, FileBarChart, FileText, Gift, KeyRound, Plane, Receipt, Repeat, Settings, ShieldCheck, Wrench } from "lucide-react";
 
 const ITEMS = [
-  { href: "/settings/billing",     label: "Billing & plan",        icon: CreditCard },
-  { href: "/settings/locations",   label: "Locations & geofences", icon: Building2 },
-  { href: "/settings/pto",         label: "Time-off policies",     icon: Plane },
-  { href: "/settings/integrations", label: "Integrations",          icon: Wrench },
-  { href: "/settings/audit",       label: "Audit log",             icon: FileText },
-  { href: "/attendance#tipping",   label: "Tip management",        icon: Receipt },
-  { href: "/reports",              label: "Advanced reports",      icon: FileBarChart },
-  { href: "/hr/surveys",           label: "Survey library",        icon: BookOpen },
-  { href: "/compliance",           label: "Compliance Autopilot",  icon: ShieldCheck },
+  { href: "/settings/billing",          label: "Billing & plan",        icon: CreditCard },
+  { href: "/settings/locations",        label: "Locations & geofences", icon: Building2 },
+  { href: "/settings/pto",              label: "Time-off policies",     icon: Plane },
+  { href: "/settings/recurring-shifts", label: "Recurring patterns",    icon: Repeat },
+  { href: "/settings/availability",     label: "My availability",       icon: CalendarX },
+  { href: "/settings/integrations",     label: "Integrations",          icon: Wrench },
+  { href: "/settings/audit",            label: "Audit log",             icon: FileText },
+  { href: "/attendance#tipping",        label: "Tip management",        icon: Receipt },
+  { href: "/reports",                   label: "Advanced reports",      icon: FileBarChart },
+  { href: "/hr/surveys",                label: "Survey library",        icon: BookOpen },
+  { href: "/compliance",                label: "Compliance Autopilot",  icon: ShieldCheck },
   { href: "#", label: "Permissions & roles",   icon: ShieldCheck },
   { href: "#", label: "Notification rules",    icon: Bell },
   { href: "#", label: "API keys",              icon: KeyRound },

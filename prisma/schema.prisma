@@ -170,6 +170,62 @@ model PtoBalance {
   @@index([memberId])
 }
 
+model RecurringShift {
+  id              String    @id @default(uuid())
+  memberId        String
+  locationId      String
+  dayOfWeek       Int       // 0 = Sun, 1 = Mon, …, 6 = Sat
+  startTime       String    // HH:MM
+  endTime         String    // HH:MM
+  position        String?
+  effectiveFrom   DateTime  @default(now())
+  effectiveUntil  DateTime?
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  member   Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, active])
+  @@index([locationId, dayOfWeek])
+}
+
+model AvailabilityRule {
+  id              String    @id @default(uuid())
+  memberId        String
+  type            String    // "recurring_unavailable" | "one_off_unavailable"
+  dayOfWeek       Int?      // 0-6, required for recurring
+  startTime       String?   // HH:MM, null = whole day
+  endTime         String?
+  date            DateTime? // required for one-off
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+model ShiftSwapRequest {
+  id              String    @id @default(uuid())
+  shiftId         String              // shift the requester wants to give away
+  requesterId     String              // member offering the shift
+  targetId        String              // member they want to swap with
+  targetShiftId   String?             // optional shift to swap into (mutual swap if set)
+  message         String?
+  status          String    @default("pending")  // pending | accepted_by_target | rejected_by_target | approved | rejected | canceled
+  decidedAt       DateTime?
+  decidedById     String?
+  createdAt       DateTime  @default(now())
+
+  shift     Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  requester Member @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target    Member @relation("SwapTarget",    fields: [targetId],    references: [id], onDelete: Cascade)
+
+  @@index([shiftId])
+  @@index([targetId, status])
+  @@index([requesterId, status])
+}
+
 model MemberCertification {
   id        String    @id @default(uuid())
   memberId  String
@@ -230,6 +286,10 @@ model Member {
 
   certifications  MemberCertification[]
   ptoBalances     PtoBalance[]
+  recurringShifts RecurringShift[]
+  availabilityRules AvailabilityRule[]
+  swapsAsRequester  ShiftSwapRequest[] @relation("SwapRequester")
+  swapsAsTarget     ShiftSwapRequest[] @relation("SwapTarget")
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -270,6 +330,7 @@ model Shift {
   tasks    ShiftTask[]
   openRequests OpenShiftRequest[]
   openShiftOffers OpenShiftOffer[]
+  swapRequests ShiftSwapRequest[]
 }
 
 model ShiftTask {

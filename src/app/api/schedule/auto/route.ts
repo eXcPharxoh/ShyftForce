@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   const weekEnd = addDays(weekStart, 7);
 
   // Pull context for the model
-  const [locations, members, lastWeekShifts, timeOff] = await Promise.all([
+  const [locations, members, lastWeekShifts, timeOff, availability] = await Promise.all([
     prisma.location.findMany({ where: { organizationId: u.organizationId } }),
     prisma.member.findMany({
       where: { organizationId: u.organizationId, status: "active", role: { not: "ADMIN" } },
@@ -76,6 +76,15 @@ export async function POST(req: Request) {
     }),
     prisma.timeOffRequest.findMany({
       where: { member: { organizationId: u.organizationId }, status: "approved", startsOn: { lte: weekEnd }, endsOn: { gte: weekStart } },
+    }),
+    prisma.availabilityRule.findMany({
+      where: {
+        member: { organizationId: u.organizationId },
+        OR: [
+          { type: "recurring_unavailable" },
+          { type: "one_off_unavailable", date: { gte: weekStart, lt: weekEnd } },
+        ],
+      },
     }),
   ]);
 
@@ -95,6 +104,13 @@ export async function POST(req: Request) {
     from: r.startsOn.toISOString().slice(0,10), to: r.endsOn.toISOString().slice(0,10),
     category: r.category,
   }));
+  const availabilityCtx = availability.map(a => ({
+    memberId: a.memberId,
+    type: a.type,
+    dayOfWeek: a.dayOfWeek,
+    date: a.date?.toISOString().slice(0,10) ?? null,
+    from: a.startTime, to: a.endTime,
+  }));
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i).toISOString().slice(0,10));
 
@@ -102,6 +118,7 @@ export async function POST(req: Request) {
 
 Hard rules (NEVER violate):
 - Honor approved time-off (no shifts during PTO).
+- Honor memberUnavailability rules (recurring weekly OR one-off date) — never schedule a member during an unavailable window.
 - One member can only be on ONE shift at a time (no overlapping).
 - No member exceeds maxHoursPerWeek across the whole week.
 - A member should not work back-to-back shifts that violate an 8-hour rest gap.
@@ -130,6 +147,7 @@ Output only via the propose_schedule tool. Never write JSON in chat.`;
     members: memberCtx,
     lastWeekPatterns: lastWeekCtx,
     approvedTimeOff: timeOffCtx,
+    memberUnavailability: availabilityCtx,
     extraNotes: body.notes ?? "",
   };
 

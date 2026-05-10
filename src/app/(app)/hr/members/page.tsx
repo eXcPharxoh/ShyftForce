@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { dateLabel, fmtMoney, initials } from "@/lib/utils";
 import { InviteButton } from "@/components/hr/invite-button";
 import { ImportCsvButton } from "@/components/hr/import-csv-button";
+import { ExportButton } from "@/components/reports/export-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Users } from "lucide-react";
 import Link from "next/link";
@@ -27,6 +28,7 @@ export default async function MembersPage() {
         title="Members"
         subtitle={`${members.length} ${members.length === 1 ? "person" : "people"} across ${new Set(members.map(m=>m.locationId)).size} location${new Set(members.map(m=>m.locationId)).size === 1 ? "" : "s"}`}
       >
+        {isManager && <ExportButton type="members" label="Members CSV" />}
         {isManager && <ImportCsvButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />}
         {isManager && <InviteButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />}
       </PageHeader>
