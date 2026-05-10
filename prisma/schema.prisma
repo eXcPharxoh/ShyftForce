@@ -8,42 +8,46 @@ datasource db {
 }
 
 model Organization {
-  id          String   @id @default(uuid())
-  slug        String   @unique
-  name        String
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
 
   // Branding
-  logoUrl     String?
-  timezone    String   @default("America/New_York")
-  industry    String?  // restaurant | retail | healthcare | field_service | office | fitness | other
-  isDemo      Boolean  @default(false)
+  logoUrl  String?
+  timezone String  @default("America/New_York")
+  industry String? // restaurant | retail | healthcare | field_service | office | fitness | other
+  isDemo   Boolean @default(false)
 
   // Billing (Stripe)
-  stripeCustomerId      String?
-  stripeSubscriptionId  String?
-  plan                  String   @default("trial")  // trial | starter | pro | enterprise
-  trialEndsAt           DateTime?
-  subscriptionStatus    String?  // active | past_due | canceled | incomplete
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  plan                 String    @default("trial") // trial | starter | pro | enterprise
+  trialEndsAt          DateTime?
+  subscriptionStatus   String? // active | past_due | canceled | incomplete
 
   // Payroll integration (Finch)
-  finchAccessToken      String?  // encrypted in production
-  finchProviderId       String?  // e.g. "adp_workforce_now", "gusto", "paychex"
-  finchCompanyId        String?  // Finch's internal company id
-  finchConnectedAt      DateTime?
+  finchAccessToken String? // encrypted in production
+  finchProviderId  String? // e.g. "adp_workforce_now", "gusto", "paychex"
+  finchCompanyId   String? // Finch's internal company id
+  finchConnectedAt DateTime?
 
-  locations       Location[]
-  members         Member[]
-  payPeriods      PayPeriod[]
-  surveys         Survey[]
-  documents       Document[]
-  billboardPosts  BillboardPost[]
-  dayNotes        DayNote[]
-  hrReminders     HRReminder[]
-  complianceSettings ComplianceSettings?
-  ptoPolicies     PtoPolicy[]
-  invitations     Invitation[]
-  auditLogs       AuditLog[]
+  locations               Location[]
+  members                 Member[]
+  payPeriods              PayPeriod[]
+  surveys                 Survey[]
+  documents               Document[]
+  billboardPosts          BillboardPost[]
+  dayNotes                DayNote[]
+  hrReminders             HRReminder[]
+  complianceSettings      ComplianceSettings?
+  ptoPolicies             PtoPolicy[]
+  invitations             Invitation[]
+  auditLogs               AuditLog[]
+  predictabilityPayEvents PredictabilityPayEvent[]
+  posConnections          PosConnection[]
+  ewaSettings             EwaSettings?
+  ewaWithdrawals          EwaWithdrawal[]
 }
 
 model ComplianceSettings {
@@ -53,100 +57,214 @@ model ComplianceSettings {
   maxDailyHours               Float   @default(12)
   minRestGapHours             Float   @default(8)
   mealBreakRequiredAfterHours Float   @default(5)
+  restBreakRequiredAfterHours Float   @default(4) // CA-style 10-min paid every 4h
   maxConsecutiveDays          Int     @default(6)
-  predictiveSchedulingDays    Int     @default(0)
-  jurisdiction                String  @default("default")
+  predictiveSchedulingDays    Int     @default(0) // Fair Workweek lead time (days)
+  jurisdiction                String  @default("default") // see lib/compliance/jurisdictions.ts
+  industry                    String  @default("default") // retail | food | hospitality | healthcare | other
+  predictabilityPayEnabled    Boolean @default(false)
+  minorAgeThreshold           Int     @default(18)
+  minorMaxDailyHours          Float   @default(8)
+  minorMaxWeeklyHours         Float   @default(40)
+  minorEarliestStartHour      Int     @default(7)
+  minorLatestEndHour          Int     @default(22)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model PredictabilityPayEvent {
+  id              String    @id @default(uuid())
+  organizationId  String
+  shiftId         String
+  memberId        String
+  changeType      String // added | moved | canceled | shortened
+  occurredAt      DateTime  @default(now())
+  shiftStartsAt   DateTime
+  noticeHours     Float // hours of notice given before shift
+  hoursOwed       Float
+  hourlyRate      Float
+  amountOwedCents Int
+  reason          String?
+  resolvedAt      DateTime?
+  resolvedById    String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shift        Shift        @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, occurredAt])
+  @@index([memberId, resolvedAt])
+}
+
+model PosConnection {
+  id             String    @id @default(uuid())
+  organizationId String
+  locationId     String?
+  provider       String // toast | square | clover | manual
+  status         String    @default("connected") // connected | error | disconnected
+  accessToken    String? // encrypted in production
+  refreshToken   String?
+  externalId     String? // POS-side restaurant/location id
+  lastSyncAt     DateTime?
+  syncError      String?
+  createdAt      DateTime  @default(now())
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?            @relation(fields: [locationId], references: [id])
+  snapshots    PosRevenueSnapshot[]
+
+  @@index([organizationId, status])
+}
+
+model PosRevenueSnapshot {
+  id               String   @id @default(uuid())
+  connectionId     String
+  locationId       String
+  intervalStart    DateTime
+  intervalEnd      DateTime
+  grossSalesCents  Int
+  netSalesCents    Int?
+  transactionCount Int      @default(0)
+  source           String   @default("api") // api | manual
+  createdAt        DateTime @default(now())
+
+  connection PosConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  location   Location      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, intervalStart, intervalEnd])
+  @@index([locationId, intervalStart])
+}
+
+model EwaSettings {
+  id                    String   @id @default(uuid())
+  organizationId        String   @unique
+  enabled               Boolean  @default(false)
+  earnedRatePercent     Int      @default(50) // % of earned-but-unpaid wages accessible
+  feeCentsPerWithdrawal Int      @default(199) // $1.99 default
+  minWithdrawalCents    Int      @default(2000) // $20 minimum
+  maxPerPayPeriodCents  Int      @default(50000) // $500 max per pay period
+  providerName          String   @default("internal_ledger") // internal_ledger | branch | tapcheck | dailypay | stripe_treasury
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model EwaWithdrawal {
+  id              String    @id @default(uuid())
+  memberId        String
+  organizationId  String
+  amountCents     Int
+  feeCentsCharged Int       @default(0)
+  status          String    @default("pending") // pending | processing | settled | failed | canceled
+  payoutMethod    String? // ach | instant_debit | demo
+  requestedAt     DateTime  @default(now())
+  settledAt       DateTime?
+  externalRef     String? // provider-side id
+  failureReason   String?
+  payPeriodId     String?
+
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  payPeriod    PayPeriod?   @relation(fields: [payPeriodId], references: [id])
+
+  @@index([memberId, status])
+  @@index([organizationId, requestedAt])
 }
 
 model Location {
-  id              String   @id @default(uuid())
-  organizationId  String
-  name            String
-  weeklyBudget    Float?
-  projectedRevenue Float?
-  latitude               Float?
-  longitude              Float?
-  geofenceRadiusMeters   Int      @default(100)
-  createdAt       DateTime @default(now())
+  id                   String   @id @default(uuid())
+  organizationId       String
+  name                 String
+  weeklyBudget         Float?
+  projectedRevenue     Float?
+  latitude             Float?
+  longitude            Float?
+  geofenceRadiusMeters Int      @default(100)
+  createdAt            DateTime @default(now())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  members      Member[]
-  shifts       Shift[]
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        Member[]
+  shifts         Shift[]
+  posConnections PosConnection[]
+  posRevenue     PosRevenueSnapshot[]
 }
 
 model User {
-  id        String  @id @default(uuid())
-  email     String  @unique
+  id        String   @id @default(uuid())
+  email     String   @unique
   name      String
   password  String
   avatar    String?
   createdAt DateTime @default(now())
 
-  emailVerified         DateTime?
-  failedLoginAttempts   Int       @default(0)
-  lockedUntil           DateTime?
+  emailVerified       DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
 
-  member            Member?
-  emailTokens       EmailVerification[]
-  passwordResets    PasswordReset[]
-  auditLogs         AuditLog[]
+  member         Member?
+  emailTokens    EmailVerification[]
+  passwordResets PasswordReset[]
+  auditLogs      AuditLog[]
 }
 
 model EmailVerification {
-  id        String   @id @default(uuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
+  id         String    @id @default(uuid())
+  userId     String
+  token      String    @unique
+  expiresAt  DateTime
   consumedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([token])
 }
 
 model PasswordReset {
-  id        String   @id @default(uuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
+  id         String    @id @default(uuid())
+  userId     String
+  token      String    @unique
+  expiresAt  DateTime
   consumedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([token])
 }
 
 model Invitation {
-  id              String    @id @default(uuid())
-  organizationId  String
-  email           String
-  role            String    @default("EMPLOYEE")  // ADMIN | MANAGER | EMPLOYEE
-  token           String    @unique
-  invitedById     String?
-  position        String?
-  locationId      String?
-  expiresAt       DateTime
-  acceptedAt      DateTime?
-  createdAt       DateTime  @default(now())
+  id             String    @id @default(uuid())
+  organizationId String
+  email          String
+  role           String    @default("EMPLOYEE") // ADMIN | MANAGER | EMPLOYEE
+  token          String    @unique
+  invitedById    String?
+  position       String?
+  locationId     String?
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime  @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([token])
   @@index([organizationId, email])
 }
 
 model PtoPolicy {
-  id              String   @id @default(uuid())
-  organizationId  String
-  category        String   // "vacation" | "sick" | "personal" | "bereavement" | "unpaid"
-  name            String
-  annualHours     Float    @default(0)               // 0 = not tracked / unlimited
-  accrualMethod   String   @default("annual_lump_sum") // annual_lump_sum | per_pay_period | per_hour_worked | unlimited
-  hoursPerDay     Float    @default(8)               // used to convert PTO days → hours when reviewing
-  maxBalance      Float?
-  allowNegative   Boolean  @default(false)
-  active          Boolean  @default(true)
+  id             String  @id @default(uuid())
+  organizationId String
+  category       String // "vacation" | "sick" | "personal" | "bereavement" | "unpaid"
+  name           String
+  annualHours    Float   @default(0) // 0 = not tracked / unlimited
+  accrualMethod  String  @default("annual_lump_sum") // annual_lump_sum | per_pay_period | per_hour_worked | unlimited
+  hoursPerDay    Float   @default(8) // used to convert PTO days → hours when reviewing
+  maxBalance     Float?
+  allowNegative  Boolean @default(false)
+  active         Boolean @default(true)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   balances     PtoBalance[]
@@ -155,13 +273,13 @@ model PtoPolicy {
 }
 
 model PtoBalance {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   memberId        String
   policyId        String
-  hoursAccrued    Float    @default(0)   // total ever accrued (lifetime)
-  hoursUsed       Float    @default(0)   // total ever used (lifetime)
-  lastAccrualAt   DateTime?              // last time we ran accrual logic for this member
-  lastAccrualYear Int?                   // year of last lump-sum accrual (for annual reset detection)
+  hoursAccrued    Float     @default(0) // total ever accrued (lifetime)
+  hoursUsed       Float     @default(0) // total ever used (lifetime)
+  lastAccrualAt   DateTime? // last time we ran accrual logic for this member
+  lastAccrualYear Int? // year of last lump-sum accrual (for annual reset detection)
 
   member Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
   policy PtoPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
@@ -171,34 +289,34 @@ model PtoBalance {
 }
 
 model RecurringShift {
-  id              String    @id @default(uuid())
-  memberId        String
-  locationId      String
-  dayOfWeek       Int       // 0 = Sun, 1 = Mon, …, 6 = Sat
-  startTime       String    // HH:MM
-  endTime         String    // HH:MM
-  position        String?
-  effectiveFrom   DateTime  @default(now())
-  effectiveUntil  DateTime?
-  active          Boolean   @default(true)
-  createdAt       DateTime  @default(now())
+  id             String    @id @default(uuid())
+  memberId       String
+  locationId     String
+  dayOfWeek      Int // 0 = Sun, 1 = Mon, …, 6 = Sat
+  startTime      String // HH:MM
+  endTime        String // HH:MM
+  position       String?
+  effectiveFrom  DateTime  @default(now())
+  effectiveUntil DateTime?
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
 
-  member   Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId, active])
   @@index([locationId, dayOfWeek])
 }
 
 model AvailabilityRule {
-  id              String    @id @default(uuid())
-  memberId        String
-  type            String    // "recurring_unavailable" | "one_off_unavailable"
-  dayOfWeek       Int?      // 0-6, required for recurring
-  startTime       String?   // HH:MM, null = whole day
-  endTime         String?
-  date            DateTime? // required for one-off
-  notes           String?
-  createdAt       DateTime  @default(now())
+  id        String    @id @default(uuid())
+  memberId  String
+  type      String // "recurring_unavailable" | "one_off_unavailable"
+  dayOfWeek Int? // 0-6, required for recurring
+  startTime String? // HH:MM, null = whole day
+  endTime   String?
+  date      DateTime? // required for one-off
+  notes     String?
+  createdAt DateTime  @default(now())
 
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
@@ -206,20 +324,20 @@ model AvailabilityRule {
 }
 
 model ShiftSwapRequest {
-  id              String    @id @default(uuid())
-  shiftId         String              // shift the requester wants to give away
-  requesterId     String              // member offering the shift
-  targetId        String              // member they want to swap with
-  targetShiftId   String?             // optional shift to swap into (mutual swap if set)
-  message         String?
-  status          String    @default("pending")  // pending | accepted_by_target | rejected_by_target | approved | rejected | canceled
-  decidedAt       DateTime?
-  decidedById     String?
-  createdAt       DateTime  @default(now())
+  id            String    @id @default(uuid())
+  shiftId       String // shift the requester wants to give away
+  requesterId   String // member offering the shift
+  targetId      String // member they want to swap with
+  targetShiftId String? // optional shift to swap into (mutual swap if set)
+  message       String?
+  status        String    @default("pending") // pending | accepted_by_target | rejected_by_target | approved | rejected | canceled
+  decidedAt     DateTime?
+  decidedById   String?
+  createdAt     DateTime  @default(now())
 
   shift     Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
   requester Member @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  target    Member @relation("SwapTarget",    fields: [targetId],    references: [id], onDelete: Cascade)
+  target    Member @relation("SwapTarget", fields: [targetId], references: [id], onDelete: Cascade)
 
   @@index([shiftId])
   @@index([targetId, status])
@@ -229,11 +347,11 @@ model ShiftSwapRequest {
 model MemberCertification {
   id        String    @id @default(uuid())
   memberId  String
-  name      String       // "Food Handler", "First Aid", "Firearm Permit", "OSHA-30"
+  name      String // "Food Handler", "First Aid", "Firearm Permit", "OSHA-30"
   issuedOn  DateTime?
   expiresOn DateTime?
-  number    String?      // license/cert number
-  fileUrl   String?      // optional file ref
+  number    String? // license/cert number
+  fileUrl   String? // optional file ref
   notes     String?
   createdAt DateTime  @default(now())
 
@@ -244,16 +362,16 @@ model MemberCertification {
 }
 
 model AuditLog {
-  id              String   @id @default(uuid())
-  organizationId  String
-  actorId         String?  // user id; null = system
-  action          String   // e.g. "shift.create", "timesheet.approve", "billing.upgrade"
-  entityType      String?  // e.g. "Shift", "Member"
-  entityId        String?
-  metadata        String?  // JSON string for diff/payload
-  ipAddress       String?
-  userAgent       String?
-  createdAt       DateTime @default(now())
+  id             String   @id @default(uuid())
+  organizationId String
+  actorId        String? // user id; null = system
+  action         String // e.g. "shift.create", "timesheet.approve", "billing.upgrade"
+  entityType     String? // e.g. "Shift", "Member"
+  entityId       String?
+  metadata       String? // JSON string for diff/payload
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   actor        User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
@@ -265,72 +383,75 @@ model AuditLog {
 
 // SQLite has no enums — Role is a string: "ADMIN" | "MANAGER" | "EMPLOYEE"
 model Member {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  organizationId  String
-  locationId      String?
-  role            String   @default("EMPLOYEE")
-  position        String?
-  hourlyRate      Float?
-  hireDate        DateTime @default(now())
-  birthday        DateTime?
-  status          String   @default("active")
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  organizationId String
+  locationId     String?
+  role           String    @default("EMPLOYEE")
+  position       String?
+  hourlyRate     Float?
+  hireDate       DateTime  @default(now())
+  birthday       DateTime?
+  status         String    @default("active")
 
   // Profile additions
-  phone               String?
+  phone                 String?
   emergencyContactName  String?
   emergencyContactPhone String?
-  notes               String?     // manager notes about this member
-  externalEmployeeId  String?     // ID from payroll/HRIS provider (e.g. Finch)
-  payrollProvider     String?     // "adp_workforce_now" | "gusto" | "paychex" | etc.
+  notes                 String? // manager notes about this member
+  externalEmployeeId    String? // ID from payroll/HRIS provider (e.g. Finch)
+  payrollProvider       String? // "adp_workforce_now" | "gusto" | "paychex" | etc.
 
-  certifications  MemberCertification[]
-  ptoBalances     PtoBalance[]
-  recurringShifts RecurringShift[]
+  certifications    MemberCertification[]
+  ptoBalances       PtoBalance[]
+  recurringShifts   RecurringShift[]
   availabilityRules AvailabilityRule[]
-  swapsAsRequester  ShiftSwapRequest[] @relation("SwapRequester")
-  swapsAsTarget     ShiftSwapRequest[] @relation("SwapTarget")
+  swapsAsRequester  ShiftSwapRequest[]    @relation("SwapRequester")
+  swapsAsTarget     ShiftSwapRequest[]    @relation("SwapTarget")
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  location        Location? @relation(fields: [locationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id])
 
-  shifts            Shift[]
-  timeOffRequests   TimeOffRequest[]
-  expenseRequests   ExpenseRequest[]
-  timesheetEntries  TimesheetEntry[]
-  attendanceLogs    AttendanceLog[]
-  kudosSent         Kudos[] @relation("KudosFrom")
-  kudosReceived     Kudos[] @relation("KudosTo")
-  surveyResponses   SurveyResponse[]
-  documentRequests  DocumentRequest[]
-  messagesSent      Message[] @relation("MsgFrom")
-  messagesReceived  Message[] @relation("MsgTo")
-  billboardReads    BillboardRead[]
-  billboardPosts    BillboardPost[] @relation("PostAuthor")
-  dayNotesAuthored  DayNote[] @relation("NoteAuthor")
-  documents         Document[]
-  openShiftOffers   OpenShiftOffer[]
+  shifts                  Shift[]
+  timeOffRequests         TimeOffRequest[]
+  expenseRequests         ExpenseRequest[]
+  timesheetEntries        TimesheetEntry[]
+  attendanceLogs          AttendanceLog[]
+  kudosSent               Kudos[]                  @relation("KudosFrom")
+  kudosReceived           Kudos[]                  @relation("KudosTo")
+  surveyResponses         SurveyResponse[]
+  documentRequests        DocumentRequest[]
+  messagesSent            Message[]                @relation("MsgFrom")
+  messagesReceived        Message[]                @relation("MsgTo")
+  billboardReads          BillboardRead[]
+  billboardPosts          BillboardPost[]          @relation("PostAuthor")
+  dayNotesAuthored        DayNote[]                @relation("NoteAuthor")
+  documents               Document[]
+  openShiftOffers         OpenShiftOffer[]
+  predictabilityPayEvents PredictabilityPayEvent[]
+  ewaWithdrawals          EwaWithdrawal[]
 }
 
 model Shift {
-  id          String   @id @default(uuid())
-  locationId  String
-  memberId    String?
-  startsAt    DateTime
-  endsAt      DateTime
-  position    String?
-  notes       String?
-  status      String   @default("draft")
-  isOpen      Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  locationId String
+  memberId   String?
+  startsAt   DateTime
+  endsAt     DateTime
+  position   String?
+  notes      String?
+  status     String   @default("draft")
+  isOpen     Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
-  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  member   Member?  @relation(fields: [memberId], references: [id])
-  tasks    ShiftTask[]
-  openRequests OpenShiftRequest[]
-  openShiftOffers OpenShiftOffer[]
-  swapRequests ShiftSwapRequest[]
+  location                Location                 @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  member                  Member?                  @relation(fields: [memberId], references: [id])
+  tasks                   ShiftTask[]
+  openRequests            OpenShiftRequest[]
+  openShiftOffers         OpenShiftOffer[]
+  swapRequests            ShiftSwapRequest[]
+  predictabilityPayEvents PredictabilityPayEvent[]
 }
 
 model ShiftTask {
@@ -353,12 +474,12 @@ model OpenShiftRequest {
 }
 
 model OpenShiftOffer {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   shiftId     String
   memberId    String
-  wave        Int      @default(1)
-  status      String   @default("pending") // pending | claimed | declined | expired | superseded
-  sentAt      DateTime @default(now())
+  wave        Int       @default(1)
+  status      String    @default("pending") // pending | claimed | declined | expired | superseded
+  sentAt      DateTime  @default(now())
   expiresAt   DateTime
   respondedAt DateTime?
   rationale   String?
@@ -372,18 +493,18 @@ model OpenShiftOffer {
 }
 
 model TimeOffRequest {
-  id              String   @id @default(uuid())
-  memberId        String
-  startsOn        DateTime
-  endsOn          DateTime
-  reason          String?
-  category        String   @default("vacation")
-  status          String   @default("pending")
-  hoursRequested  Float?            // computed at creation (business days × hours/day)
-  hoursDeducted   Float?            // set on approval (so we know exactly what to refund if reversed)
-  createdAt       DateTime @default(now())
-  decidedAt       DateTime?
-  decidedById     String?
+  id             String    @id @default(uuid())
+  memberId       String
+  startsOn       DateTime
+  endsOn         DateTime
+  reason         String?
+  category       String    @default("vacation")
+  status         String    @default("pending")
+  hoursRequested Float? // computed at creation (business days × hours/day)
+  hoursDeducted  Float? // set on approval (so we know exactly what to refund if reversed)
+  createdAt      DateTime  @default(now())
+  decidedAt      DateTime?
+  decidedById    String?
 
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }
@@ -410,18 +531,19 @@ model Kudos {
   createdAt DateTime @default(now())
 
   from Member @relation("KudosFrom", fields: [fromId], references: [id], onDelete: Cascade)
-  to   Member @relation("KudosTo",   fields: [toId],   references: [id], onDelete: Cascade)
+  to   Member @relation("KudosTo", fields: [toId], references: [id], onDelete: Cascade)
 }
 
 model PayPeriod {
-  id              String   @id @default(uuid())
-  organizationId  String
-  startsOn        DateTime
-  endsOn          DateTime
-  status          String   @default("open")
+  id             String   @id @default(uuid())
+  organizationId String
+  startsOn       DateTime
+  endsOn         DateTime
+  status         String   @default("open")
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  entries TimesheetEntry[]
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entries        TimesheetEntry[]
+  ewaWithdrawals EwaWithdrawal[]
 }
 
 model TimesheetEntry {
@@ -439,68 +561,68 @@ model TimesheetEntry {
 }
 
 model AttendanceLog {
-  id              String   @id @default(uuid())
-  memberId        String
-  type            String
-  at              DateTime @default(now())
-  latitude        Float?
-  longitude       Float?
-  accuracyMeters  Float?
-  photoData       String?      // base64 data URL (~50KB JPEG); for production swap to S3 URL
-  locationId      String?      // location they were assigned to at time of clock
-  distanceMeters  Float?       // computed distance to assigned location
-  withinGeofence  Boolean?     // null = unknown (no GPS), true/false = computed
-  verified        Boolean      @default(false)  // true if both GPS+photo were captured
+  id             String   @id @default(uuid())
+  memberId       String
+  type           String
+  at             DateTime @default(now())
+  latitude       Float?
+  longitude      Float?
+  accuracyMeters Float?
+  photoData      String? // base64 data URL (~50KB JPEG); for production swap to S3 URL
+  locationId     String? // location they were assigned to at time of clock
+  distanceMeters Float? // computed distance to assigned location
+  withinGeofence Boolean? // null = unknown (no GPS), true/false = computed
+  verified       Boolean  @default(false) // true if both GPS+photo were captured
 
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }
 
 model Document {
-  id              String   @id @default(uuid())
-  organizationId  String
-  memberId        String?
-  uploadedById    String?
-  name            String
-  url             String?         // optional external link
-  category        String?
-  mimeType        String?
-  sizeBytes       Int?
-  data            Bytes?          // for in-DB storage; production should use external blob storage
-  uploadedAt      DateTime @default(now())
+  id             String   @id @default(uuid())
+  organizationId String
+  memberId       String?
+  uploadedById   String?
+  name           String
+  url            String? // optional external link
+  category       String?
+  mimeType       String?
+  sizeBytes      Int?
+  data           Bytes? // for in-DB storage; production should use external blob storage
+  uploadedAt     DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   member       Member?      @relation(fields: [memberId], references: [id])
 }
 
 model DocumentRequest {
-  id            String   @id @default(uuid())
-  memberId      String
-  documentName  String
-  status        String   @default("pending")
-  createdAt     DateTime @default(now())
+  id           String   @id @default(uuid())
+  memberId     String
+  documentName String
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
 
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }
 
 model Survey {
-  id              String   @id @default(uuid())
-  organizationId  String
-  title           String
-  description     String?
-  status          String   @default("active")
-  createdAt       DateTime @default(now())
+  id             String   @id @default(uuid())
+  organizationId String
+  title          String
+  description    String?
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   questions    SurveyQuestion[]
   responses    SurveyResponse[]
 }
 
 model SurveyQuestion {
-  id        String  @id @default(uuid())
-  surveyId  String
-  question  String
-  type      String  @default("scale")
-  order     Int     @default(0)
+  id       String @id @default(uuid())
+  surveyId String
+  question String
+  type     String @default("scale")
+  order    Int    @default(0)
 
   survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
 }
@@ -517,28 +639,28 @@ model SurveyResponse {
 }
 
 model Message {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   fromId    String
   toId      String
   body      String
   readAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   from Member @relation("MsgFrom", fields: [fromId], references: [id], onDelete: Cascade)
-  to   Member @relation("MsgTo",   fields: [toId],   references: [id], onDelete: Cascade)
+  to   Member @relation("MsgTo", fields: [toId], references: [id], onDelete: Cascade)
 }
 
 model BillboardPost {
-  id              String   @id @default(uuid())
-  organizationId  String
-  authorId        String
-  title           String
-  body            String
-  category        String?
-  publishedAt     DateTime @default(now())
+  id             String   @id @default(uuid())
+  organizationId String
+  authorId       String
+  title          String
+  body           String
+  category       String?
+  publishedAt    DateTime @default(now())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  author       Member       @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       Member          @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   reads        BillboardRead[]
 }
 
@@ -555,25 +677,25 @@ model BillboardRead {
 }
 
 model DayNote {
-  id              String   @id @default(uuid())
-  organizationId  String
-  locationId      String?
-  date            DateTime
-  body            String
-  authorId        String
-  createdAt       DateTime @default(now())
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String?
+  date           DateTime
+  body           String
+  authorId       String
+  createdAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   author       Member       @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
 }
 
 model HRReminder {
-  id              String   @id @default(uuid())
-  organizationId  String
-  title           String
-  body            String?
-  dueOn           DateTime
-  done            Boolean  @default(false)
+  id             String   @id @default(uuid())
+  organizationId String
+  title          String
+  body           String?
+  dueOn          DateTime
+  done           Boolean  @default(false)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }

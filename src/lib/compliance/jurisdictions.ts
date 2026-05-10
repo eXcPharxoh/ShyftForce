@@ -1,0 +1,240 @@
+// Curated rule packs for the worst offenders in Fair Workweek + meal/rest break law.
+// Sources: city/state ordinances as of 2026 — admins can override every value in
+// ComplianceSettings, these are starting points + "auto-fill from jurisdiction".
+//
+// We intentionally encode only the schedulable bits (lead time, meal/rest cadence,
+// minor caps, predictability pay schedule). Everything else (right-to-rest pay,
+// good-faith estimates, etc.) lives in the runbook docs.
+
+export type PredictabilityPaySchedule = {
+  // hours of notice before the shift → number of hours of pay owed
+  // Example: 24 means "less than 24h notice = 4h pay"
+  brackets: { lessThanHoursNotice: number; hoursOwed: number; label: string }[];
+};
+
+export type JurisdictionRules = {
+  id: string;
+  label: string;
+  region: string;
+  predictiveSchedulingDays: number;
+  predictabilityPay: PredictabilityPaySchedule | null;
+  mealBreakAfterHours: number;        // owed an unpaid meal break after this many hours
+  restBreakAfterHours: number;        // paid 10-min rest break per this many hours (CA-style)
+  minRestGapHours: number;            // "right to rest" between shifts
+  minorAgeThreshold: number;          // FLSA: under this age triggers minor rules
+  minorMaxDailyHours: number;         // school-week cap (override during school)
+  minorMaxWeeklyHours: number;
+  minorEarliestStartHour: number;     // 24h
+  minorLatestEndHour: number;
+  notes?: string;
+};
+
+export const JURISDICTIONS: Record<string, JurisdictionRules> = {
+  default: {
+    id: "default",
+    label: "Federal default (FLSA only)",
+    region: "USA",
+    predictiveSchedulingDays: 0,
+    predictabilityPay: null,
+    mealBreakAfterHours: 6,
+    restBreakAfterHours: 0,
+    minRestGapHours: 8,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 40,
+    minorEarliestStartHour: 7,
+    minorLatestEndHour: 19,
+    notes: "Federal Fair Labor Standards Act baseline. Most states layer additional rules on top.",
+  },
+  california: {
+    id: "california",
+    label: "California",
+    region: "CA, USA",
+    predictiveSchedulingDays: 0, // statewide doesn't have FW; LA/SF do (separate)
+    predictabilityPay: null,
+    mealBreakAfterHours: 5,
+    restBreakAfterHours: 4,
+    minRestGapHours: 8,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 48,
+    minorEarliestStartHour: 5,
+    minorLatestEndHour: 22,
+    notes: "Mandatory 30-min unpaid meal break by hour 5; 10-min paid rest every 4h; daily OT after 8h.",
+  },
+  new_york_city: {
+    id: "new_york_city",
+    label: "New York City — Fair Workweek",
+    region: "NYC, USA",
+    predictiveSchedulingDays: 14,
+    predictabilityPay: {
+      brackets: [
+        { lessThanHoursNotice: 24,  hoursOwed: 1,    label: "Less than 24h notice" },
+        { lessThanHoursNotice: 168, hoursOwed: 0.25, label: "Less than 7 days notice (15 min)" },
+        { lessThanHoursNotice: 336, hoursOwed: 0.166, label: "Less than 14 days notice (10 min)" },
+      ],
+    },
+    mealBreakAfterHours: 6,
+    restBreakAfterHours: 0,
+    minRestGapHours: 11,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 28,
+    minorEarliestStartHour: 6,
+    minorLatestEndHour: 22,
+    notes: "Fast-food + retail Fair Workweek: 14-day advance schedule; pay penalties for late changes; right to rest 11h.",
+  },
+  seattle: {
+    id: "seattle",
+    label: "Seattle — Secure Scheduling",
+    region: "WA, USA",
+    predictiveSchedulingDays: 14,
+    predictabilityPay: {
+      brackets: [
+        { lessThanHoursNotice: 24,  hoursOwed: 4,    label: "Less than 24h notice (half-pay 4h)" },
+        { lessThanHoursNotice: 336, hoursOwed: 1,    label: "Less than 14 days notice" },
+      ],
+    },
+    mealBreakAfterHours: 5,
+    restBreakAfterHours: 4,
+    minRestGapHours: 10,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 40,
+    minorEarliestStartHour: 7,
+    minorLatestEndHour: 21,
+    notes: "Applies to retail + food chains (500+ employees worldwide). Right-to-rest = 10h.",
+  },
+  chicago: {
+    id: "chicago",
+    label: "Chicago — Fair Workweek",
+    region: "IL, USA",
+    predictiveSchedulingDays: 14,
+    predictabilityPay: {
+      brackets: [
+        { lessThanHoursNotice: 24,  hoursOwed: 4,    label: "Less than 24h notice (loss = full shift)" },
+        { lessThanHoursNotice: 336, hoursOwed: 1,    label: "Less than 14 days notice" },
+      ],
+    },
+    mealBreakAfterHours: 7.5,
+    restBreakAfterHours: 0,
+    minRestGapHours: 10,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 40,
+    minorEarliestStartHour: 7,
+    minorLatestEndHour: 21,
+    notes: "Covered industries: building services, healthcare, hotels, manufacturing, restaurants, retail, warehouse.",
+  },
+  philadelphia: {
+    id: "philadelphia",
+    label: "Philadelphia — Fair Workweek",
+    region: "PA, USA",
+    predictiveSchedulingDays: 14,
+    predictabilityPay: {
+      brackets: [
+        { lessThanHoursNotice: 24,  hoursOwed: 4,    label: "Less than 24h notice (lost shift)" },
+        { lessThanHoursNotice: 336, hoursOwed: 1,    label: "Less than 14 days notice" },
+      ],
+    },
+    mealBreakAfterHours: 6,
+    restBreakAfterHours: 0,
+    minRestGapHours: 9,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 40,
+    minorEarliestStartHour: 7,
+    minorLatestEndHour: 22,
+    notes: "Retail, hospitality, food: 250+ employees + 30+ locations.",
+  },
+  los_angeles: {
+    id: "los_angeles",
+    label: "Los Angeles — Fair Work Week",
+    region: "CA, USA",
+    predictiveSchedulingDays: 14,
+    predictabilityPay: {
+      brackets: [
+        { lessThanHoursNotice: 24,  hoursOwed: 4,    label: "Less than 24h notice" },
+        { lessThanHoursNotice: 336, hoursOwed: 1,    label: "Less than 14 days notice" },
+      ],
+    },
+    mealBreakAfterHours: 5,    // CA state rule
+    restBreakAfterHours: 4,
+    minRestGapHours: 10,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 48,
+    minorEarliestStartHour: 5,
+    minorLatestEndHour: 22,
+    notes: "Retail Fair Work Week (effective 2023): 300+ employees globally, applies to LA city retail.",
+  },
+  oregon: {
+    id: "oregon",
+    label: "Oregon — Fair Work Week (statewide)",
+    region: "OR, USA",
+    predictiveSchedulingDays: 14,
+    predictabilityPay: {
+      brackets: [
+        { lessThanHoursNotice: 24,  hoursOwed: 4,    label: "Less than 24h notice" },
+        { lessThanHoursNotice: 336, hoursOwed: 1,    label: "Less than 14 days notice" },
+      ],
+    },
+    mealBreakAfterHours: 6,
+    restBreakAfterHours: 4,
+    minRestGapHours: 10,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 44,
+    minorEarliestStartHour: 7,
+    minorLatestEndHour: 22,
+    notes: "Retail, hospitality, food service with 500+ employees worldwide.",
+  },
+};
+
+/** Apply a jurisdiction's rules to a settings object. Returns the merged settings. */
+export function applyJurisdiction(
+  current: { jurisdiction: string; [k: string]: any },
+  jurisdictionId: string,
+): {
+  jurisdiction: string;
+  predictiveSchedulingDays: number;
+  mealBreakRequiredAfterHours: number;
+  restBreakRequiredAfterHours: number;
+  minRestGapHours: number;
+  predictabilityPayEnabled: boolean;
+  minorAgeThreshold: number;
+  minorMaxDailyHours: number;
+  minorMaxWeeklyHours: number;
+  minorEarliestStartHour: number;
+  minorLatestEndHour: number;
+} {
+  const j = JURISDICTIONS[jurisdictionId] ?? JURISDICTIONS.default;
+  return {
+    jurisdiction: j.id,
+    predictiveSchedulingDays: j.predictiveSchedulingDays,
+    mealBreakRequiredAfterHours: j.mealBreakAfterHours,
+    restBreakRequiredAfterHours: j.restBreakAfterHours,
+    minRestGapHours: j.minRestGapHours,
+    predictabilityPayEnabled: !!j.predictabilityPay,
+    minorAgeThreshold: j.minorAgeThreshold,
+    minorMaxDailyHours: j.minorMaxDailyHours,
+    minorMaxWeeklyHours: j.minorMaxWeeklyHours,
+    minorEarliestStartHour: j.minorEarliestStartHour,
+    minorLatestEndHour: j.minorLatestEndHour,
+  };
+}
+
+/** Look up the predictability-pay bracket that applies to a given notice window. */
+export function predictabilityHoursOwed(
+  jurisdictionId: string,
+  noticeHours: number,
+): { hoursOwed: number; bracketLabel: string } | null {
+  const j = JURISDICTIONS[jurisdictionId];
+  if (!j?.predictabilityPay) return null;
+  // Find smallest bracket that the noticeHours triggers (most specific = smallest threshold)
+  const sorted = [...j.predictabilityPay.brackets].sort((a, b) => a.lessThanHoursNotice - b.lessThanHoursNotice);
+  for (const b of sorted) {
+    if (noticeHours < b.lessThanHoursNotice) return { hoursOwed: b.hoursOwed, bracketLabel: b.label };
+  }
+  return null;
+}

@@ -3,9 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { addDays, dateLabel, startOfWeek } from "@/lib/utils";
 import { checkCompliance, RULE_META, type Violation } from "@/lib/compliance/engine";
 import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
-import { ShieldCheck, AlertTriangle, AlertOctagon, Sparkles, Settings as SettingsIcon } from "lucide-react";
+import { JURISDICTIONS } from "@/lib/compliance/jurisdictions";
+import { unresolvedPredictabilityForOrg } from "@/lib/compliance/predictability";
+import { ShieldCheck, AlertTriangle, AlertOctagon, Sparkles, Settings as SettingsIcon, Globe } from "lucide-react";
 import { ComplianceSettingsButton } from "@/components/compliance/settings-button";
+import { JurisdictionPicker } from "@/components/compliance/jurisdiction-picker";
+import { PredictabilityLedger } from "@/components/compliance/predictability-ledger";
 import { PageHeader } from "@/components/ui/page-header";
+
+export const dynamic = "force-dynamic";
 
 export default async function CompliancePage() {
   const u = await requireUser();
@@ -13,7 +19,7 @@ export default async function CompliancePage() {
   const start = addDays(startOfWeek(new Date()), -7);
   const end   = addDays(startOfWeek(new Date()), 21);
 
-  const [shifts, members, settings, locations] = await Promise.all([
+  const [shifts, members, settings, locations, predictability] = await Promise.all([
     prisma.shift.findMany({
       where: { location: { organizationId: orgId }, startsAt: { gte: start, lt: end }, memberId: { not: null } },
       include: { location: true, member: { include: { user: true } } },
@@ -21,11 +27,12 @@ export default async function CompliancePage() {
     prisma.member.findMany({ where: { organizationId: orgId }, include: { user: true } }),
     getOrCreateComplianceSettings(orgId),
     prisma.location.findMany({ where: { organizationId: orgId } }),
+    unresolvedPredictabilityForOrg(orgId),
   ]);
 
   const violations = checkCompliance({
     shifts: shifts.map(s => ({ id: s.id, memberId: s.memberId, startsAt: s.startsAt, endsAt: s.endsAt, status: s.status, createdAt: s.createdAt })),
-    members: members.map(m => ({ id: m.id, name: m.user.name })),
+    members: members.map(m => ({ id: m.id, name: m.user.name, birthday: m.birthday })),
     settings,
   });
 
@@ -37,9 +44,19 @@ export default async function CompliancePage() {
     byRule.get(v.rule)!.push(v);
   }
 
-  // affected members
   const affectedIds = new Set(violations.map(v => v.memberId));
   const isClean = violations.length === 0;
+
+  const jurisdictionOptions = Object.values(JURISDICTIONS).map((j) => ({
+    id: j.id, label: j.label, region: j.region,
+    predictiveSchedulingDays: j.predictiveSchedulingDays,
+    hasPredictabilityPay: !!j.predictabilityPay,
+    mealBreakAfterHours: j.mealBreakAfterHours,
+    restBreakAfterHours: j.restBreakAfterHours,
+    minRestGapHours: j.minRestGapHours,
+    notes: j.notes,
+  }));
+  const currentJurisdiction = JURISDICTIONS[settings.jurisdiction ?? "default"] ?? JURISDICTIONS.default;
 
   return (
     <div className="space-y-5">
@@ -47,8 +64,9 @@ export default async function CompliancePage() {
         eyebrow="Labor compliance"
         icon={ShieldCheck}
         title="Compliance Autopilot"
-        subtitle={`${dateLabel(start)} → ${dateLabel(addDays(end, -1))} · ${shifts.length} shifts checked`}
+        subtitle={`${currentJurisdiction.label} · ${dateLabel(start)} → ${dateLabel(addDays(end, -1))} · ${shifts.length} shifts checked`}
       >
+        <JurisdictionPicker current={settings.jurisdiction ?? "default"} options={jurisdictionOptions} />
         <ComplianceSettingsButton settings={settings} />
       </PageHeader>
 
@@ -64,13 +82,33 @@ export default async function CompliancePage() {
         <Stat tone="ink"    icon={<Sparkles className="w-5 h-5" />} label="Affected members" value={affectedIds.size} />
       </div>
 
+      {settings.predictabilityPayEnabled && (
+        <PredictabilityLedger
+          events={predictability.events.map((e) => ({
+            id: e.id,
+            memberName: e.member.user.name,
+            locationName: e.shift.location.name,
+            changeType: e.changeType,
+            occurredAt: e.occurredAt.toISOString(),
+            shiftStartsAt: e.shiftStartsAt.toISOString(),
+            noticeHours: e.noticeHours,
+            hoursOwed: e.hoursOwed,
+            hourlyRate: e.hourlyRate,
+            amountOwedCents: e.amountOwedCents,
+            reason: e.reason,
+          }))}
+          totalOwedCents={predictability.totalOwedCents}
+          byMember={predictability.byMember}
+        />
+      )}
+
       {isClean ? (
         <section className="card p-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
             <ShieldCheck className="w-8 h-8" />
           </div>
           <h3 className="font-bold text-lg">No violations detected ✨</h3>
-          <p className="text-sm text-ink-500 mt-1 max-w-md mx-auto">All scheduled shifts comply with your active rules.</p>
+          <p className="text-sm text-ink-500 mt-1 max-w-md mx-auto">All scheduled shifts comply with your active rules under {currentJurisdiction.label}.</p>
         </section>
       ) : (
         <div className="space-y-3">
@@ -113,12 +151,18 @@ export default async function CompliancePage() {
       <section className="card p-4">
         <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><SettingsIcon className="w-4 h-4" /> Active rules</h3>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+          <RuleSetting label="Jurisdiction"                value={currentJurisdiction.label} />
           <RuleSetting label="Max weekly hours"            value={`${settings.maxWeeklyHours}h`} />
           <RuleSetting label="Max daily hours"             value={`${settings.maxDailyHours}h`} />
           <RuleSetting label="Min rest gap"                value={`${settings.minRestGapHours}h`} />
           <RuleSetting label="Meal break required after"   value={`${settings.mealBreakRequiredAfterHours}h`} />
+          <RuleSetting label="Rest break required every"   value={settings.restBreakRequiredAfterHours > 0 ? `${settings.restBreakRequiredAfterHours}h` : "off"} />
           <RuleSetting label="Max consecutive days"        value={settings.maxConsecutiveDays} />
           <RuleSetting label="Predictive scheduling"       value={settings.predictiveSchedulingDays > 0 ? `≥${settings.predictiveSchedulingDays}d ahead` : "off"} />
+          <RuleSetting label="Predictability pay"          value={settings.predictabilityPayEnabled ? "on" : "off"} />
+          <RuleSetting label="Minor age threshold"         value={`under ${settings.minorAgeThreshold}`} />
+          <RuleSetting label="Minor max daily / weekly"    value={`${settings.minorMaxDailyHours}h / ${settings.minorMaxWeeklyHours}h`} />
+          <RuleSetting label="Minor work hours window"     value={`${settings.minorEarliestStartHour}:00–${settings.minorLatestEndHour}:00`} />
         </div>
       </section>
     </div>
