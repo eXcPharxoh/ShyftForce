@@ -125,17 +125,17 @@ export function ClockInDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-ink-900/50 backdrop-blur-[2px] flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
-        <header className="px-5 h-14 border-b border-ink-200 flex items-center gap-2.5 shrink-0">
-          <div className={`w-8 h-8 rounded-lg bg-${meta.tone}-500 text-white flex items-center justify-center`}>
+    <div className="fixed inset-0 z-50 bg-ink-900/50 dark:bg-black/70 backdrop-blur-[2px] flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white dark:bg-ink-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col text-ink-900 dark:text-ink-50 animate-scale-in">
+        <header className="px-5 h-14 border-b border-ink-200 dark:border-ink-800 flex items-center gap-2.5 shrink-0">
+          <div className={`w-8 h-8 rounded-lg bg-${meta.tone}-500 text-white flex items-center justify-center shadow-soft shrink-0`}>
             <meta.icon className="w-4 h-4" />
           </div>
           <div className="flex-1">
             <div className="font-semibold text-sm leading-none">{meta.label}</div>
-            <div className="text-[11px] text-ink-500 mt-0.5">{assignedLocation?.name ?? "No assigned location"}</div>
+            <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-0.5">{assignedLocation?.name ?? "No assigned location"}</div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-ink-100"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 text-ink-500 dark:text-ink-400"><X className="w-4 h-4" /></button>
         </header>
 
         <div className="p-5 space-y-4">
@@ -163,22 +163,22 @@ export function ClockInDialog({
               <canvas ref={canvasRef} className="hidden" />
 
               {/* Geofence status */}
-              <div className="rounded-xl border border-ink-200 p-3 flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                  withinFence === true  ? "bg-emerald-50 text-emerald-700" :
-                  withinFence === false ? "bg-amber-50 text-amber-700"     :
-                                          "bg-ink-100 text-ink-600"
+              <div className="rounded-xl border border-ink-200 dark:border-ink-800 p-3 flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                  withinFence === true  ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" :
+                  withinFence === false ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300"     :
+                                          "bg-ink-100 dark:bg-ink-800 text-ink-600 dark:text-ink-400"
                 }`}><MapPin className="w-5 h-5" /></div>
                 <div className="flex-1 min-w-0 text-sm">
-                  {coordsError && <div className="text-ink-700">Location unavailable<div className="text-[11px] text-ink-500">{coordsError}</div></div>}
-                  {!coordsError && !coords && <div className="text-ink-500 flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Getting your location…</div>}
-                  {coords && distance == null && <div className="text-ink-700">Location captured · no geofence on this site</div>}
+                  {coordsError && <div className="text-ink-700 dark:text-ink-300">Location unavailable<div className="text-[11px] text-ink-500 dark:text-ink-400">{coordsError}</div></div>}
+                  {!coordsError && !coords && <div className="text-ink-500 dark:text-ink-400 flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Getting your location…</div>}
+                  {coords && distance == null && <div className="text-ink-700 dark:text-ink-300">Location captured · no geofence on this site</div>}
                   {coords && distance != null && (
                     <>
-                      <div className={withinFence ? "text-emerald-700 font-medium" : "text-amber-700 font-medium"}>
+                      <div className={withinFence ? "text-emerald-700 dark:text-emerald-300 font-medium" : "text-amber-700 dark:text-amber-300 font-medium"}>
                         {withinFence ? "Within geofence" : "Outside geofence"} · {fmtDistance(distance)} from site
                       </div>
-                      <div className="text-[11px] text-ink-500">Allowed: ≤ {assignedLocation?.geofenceRadiusMeters}m · accuracy ±{Math.round(coords.accuracy)}m</div>
+                      <div className="text-[11px] text-ink-500 dark:text-ink-400">Allowed: ≤ {assignedLocation?.geofenceRadiusMeters}m · accuracy ±{Math.round(coords.accuracy)}m</div>
                     </>
                   )}
                 </div>
@@ -190,11 +190,11 @@ export function ClockInDialog({
             <div className="text-center py-4">
               {result.ok ? (
                 <>
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 flex items-center justify-center mx-auto mb-3">
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <div className="font-semibold">{meta.label} recorded</div>
-                  <div className="text-sm text-ink-500 mt-1">
+                  <div className="text-sm text-ink-500 dark:text-ink-400 mt-1">
                     {result.verified
                       ? "Verified · GPS + photo captured"
                       : "Recorded — but unverified (missing GPS or photo)"}
@@ -203,11 +203,11 @@ export function ClockInDialog({
                 </>
               ) : (
                 <>
-                  <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
+                  <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 flex items-center justify-center mx-auto mb-3">
                     <AlertTriangle className="w-8 h-8" />
                   </div>
                   <div className="font-semibold">Couldn't record</div>
-                  <div className="text-sm text-rose-600 mt-1">{result.error ?? "Try again"}</div>
+                  <div className="text-sm text-rose-600 dark:text-rose-400 mt-1">{result.error ?? "Try again"}</div>
                 </>
               )}
             </div>
@@ -215,7 +215,7 @@ export function ClockInDialog({
         </div>
 
         {!result && (
-          <footer className="border-t border-ink-200 p-4 flex items-center justify-end gap-2 shrink-0">
+          <footer className="border-t border-ink-200 dark:border-ink-800 p-4 flex items-center justify-end gap-2 shrink-0">
             <button onClick={onClose} className="btn-ghost">Cancel</button>
             <button onClick={submit} disabled={submitting} className={`btn-primary bg-${meta.tone}-500 hover:bg-${meta.tone}-600`}>
               {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><meta.icon className="w-4 h-4" /> {meta.label}</>}

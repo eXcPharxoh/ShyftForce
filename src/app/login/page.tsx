@@ -76,7 +76,7 @@ export default function LoginPage() {
             <Wordmark className="text-lg" />
           </div>
           <h2 className="text-[26px] font-bold tracking-tight-2 mb-1">Welcome back</h2>
-          <p className="text-ink-500 text-sm mb-6">Sign in to your workspace.</p>
+          <p className="text-ink-500 dark:text-ink-400 text-sm mb-6">Sign in to your workspace.</p>
 
           <label className="label" htmlFor="email">Email</label>
           <input id="email" className="input mb-3" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
@@ -94,12 +94,12 @@ export default function LoginPage() {
             {loading ? "Signing in…" : "Sign in"}
           </button>
 
-          <div className="text-center text-[11px] text-ink-500 mt-4">
+          <div className="text-center text-[11px] text-ink-500 dark:text-ink-400 mt-4">
             Don't have an account? <Link href="/signup" className="text-brand-600 font-semibold hover:underline">Start free trial →</Link>
           </div>
 
-          <div className="mt-6 pt-5 border-t border-ink-100">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-ink-400 mb-2">Demo accounts</div>
+          <div className="mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-ink-400 dark:text-ink-500 mb-2">Demo accounts</div>
             <div className="space-y-1 text-[11px]">
               <DemoRow email="admin@platinum.com"  badge="Admin"     tone="orange" />
               <DemoRow email="sarah@platinum.com"  badge="Manager"   tone="blue" />
@@ -116,7 +116,7 @@ function DemoRow({ email, badge, tone }: { email: string; badge: string; tone: "
   const cls = tone === "orange" ? "badge-orange" : tone === "blue" ? "badge-blue" : "badge-gray";
   return (
     <div className="flex items-center justify-between">
-      <span className="font-mono text-ink-700">{email}</span>
+      <span className="font-mono text-ink-700 dark:text-ink-300">{email}</span>
       <span className={cls}>{badge}</span>
     </div>
   );

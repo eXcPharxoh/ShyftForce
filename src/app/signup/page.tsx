@@ -85,7 +85,7 @@ export default function SignupPage() {
             <Wordmark className="text-lg" />
           </div>
           <h2 className="text-[26px] font-bold tracking-tight-2 mb-1">Create your workspace</h2>
-          <p className="text-ink-500 text-sm mb-5">Free 14-day trial. Cancel anytime.</p>
+          <p className="text-ink-500 dark:text-ink-400 text-sm mb-5">Free 14-day trial. Cancel anytime.</p>
 
           <label className="label" htmlFor="name">Your name</label>
           <input id="name" className="input mb-3" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" autoComplete="name" />
@@ -104,10 +104,10 @@ export default function SignupPage() {
             {loading ? "Creating workspace…" : "Start free trial"}
           </button>
 
-          <div className="text-center mt-4 text-xs text-ink-500">
+          <div className="text-center mt-4 text-xs text-ink-500 dark:text-ink-400">
             Already have an account? <Link href="/login" className="text-brand-600 font-semibold hover:underline">Sign in</Link>
           </div>
-          <div className="text-center mt-2 text-[11px] text-ink-400">
+          <div className="text-center mt-2 text-[11px] text-ink-400 dark:text-ink-500">
             By signing up you agree to our <Link href="/legal/terms" className="hover:underline">Terms</Link> and <Link href="/legal/privacy" className="hover:underline">Privacy Policy</Link>.
           </div>
         </form>

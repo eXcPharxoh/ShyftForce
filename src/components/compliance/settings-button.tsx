@@ -23,11 +23,11 @@ export function ComplianceSettingsButton({ settings }: { settings: ComplianceSet
     <>
       <button onClick={() => setOpen(true)} className="btn-outline h-9"><SettingsIcon className="w-4 h-4" /> Configure rules</button>
       {open && (
-        <div className="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-[2px] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
-            <header className="px-5 h-14 border-b border-ink-200 flex items-center justify-between shrink-0">
+        <div className="fixed inset-0 z-50 bg-ink-900/50 dark:bg-black/70 backdrop-blur-[2px] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-ink-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col text-ink-900 dark:text-ink-50 animate-scale-in">
+            <header className="px-5 h-14 border-b border-ink-200 dark:border-ink-800 flex items-center justify-between shrink-0">
               <div className="font-semibold text-sm">Compliance rules</div>
-              <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-ink-100"><X className="w-4 h-4" /></button>
+              <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 text-ink-500 dark:text-ink-400"><X className="w-4 h-4" /></button>
             </header>
             <div className="p-5 space-y-3 overflow-y-auto">
               <Field label="Max weekly hours"          v={s.maxWeeklyHours}              step={1}    onChange={v => setS({...s, maxWeeklyHours: v})} />
@@ -37,9 +37,9 @@ export function ComplianceSettingsButton({ settings }: { settings: ComplianceSet
               <Field label="Max consecutive days"      v={s.maxConsecutiveDays}          step={1}    onChange={v => setS({...s, maxConsecutiveDays: Math.round(v)})} integer />
               <Field label="Predictive scheduling (days ahead, 0 = off)"
                                                        v={s.predictiveSchedulingDays}    step={1}    onChange={v => setS({...s, predictiveSchedulingDays: Math.round(v)})} integer />
-              <p className="text-[11px] text-ink-500">Set predictive scheduling to <b>14</b> for NYC/Seattle Fair Workweek, <b>7</b> for Oregon, <b>0</b> to disable.</p>
+              <p className="text-[11px] text-ink-500 dark:text-ink-400">Set predictive scheduling to <b className="text-ink-700 dark:text-ink-300">14</b> for NYC/Seattle Fair Workweek, <b className="text-ink-700 dark:text-ink-300">7</b> for Oregon, <b className="text-ink-700 dark:text-ink-300">0</b> to disable.</p>
             </div>
-            <footer className="border-t border-ink-200 p-3 flex items-center justify-end gap-2 shrink-0">
+            <footer className="border-t border-ink-200 dark:border-ink-800 p-3 flex items-center justify-end gap-2 shrink-0">
               <button onClick={() => setOpen(false)} className="btn-ghost">Cancel</button>
               <button onClick={save} disabled={saving} className="btn-primary">{saving ? "Saving…" : "Save rules"}</button>
             </footer>

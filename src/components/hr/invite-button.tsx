@@ -41,14 +41,14 @@ export function InviteButton({ locations }: { locations: Loc[] }) {
     <>
       <button onClick={() => setOpen(true)} className="btn-primary"><UserPlus className="w-4 h-4" /> Invite</button>
       {open && (
-        <div className="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-[2px] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <header className="px-5 h-14 border-b border-ink-200 flex items-center justify-between shrink-0">
+        <div className="fixed inset-0 z-50 bg-ink-900/50 dark:bg-black/70 backdrop-blur-[2px] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-ink-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col text-ink-900 dark:text-ink-50 animate-scale-in">
+            <header className="px-5 h-14 border-b border-ink-200 dark:border-ink-800 flex items-center justify-between shrink-0">
               <div>
                 <div className="font-semibold text-sm">Invite teammates</div>
-                <div className="text-[11px] text-ink-500">They'll get a magic link to join your workspace.</div>
+                <div className="text-[11px] text-ink-500 dark:text-ink-400">They'll get a magic link to join your workspace.</div>
               </div>
-              <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-ink-100"><X className="w-4 h-4" /></button>
+              <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 text-ink-500 dark:text-ink-400"><X className="w-4 h-4" /></button>
             </header>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {rows.map((row, i) => (
@@ -82,9 +82,9 @@ export function InviteButton({ locations }: { locations: Loc[] }) {
               ))}
               <button onClick={addRow} className="btn-outline text-xs"><Plus className="w-4 h-4" /> Add another</button>
             </div>
-            <footer className="border-t border-ink-200 p-4 flex items-center justify-between shrink-0">
-              {error && <div className="text-rose-600 text-xs">{error}</div>}
-              {done != null && <div className="text-emerald-700 text-xs">{done} invitation{done === 1 ? "" : "s"} sent ✨</div>}
+            <footer className="border-t border-ink-200 dark:border-ink-800 p-4 flex items-center justify-between shrink-0">
+              {error && <div className="text-rose-600 dark:text-rose-400 text-xs">{error}</div>}
+              {done != null && <div className="text-emerald-700 dark:text-emerald-300 text-xs">{done} invitation{done === 1 ? "" : "s"} sent ✨</div>}
               <div className="ml-auto flex gap-2">
                 <button onClick={() => setOpen(false)} className="btn-ghost">Cancel</button>
                 <button onClick={send} disabled={sending} className="btn-primary">
