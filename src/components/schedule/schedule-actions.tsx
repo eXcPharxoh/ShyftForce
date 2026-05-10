@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Copy, Printer, Repeat, Loader2, Check, AlertCircle, MoreHorizontal, ShieldAlert,
+  Copy, Printer, Repeat, Loader2, Check, AlertCircle, MoreHorizontal, ShieldAlert, TrendingUp,
 } from "lucide-react";
 
 export function ScheduleActions({ weekStart }: { weekStart: string }) {
@@ -63,6 +63,13 @@ export function ScheduleActions({ weekStart }: { weekStart: string }) {
               <div>
                 <div className="text-sm font-semibold text-ink-900 dark:text-ink-100">Coverage Center</div>
                 <div className="text-[11px] text-ink-500 dark:text-ink-400">Live no-show + open-shift autopilot status</div>
+              </div>
+            </Link>
+            <Link href="/schedule/forecast" onClick={() => setOpen(false)} className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition flex items-start gap-2.5">
+              <TrendingUp className="w-4 h-4 mt-0.5 text-brand-500 dark:text-brand-400 shrink-0" />
+              <div>
+                <div className="text-sm font-semibold text-ink-900 dark:text-ink-100">Demand Forecast</div>
+                <div className="text-[11px] text-ink-500 dark:text-ink-400">AI-predicted revenue + staffing → one-click draft week</div>
               </div>
             </Link>
           </div>

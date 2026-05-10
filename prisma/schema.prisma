@@ -48,6 +48,8 @@ model Organization {
   posConnections          PosConnection[]
   ewaSettings             EwaSettings?
   ewaWithdrawals          EwaWithdrawal[]
+  demandForecasts         DemandForecast[]
+  demandContexts          DemandContext[]
 }
 
 model ComplianceSettings {
@@ -151,6 +153,45 @@ model EwaSettings {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
+model DemandForecast {
+  id                    String   @id @default(uuid())
+  organizationId        String
+  locationId            String
+  slotStart             DateTime
+  slotEnd               DateTime
+  predictedRevenueCents Int
+  predictedHeadcount    Int
+  confidence            Float    @default(0.5)
+  contextNotes          String?
+  generatedAt           DateTime @default(now())
+  generatedBy           String   @default("autopilot") // autopilot | claude | manual
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, slotStart])
+  @@index([organizationId, slotStart])
+}
+
+model DemandContext {
+  id                String   @id @default(uuid())
+  organizationId    String
+  locationId        String?
+  startsAt          DateTime
+  endsAt            DateTime
+  category          String // weather | event | holiday | promotion | manual
+  label             String
+  expectedImpactPct Float    @default(0) // -100 to +100
+  source            String? // manual | openweathermap | claude | ticketmaster
+  createdAt         DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id])
+
+  @@index([locationId, startsAt])
+  @@index([organizationId, startsAt])
+}
+
 model EwaWithdrawal {
   id              String    @id @default(uuid())
   memberId        String
@@ -184,11 +225,13 @@ model Location {
   geofenceRadiusMeters Int      @default(100)
   createdAt            DateTime @default(now())
 
-  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  members        Member[]
-  shifts         Shift[]
-  posConnections PosConnection[]
-  posRevenue     PosRevenueSnapshot[]
+  organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members         Member[]
+  shifts          Shift[]
+  posConnections  PosConnection[]
+  posRevenue      PosRevenueSnapshot[]
+  demandForecasts DemandForecast[]
+  demandContexts  DemandContext[]
 }
 
 model User {
