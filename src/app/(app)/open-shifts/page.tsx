@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { dateLabel, fmtHours, initials, relTime, timeLabel } from "@/lib/utils";
 import { ClaimButton } from "@/components/marketplace/claim-button";
 import { ManagerOpenShiftRow } from "@/components/marketplace/manager-open-shift-row";
-import { CalendarClock, ShoppingBag, Users, AlertTriangle } from "lucide-react";
+import { CalendarClock, ShoppingBag, Users, AlertTriangle, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import Link from "next/link";
 
 export default async function OpenShiftsPage() {
   const u = await requireUser();
@@ -75,7 +77,14 @@ export default async function OpenShiftsPage() {
       {!isManager && (
         <section className="card p-4">
           <h3 className="text-sm font-semibold mb-3">Available to claim</h3>
-          {browsable.length === 0 && <div className="text-xs text-ink-500 py-3 text-center">No browsable open shifts right now.</div>}
+          {browsable.length === 0 && (
+            <EmptyState
+              icon={Sparkles}
+              tone="success"
+              title="All caught up — no open shifts"
+              description="When your manager opens a shift to the team, you'll see it here. We'll also DM you for any offer made directly to you."
+            />
+          )}
           <ul className="space-y-2">
             {browsable.map(s => (
               <li key={s.id} className="flex items-center gap-3 p-3 rounded-xl border border-ink-200 hover:border-brand-300">
@@ -101,9 +110,15 @@ export default async function OpenShiftsPage() {
             <span className="badge bg-amber-50 text-amber-800">{openShifts.length} open</span>
           </header>
           {openShifts.length === 0 && (
-            <div className="p-12 text-center text-sm text-ink-500">No open shifts. ✨</div>
+            <EmptyState
+              icon={Sparkles}
+              tone="success"
+              title="No open shifts"
+              description="Every shift this week is assigned. When you create an unassigned shift on the Schedule, it'll show up here ready to auto-offer."
+              action={<Link href="/schedule" className="btn-soft">Open Schedule →</Link>}
+            />
           )}
-          <ul className="divide-y divide-ink-100">
+          <ul className="divide-y divide-ink-100 dark:divide-ink-800">
             {openShifts.map(s => (
               <ManagerOpenShiftRow
                 key={s.id}

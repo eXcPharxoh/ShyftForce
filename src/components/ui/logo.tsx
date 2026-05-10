@@ -16,7 +16,7 @@ export function Logo({ size = "md", className }: { size?: "sm" | "md" | "lg"; cl
 
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span className={cn("font-bold tracking-tight-2 text-ink-900", className)}>
+    <span className={cn("font-bold tracking-tight-2 text-ink-900 dark:text-ink-50", className)}>
       shyft<span className="text-gradient-brand">force</span>
     </span>
   );

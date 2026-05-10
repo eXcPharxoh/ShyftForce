@@ -23,11 +23,11 @@ export function WidgetCard({
     <section className={cn("relative card card-hover p-5 group overflow-hidden", spanCls, className)}>
       {accent && <span className={cn("absolute top-0 left-0 right-0 h-0.5", accentBar)} />}
       <div className="flex items-center justify-between mb-3.5">
-        <h3 className="text-[13px] font-semibold text-ink-700 uppercase tracking-wider">{title}</h3>
+        <h3 className="text-[13px] font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider">{title}</h3>
         {action && actionHref && (
           <Link
             href={actionHref}
-            className="text-[11px] font-semibold text-brand-600 hover:text-brand-700
+            className="text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300
                        inline-flex items-center gap-0.5 transition-all group/cta"
           >
             {action} <ArrowUpRight className="w-3 h-3 group-hover/cta:translate-x-0.5 group-hover/cta:-translate-y-0.5 transition-transform" />

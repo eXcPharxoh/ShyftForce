@@ -258,7 +258,7 @@ export default async function Dashboard() {
                     <span className="font-medium">{k.to.user.name}</span>
                     <span className="ml-1">{k.emoji}</span>
                   </div>
-                  <div className="text-sm text-ink-700 mt-0.5">"{k.message}"</div>
+                  <div className="text-sm text-ink-700 dark:text-ink-300 mt-0.5">"{k.message}"</div>
                   <div className="text-[11px] text-ink-500 mt-0.5">{relTime(k.createdAt)}</div>
                 </div>
               </li>
@@ -296,7 +296,7 @@ export default async function Dashboard() {
 
         {/* 12 — Employee Onboarding */}
         <WidgetCard title="Employee Onboarding" action="Configure" actionHref="/hr/members">
-          <p className="text-sm text-ink-700 mb-2">Customize your onboarding workflow — checklists, documents, training.</p>
+          <p className="text-sm text-ink-700 dark:text-ink-300 mb-2">Customize your onboarding workflow — checklists, documents, training.</p>
           <Link href="/hr/members" className="btn-outline text-xs">Configure workflow</Link>
         </WidgetCard>
 
@@ -315,7 +315,7 @@ export default async function Dashboard() {
               {tsByLocation.map(l => (
                 <tr key={l.id} className="border-t border-ink-100">
                   <td className="py-2 font-medium">{l.name}</td>
-                  <td className="py-2 text-ink-700">{l.manager}</td>
+                  <td className="py-2 text-ink-700 dark:text-ink-300">{l.manager}</td>
                   <td className="py-2"><span className={l.alerts > 0 ? "badge-rose badge bg-rose-50 text-rose-700" : "badge-green"}>{l.alerts} alerts</span></td>
                   <td className="py-2 text-right"><button className="btn-ghost text-xs">Send a Reminder</button></td>
                 </tr>
@@ -397,15 +397,15 @@ function nextOccurrence(d: Date): Date {
 
 function Stat({ label, value, tone }: { label: string; value: number; tone: "ink" | "rose" | "amber" | "emerald" }) {
   const colors: Record<string, string> = {
-    ink: "text-ink-900",
-    rose: "text-rose-600",
-    amber: "text-amber-600",
-    emerald: "text-emerald-600",
+    ink:     "text-ink-900 dark:text-ink-50",
+    rose:    "text-rose-600 dark:text-rose-400",
+    amber:   "text-amber-600 dark:text-amber-400",
+    emerald: "text-emerald-600 dark:text-emerald-400",
   };
   return (
     <div>
       <div className={`text-2xl font-bold ${colors[tone]}`}>{value}</div>
-      <div className="text-[11px] text-ink-500 font-medium">{label}</div>
+      <div className="text-[11px] text-ink-500 dark:text-ink-400 font-medium">{label}</div>
     </div>
   );
 }
@@ -431,5 +431,5 @@ function Task({ text, done }: { text: string; done?: boolean }) {
 
 function Avatar({ name, src }: { name: string; src?: string }) {
   if (src) return <img src={src} alt={name} className="w-8 h-8 rounded-full" />;
-  return <div className="w-8 h-8 rounded-full bg-ink-200 text-ink-700 text-xs font-semibold flex items-center justify-center">{initials(name)}</div>;
+  return <div className="w-8 h-8 rounded-full bg-ink-200 dark:bg-ink-800 text-ink-700 dark:text-ink-300 text-xs font-semibold flex items-center justify-center">{initials(name)}</div>;
 }

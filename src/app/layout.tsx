@@ -14,9 +14,24 @@ export const metadata: Metadata = {
   description: "AI-powered scheduling, attendance, payroll & HR for multi-location teams.",
 };
 
+// Runs before hydration to set the right theme class on <html> — prevents flash
+const themeScript = `
+(function() {
+  try {
+    var t = localStorage.getItem('shyftforce-theme') || 'system';
+    var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.documentElement.classList.add('dark');
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>

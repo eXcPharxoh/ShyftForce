@@ -129,7 +129,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Empty({ text }: { text: string }) {
-  return <div className="text-xs text-ink-500 py-4 text-center">{text}</div>;
+  return <div className="text-xs text-ink-500 dark:text-ink-400 py-4 text-center">{text}</div>;
 }
 
 function StatusBadge({ status }: { status: string }) {

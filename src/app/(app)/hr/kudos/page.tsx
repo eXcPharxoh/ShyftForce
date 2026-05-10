@@ -2,6 +2,8 @@ import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { initials, relTime } from "@/lib/utils";
 import { KudosForm } from "@/components/hr/kudos-form";
+import { EmptyState } from "@/components/ui/empty-state";
+import { MessageSquareHeart } from "lucide-react";
 
 export default async function KudosPage() {
   const u = await requireUser();
@@ -46,7 +48,16 @@ export default async function KudosPage() {
                 </div>
               </li>
             ))}
-            {kudos.length === 0 && <li className="text-xs text-ink-500">Be the first to send one!</li>}
+            {kudos.length === 0 && (
+              <li>
+                <EmptyState
+                  icon={MessageSquareHeart}
+                  tone="brand"
+                  title="No high fives yet"
+                  description="Recognition is contagious. Send the first one to set the tone for your team."
+                />
+              </li>
+            )}
           </ul>
         </section>
       </div>

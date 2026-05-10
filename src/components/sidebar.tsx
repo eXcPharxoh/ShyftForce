@@ -50,14 +50,14 @@ export function Sidebar({ orgName, pendingOffers = 0 }: { orgName: string; pendi
   ];
 
   return (
-    <aside className="w-64 shrink-0 bg-white border-r border-ink-200/80 hidden lg:flex flex-col h-screen sticky top-0">
+    <aside className="w-64 shrink-0 bg-white dark:bg-ink-950 border-r border-ink-200/80 dark:border-ink-800/80 hidden lg:flex flex-col h-screen sticky top-0">
       {/* Brand */}
       <div className="px-5 py-5">
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
           <Logo size="md" />
           <div className="min-w-0">
             <Wordmark className="text-base block leading-none" />
-            <div className="text-[11px] text-ink-500 mt-1 truncate max-w-[150px]">{orgName}</div>
+            <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-1 truncate max-w-[150px]">{orgName}</div>
           </div>
         </Link>
       </div>
@@ -69,7 +69,7 @@ export function Sidebar({ orgName, pendingOffers = 0 }: { orgName: string; pendi
         {sections.map((sec, sIdx) => (
           <div key={sIdx} className={sIdx > 0 ? "mt-5" : ""}>
             {sec.label && (
-              <div className="px-2.5 mb-1.5 text-[10px] uppercase tracking-wider font-bold text-ink-400">{sec.label}</div>
+              <div className="px-2.5 mb-1.5 text-[10px] uppercase tracking-wider font-bold text-ink-400 dark:text-ink-500">{sec.label}</div>
             )}
             {sec.items.map(({ href, label, icon: Icon, badge }) => {
               const active = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
@@ -81,8 +81,8 @@ export function Sidebar({ orgName, pendingOffers = 0 }: { orgName: string; pendi
                     "relative flex items-center gap-3 px-2.5 py-2 rounded-xl text-[13px] font-medium mb-0.5",
                     "transition-all duration-150",
                     active
-                      ? "bg-brand-50 text-brand-700"
-                      : "text-ink-700 hover:bg-ink-100/70 hover:text-ink-900",
+                      ? "bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300"
+                      : "text-ink-700 dark:text-ink-300 hover:bg-ink-100/70 dark:hover:bg-ink-800/70 hover:text-ink-900 dark:hover:text-ink-50",
                   )}
                 >
                   {/* Active rail */}
@@ -92,13 +92,13 @@ export function Sidebar({ orgName, pendingOffers = 0 }: { orgName: string; pendi
                       active ? "bg-brand-500 opacity-100" : "opacity-0",
                     )}
                   />
-                  <Icon className={cn("w-[17px] h-[17px] shrink-0", active ? "text-brand-600" : "text-ink-400 group-hover:text-ink-600")} />
+                  <Icon className={cn("w-[17px] h-[17px] shrink-0", active ? "text-brand-600 dark:text-brand-300" : "text-ink-400 dark:text-ink-500")} />
                   <span className="flex-1 truncate">{label}</span>
                   {badge != null && (
                     <span
                       className={cn(
                         "min-w-[20px] text-center text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                        active ? "bg-brand-500 text-white" : "bg-ink-200 text-ink-700",
+                        active ? "bg-brand-500 text-white" : "bg-ink-200 text-ink-700 dark:bg-ink-800 dark:text-ink-300",
                       )}
                     >
                       {badge}

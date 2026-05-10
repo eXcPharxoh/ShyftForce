@@ -1,7 +1,9 @@
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { dateLabel } from "@/lib/utils";
-import { FileText, FileCheck, FileX, Inbox } from "lucide-react";
+import { FileText, FileCheck, FileX, Inbox, FolderClosed } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function DocumentsPage() {
   const u = await requireUser();
@@ -20,13 +22,14 @@ export default async function DocumentsPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Documents</h1>
-          <p className="text-sm text-ink-500">{documents.length} on file · {requests.filter(r => r.status === "pending").length} pending requests</p>
-        </div>
+      <PageHeader
+        eyebrow="Records"
+        icon={FolderClosed}
+        title="Documents"
+        subtitle={`${documents.length} on file · ${requests.filter(r => r.status === "pending").length} pending requests`}
+      >
         <button className="btn-primary">Upload</button>
-      </header>
+      </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <section className="card p-4">
@@ -42,7 +45,15 @@ export default async function DocumentsPage() {
                 <a href={d.url} className="btn-ghost text-xs">Open</a>
               </li>
             ))}
-            {documents.length === 0 && <li className="text-xs text-ink-500 py-3 text-center">No documents on file.</li>}
+            {documents.length === 0 && (
+              <li>
+                <EmptyState
+                  icon={FolderClosed}
+                  title="No documents on file"
+                  description="Upload signed contracts, ID verifications, training certs. Or send a document request to your team."
+                />
+              </li>
+            )}
           </ul>
         </section>
 
@@ -61,7 +72,16 @@ export default async function DocumentsPage() {
                 <span className={r.status === "pending" ? "badge bg-amber-50 text-amber-700" : "badge-green"}>{r.status}</span>
               </li>
             ))}
-            {requests.length === 0 && <li className="text-xs text-ink-500 py-3 text-center">No pending document requests.</li>}
+            {requests.length === 0 && (
+              <li>
+                <EmptyState
+                  icon={Inbox}
+                  tone="success"
+                  title="Inbox zero"
+                  description="No pending document requests. When you ask a team member for a document, you'll see it here."
+                />
+              </li>
+            )}
           </ul>
         </section>
       </div>

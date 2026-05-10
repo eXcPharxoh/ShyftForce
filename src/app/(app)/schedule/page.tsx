@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { addDays, dateLabel, initials, startOfWeek, timeLabel } from "@/lib/utils";
 import { ScheduleControls } from "@/components/schedule/schedule-controls";
 import { AutoScheduleButton } from "@/components/schedule/auto-schedule-button";
+import { ShiftCell } from "@/components/schedule/shift-cell";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -65,15 +66,18 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
       <div className="card overflow-x-auto">
         <table className="w-full text-sm min-w-[1000px]">
           <thead>
-            <tr className="border-b border-ink-200 bg-ink-50/60">
-              <th className="text-left p-3 w-56 font-medium text-ink-600 text-xs uppercase">Employee</th>
-              {days.map(d => (
-                <th key={+d} className="p-3 text-center font-medium text-ink-700">
-                  <div className="text-[11px] uppercase text-ink-500">{d.toLocaleDateString("en-US", { weekday: "short" })}</div>
-                  <div className="text-base">{d.getDate()}</div>
-                </th>
-              ))}
-              <th className="p-3 text-right font-medium text-ink-600 text-xs uppercase">Hrs</th>
+            <tr className="border-b border-ink-200 dark:border-ink-800 bg-ink-50/60 dark:bg-ink-900/60">
+              <th className="text-left p-3 w-56 font-semibold text-ink-600 dark:text-ink-400 text-[11px] uppercase tracking-wider">Employee</th>
+              {days.map(d => {
+                const isToday = d.toDateString() === new Date().toDateString();
+                return (
+                  <th key={+d} className={`p-3 text-center font-medium ${isToday ? "text-brand-600 dark:text-brand-400" : "text-ink-700 dark:text-ink-200"}`}>
+                    <div className={`text-[11px] uppercase tracking-wider ${isToday ? "text-brand-600 dark:text-brand-400 font-bold" : "text-ink-500 dark:text-ink-400"}`}>{d.toLocaleDateString("en-US", { weekday: "short" })}</div>
+                    <div className={`text-base ${isToday ? "inline-flex items-center justify-center w-7 h-7 rounded-full bg-brand-500 text-white" : ""}`}>{d.getDate()}</div>
+                  </th>
+                );
+              })}
+              <th className="p-3 text-right font-semibold text-ink-600 dark:text-ink-400 text-[11px] uppercase tracking-wider">Hrs</th>
             </tr>
           </thead>
           <tbody>
@@ -81,15 +85,15 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
               const memberShifts = byMemberDay.get(m.id);
               const mh = shifts.filter(s => s.memberId === m.id).reduce((a, s) => a + (+s.endsAt - +s.startsAt)/3600000, 0);
               return (
-                <tr key={m.id} className="border-b border-ink-100 hover:bg-ink-50/40">
+                <tr key={m.id} className="border-b border-ink-100 dark:border-ink-800 hover:bg-ink-50/40 dark:hover:bg-ink-900/40">
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       {m.user.avatar
                         ? <img src={m.user.avatar} className="w-7 h-7 rounded-full" alt="" />
-                        : <div className="w-7 h-7 rounded-full bg-ink-200 text-[11px] font-semibold flex items-center justify-center">{initials(m.user.name)}</div>}
+                        : <div className="w-7 h-7 rounded-full bg-ink-200 dark:bg-ink-800 text-[11px] font-semibold flex items-center justify-center">{initials(m.user.name)}</div>}
                       <div className="min-w-0">
-                        <div className="font-medium truncate">{m.user.name}</div>
-                        <div className="text-[11px] text-ink-500 truncate">{m.position} · {m.location?.name}</div>
+                        <div className="font-medium truncate text-ink-900 dark:text-ink-100">{m.user.name}</div>
+                        <div className="text-[11px] text-ink-500 dark:text-ink-400 truncate">{m.position} · {m.location?.name}</div>
                       </div>
                     </div>
                   </td>
@@ -99,10 +103,25 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                       <td key={i} className="p-2 align-top">
                         <div className="space-y-1">
                           {items.map((s: any) => (
-                            <div key={s.id} className={`rounded-lg px-2 py-1.5 text-[11px] ${s.status === "draft" ? "bg-amber-50 text-amber-800 border border-amber-200" : "bg-brand-50 text-brand-800 border border-brand-200"}`}>
-                              <div className="font-semibold">{timeLabel(s.startsAt)} – {timeLabel(s.endsAt)}</div>
-                              <div className="opacity-80 truncate">{s.location.name}</div>
-                            </div>
+                            <ShiftCell
+                              key={s.id}
+                              canEdit={u.role === "ADMIN" || u.role === "MANAGER"}
+                              members={members.map(mm => ({ id: mm.id, name: mm.user.name }))}
+                              shift={{
+                                id: s.id,
+                                memberId: s.memberId,
+                                memberName: s.member?.user?.name ?? null,
+                                locationId: s.locationId,
+                                locationName: s.location.name,
+                                date: new Date(s.startsAt).toISOString().slice(0,10),
+                                startTime: new Date(s.startsAt).toTimeString().slice(0,5),
+                                endTime:   new Date(s.endsAt).toTimeString().slice(0,5),
+                                position: s.position ?? "",
+                                notes: s.notes,
+                                status: s.status,
+                                isOpen: s.isOpen,
+                              }}
+                            />
                           ))}
                           {items.length === 0 && <div className="h-7" />}
                         </div>

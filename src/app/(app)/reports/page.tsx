@@ -75,7 +75,7 @@ export default async function ReportsPage() {
                     {l.overtime > 0 && <><span className="text-ink-400 mx-1.5">·</span><span className="text-amber-700">{fmtHours(l.overtime)} OT</span></>}
                   </span>
                 </div>
-                <div className="h-2.5 rounded-full bg-ink-100 overflow-hidden">
+                <div className="h-2.5 rounded-full bg-ink-100 dark:bg-ink-800 overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full transition-all"
                     style={{ width: `${Math.max(2, pct)}%` }}
@@ -94,7 +94,7 @@ export default async function ReportsPage() {
             const heightPct = Math.max(3, (byDow[i] / dowMax) * 100);
             return (
               <div key={d} className="flex flex-col items-center">
-                <div className="relative w-full h-44 flex items-end rounded-xl bg-ink-50/60 p-2">
+                <div className="relative w-full h-44 flex items-end rounded-xl bg-ink-50/60 dark:bg-ink-800/40 p-2">
                   <div
                     className="w-full rounded-lg bg-gradient-to-t from-brand-600 to-brand-400 transition-all hover:from-brand-700 hover:to-brand-500 shadow-sm"
                     style={{ height: `${heightPct}%` }}

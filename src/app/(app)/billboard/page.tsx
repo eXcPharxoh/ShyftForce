@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { initials, relTime } from "@/lib/utils";
 import { Megaphone } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function BillboardPage() {
   const u = await requireUser();
@@ -41,7 +42,16 @@ export default async function BillboardPage() {
             </div>
           </article>
         ))}
-        {posts.length === 0 && <div className="card p-8 text-center text-sm text-ink-500">No announcements yet.</div>}
+        {posts.length === 0 && (
+          <div className="card">
+            <EmptyState
+              icon={Megaphone}
+              tone="brand"
+              title="No announcements yet"
+              description="Share company news, schedule updates, or shoutouts. Posts here notify your whole team and show up in their notifications."
+            />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -72,7 +72,13 @@ export function MessengerClient({
               </div>
             </header>
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 scroll-thin space-y-2">
-              {thread.length === 0 && <div className="text-xs text-ink-500 text-center mt-8">Start the conversation. Say hi 👋</div>}
+              {thread.length === 0 && (
+                <div className="text-center mt-12">
+                  <div className="text-5xl mb-3">👋</div>
+                  <div className="font-semibold text-ink-700 dark:text-ink-200">Say hi to {active.name.split(" ")[0]}</div>
+                  <div className="text-xs text-ink-500 dark:text-ink-400 mt-1 max-w-xs mx-auto">No messages yet. Drop the first one — they'll get a notification.</div>
+                </div>
+              )}
               {thread.map(m => {
                 const mine = m.fromId === me.id;
                 return (
@@ -91,7 +97,10 @@ export function MessengerClient({
             </form>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-ink-500 text-sm">Pick a teammate to start chatting.</div>
+          <div className="flex-1 flex items-center justify-center text-ink-500 dark:text-ink-400 text-sm flex-col gap-2">
+            <Send className="w-8 h-8 text-ink-300 dark:text-ink-600" />
+            <div>Pick a teammate to start chatting.</div>
+          </div>
         )}
       </section>
     </div>

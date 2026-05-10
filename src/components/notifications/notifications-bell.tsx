@@ -57,10 +57,10 @@ export function NotificationsBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(v => !v)}
-        className="relative w-10 h-10 rounded-xl hover:bg-ink-100 flex items-center justify-center transition"
+        className="relative w-10 h-10 rounded-xl hover:bg-ink-100 dark:hover:bg-ink-800 flex items-center justify-center transition"
         aria-label={`Notifications${count ? ` (${count})` : ""}`}
       >
-        <Bell className="w-[18px] h-[18px] text-ink-600" />
+        <Bell className="w-[18px] h-[18px] text-ink-600 dark:text-ink-300" />
         {count > 0 && (
           <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] text-[10px] font-bold
                            bg-brand-500 text-white rounded-full px-1 flex items-center justify-center
@@ -72,10 +72,10 @@ export function NotificationsBell() {
 
       {open && (
         <div className="absolute right-0 top-12 w-96 max-w-[calc(100vw-2rem)] card p-0 z-50 animate-scale-in origin-top-right overflow-hidden">
-          <header className="px-4 py-3 border-b border-ink-100 flex items-center justify-between">
+          <header className="px-4 py-3 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold">Notifications</div>
-              <div className="text-[11px] text-ink-500">{count > 0 ? `${count} item${count === 1 ? "" : "s"} need attention` : "You're all caught up"}</div>
+              <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">Notifications</div>
+              <div className="text-[11px] text-ink-500 dark:text-ink-400">{count > 0 ? `${count} item${count === 1 ? "" : "s"} need attention` : "You're all caught up"}</div>
             </div>
             {loading && <Loader2 className="w-4 h-4 animate-spin text-ink-400" />}
           </header>
@@ -86,29 +86,29 @@ export function NotificationsBell() {
             )}
             {loadedOnce && items.length === 0 && (
               <div className="p-10 text-center">
-                <div className="mx-auto w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+                <div className="mx-auto w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <div className="text-sm font-semibold text-ink-800">No new notifications</div>
-                <div className="text-[11px] text-ink-500 mt-1">We'll let you know when something needs you.</div>
+                <div className="text-sm font-semibold text-ink-800 dark:text-ink-100">No new notifications</div>
+                <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-1">We'll let you know when something needs you.</div>
               </div>
             )}
             {loadedOnce && items.length > 0 && (
-              <ul className="divide-y divide-ink-100">
+              <ul className="divide-y divide-ink-100 dark:divide-ink-800">
                 {items.map(n => (
                   <li key={n.id}>
                     <Link
                       href={n.href as any}
                       onClick={() => setOpen(false)}
-                      className="flex items-start gap-3 px-4 py-3 hover:bg-ink-50 transition"
+                      className="flex items-start gap-3 px-4 py-3 hover:bg-ink-50 dark:hover:bg-ink-800/50 transition"
                     >
-                      <span className="w-9 h-9 rounded-xl bg-ink-100/80 flex items-center justify-center text-base shrink-0">
+                      <span className="w-9 h-9 rounded-xl bg-ink-100/80 dark:bg-ink-800/80 flex items-center justify-center text-base shrink-0">
                         {n.emoji}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-semibold text-ink-900 truncate">{n.title}</div>
-                        {n.body && <div className="text-[11px] text-ink-500 truncate">{n.body}</div>}
-                        <div className="text-[10px] text-ink-400 mt-0.5">{relTime(n.createdAt)}</div>
+                        <div className="text-[13px] font-semibold text-ink-900 dark:text-ink-50 truncate">{n.title}</div>
+                        {n.body && <div className="text-[11px] text-ink-500 dark:text-ink-400 truncate">{n.body}</div>}
+                        <div className="text-[10px] text-ink-400 dark:text-ink-500 mt-0.5">{relTime(n.createdAt)}</div>
                       </div>
                       <span className={
                         "shrink-0 mt-1 w-1.5 h-1.5 rounded-full " +
@@ -122,9 +122,9 @@ export function NotificationsBell() {
             )}
           </div>
 
-          <footer className="px-4 py-2.5 border-t border-ink-100 bg-ink-50/50 flex items-center justify-between">
-            <Link href="/messenger" onClick={() => setOpen(false)} className="text-[11px] text-brand-600 font-semibold hover:underline">Open Messenger</Link>
-            <Link href="/settings/audit" onClick={() => setOpen(false)} className="text-[11px] text-ink-500 hover:text-ink-700 inline-flex items-center gap-1">
+          <footer className="px-4 py-2.5 border-t border-ink-100 dark:border-ink-800 bg-ink-50/50 dark:bg-ink-950/50 flex items-center justify-between">
+            <Link href="/messenger" onClick={() => setOpen(false)} className="text-[11px] text-brand-600 dark:text-brand-400 font-semibold hover:underline">Open Messenger</Link>
+            <Link href="/settings/audit" onClick={() => setOpen(false)} className="text-[11px] text-ink-500 dark:text-ink-400 hover:text-ink-700 dark:hover:text-ink-200 inline-flex items-center gap-1">
               <Inbox className="w-3 h-3" /> View audit log
             </Link>
           </footer>
