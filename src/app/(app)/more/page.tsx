@@ -1,19 +1,20 @@
 import Link from "next/link";
-import { Award, Bell, BookOpen, BrainCircuit, Building2, FileBarChart, Gift, KeyRound, Receipt, Settings, ShieldCheck, Wrench } from "lucide-react";
+import { Award, Bell, BookOpen, BrainCircuit, Building2, CreditCard, FileBarChart, FileText, Gift, KeyRound, Receipt, Settings, ShieldCheck, Wrench } from "lucide-react";
 
 const ITEMS = [
+  { href: "/settings/billing",   label: "Billing & plan",       icon: CreditCard },
   { href: "/settings/locations", label: "Locations & geofences", icon: Building2 },
-  { href: "/attendance#tipping", label: "Tip management", icon: Receipt },
-  { href: "/reports", label: "Advanced reports", icon: FileBarChart },
-  { href: "/hr/surveys", label: "Survey library", icon: BookOpen },
-  { href: "#", label: "Permissions & roles", icon: ShieldCheck },
-  { href: "#", label: "Notification rules", icon: Bell },
-  { href: "#", label: "API keys", icon: KeyRound },
-  { href: "#", label: "Integrations", icon: Wrench },
-  { href: "#", label: "Referral program", icon: Gift },
-  { href: "#", label: "Workspace settings", icon: Settings },
-  { href: "#", label: "AI co-pilot (beta)", icon: BrainCircuit },
-  { href: "#", label: "Awards & recognition", icon: Award },
+  { href: "/settings/audit",     label: "Audit log",            icon: FileText },
+  { href: "/attendance#tipping", label: "Tip management",       icon: Receipt },
+  { href: "/reports",            label: "Advanced reports",     icon: FileBarChart },
+  { href: "/hr/surveys",         label: "Survey library",       icon: BookOpen },
+  { href: "/compliance",         label: "Compliance Autopilot", icon: ShieldCheck },
+  { href: "#", label: "Permissions & roles",   icon: ShieldCheck },
+  { href: "#", label: "Notification rules",    icon: Bell },
+  { href: "#", label: "API keys",              icon: KeyRound },
+  { href: "#", label: "Integrations",          icon: Wrench },
+  { href: "#", label: "Referral program",      icon: Gift },
+  { href: "#", label: "Workspace settings",    icon: Settings },
 ];
 
 export default function MorePage() {

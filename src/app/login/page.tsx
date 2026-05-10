@@ -60,6 +60,10 @@ export default function LoginPage() {
           <input className="input mb-4" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           {err && <div className="text-rose-600 text-sm mb-3">{err}</div>}
           <button className="btn-primary w-full py-2.5" disabled={loading}>{loading ? "Signing in…" : "Sign in"}</button>
+          <div className="flex items-center justify-between text-xs mt-3">
+            <a href="/forgot-password" className="text-brand-600 hover:underline">Forgot password?</a>
+            <a href="/signup" className="text-brand-600 hover:underline">Create workspace →</a>
+          </div>
           <div className="mt-6 text-xs text-ink-500 leading-relaxed">
             <div className="font-medium text-ink-700 mb-1">Demo credentials</div>
             <div>admin@platinum.com / password   <span className="badge-orange">Admin</span></div>

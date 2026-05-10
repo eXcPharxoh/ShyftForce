@@ -1,14 +1,19 @@
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { dateLabel, fmtMoney, initials } from "@/lib/utils";
+import { InviteButton } from "@/components/hr/invite-button";
 
 export default async function MembersPage() {
   const u = await requireUser();
-  const members = await prisma.member.findMany({
-    where: { organizationId: u.organizationId },
-    include: { user: true, location: true },
-    orderBy: [{ role: "asc" }, { user: { name: "asc" } }],
-  });
+  const [members, locations] = await Promise.all([
+    prisma.member.findMany({
+      where: { organizationId: u.organizationId },
+      include: { user: true, location: true },
+      orderBy: [{ role: "asc" }, { user: { name: "asc" } }],
+    }),
+    prisma.location.findMany({ where: { organizationId: u.organizationId }, orderBy: { name: "asc" } }),
+  ]);
+  const isManager = u.role === "ADMIN" || u.role === "MANAGER";
 
   return (
     <div className="space-y-5">
@@ -17,7 +22,7 @@ export default async function MembersPage() {
           <h1 className="text-2xl font-bold tracking-tight">Members</h1>
           <p className="text-sm text-ink-500">{members.length} people across {new Set(members.map(m=>m.locationId)).size} locations</p>
         </div>
-        <button className="btn-primary">Invite member</button>
+        {isManager && <InviteButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />}
       </header>
 
       <section className="card overflow-hidden">

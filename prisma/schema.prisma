@@ -13,6 +13,19 @@ model Organization {
   name        String
   createdAt   DateTime @default(now())
 
+  // Branding
+  logoUrl     String?
+  timezone    String   @default("America/New_York")
+  industry    String?  // restaurant | retail | healthcare | field_service | office | fitness | other
+  isDemo      Boolean  @default(false)
+
+  // Billing (Stripe)
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?
+  plan                  String   @default("trial")  // trial | starter | pro | enterprise
+  trialEndsAt           DateTime?
+  subscriptionStatus    String?  // active | past_due | canceled | incomplete
+
   locations       Location[]
   members         Member[]
   payPeriods      PayPeriod[]
@@ -22,6 +35,8 @@ model Organization {
   dayNotes        DayNote[]
   hrReminders     HRReminder[]
   complianceSettings ComplianceSettings?
+  invitations     Invitation[]
+  auditLogs       AuditLog[]
 }
 
 model ComplianceSettings {
@@ -62,7 +77,76 @@ model User {
   avatar    String?
   createdAt DateTime @default(now())
 
-  member Member?
+  emailVerified         DateTime?
+  failedLoginAttempts   Int       @default(0)
+  lockedUntil           DateTime?
+
+  member            Member?
+  emailTokens       EmailVerification[]
+  passwordResets    PasswordReset[]
+  auditLogs         AuditLog[]
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([token])
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([token])
+}
+
+model Invitation {
+  id              String    @id @default(uuid())
+  organizationId  String
+  email           String
+  role            String    @default("EMPLOYEE")  // ADMIN | MANAGER | EMPLOYEE
+  token           String    @unique
+  invitedById     String?
+  position        String?
+  locationId      String?
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([token])
+  @@index([organizationId, email])
+}
+
+model AuditLog {
+  id              String   @id @default(uuid())
+  organizationId  String
+  actorId         String?  // user id; null = system
+  action          String   // e.g. "shift.create", "timesheet.approve", "billing.upgrade"
+  entityType      String?  // e.g. "Shift", "Member"
+  entityId        String?
+  metadata        String?  // JSON string for diff/payload
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([actorId])
+  @@index([entityType, entityId])
 }
 
 // SQLite has no enums — Role is a string: "ADMIN" | "MANAGER" | "EMPLOYEE"
