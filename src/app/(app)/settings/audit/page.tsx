@@ -2,6 +2,7 @@ import { requireManagerOrAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { relTime } from "@/lib/utils";
 import { FileText } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 const ACTION_LABELS: Record<string, string> = {
   "user.signup":              "Account created",
@@ -43,12 +44,12 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-5 max-w-4xl">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <FileText className="w-6 h-6 text-brand-500" /> Audit log
-        </h1>
-        <p className="text-sm text-ink-500">Every change in your workspace, immutable. {total.toLocaleString()} total events.</p>
-      </header>
+      <PageHeader
+        eyebrow="Trust & security"
+        icon={FileText}
+        title="Audit log"
+        subtitle={`Every change in your workspace, immutable. ${total.toLocaleString()} total event${total === 1 ? "" : "s"}.`}
+      />
 
       <section className="card overflow-hidden">
         <ul className="divide-y divide-ink-100">

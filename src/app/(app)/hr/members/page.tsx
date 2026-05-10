@@ -2,6 +2,8 @@ import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { dateLabel, fmtMoney, initials } from "@/lib/utils";
 import { InviteButton } from "@/components/hr/invite-button";
+import { PageHeader } from "@/components/ui/page-header";
+import { Users } from "lucide-react";
 
 export default async function MembersPage() {
   const u = await requireUser();
@@ -17,13 +19,14 @@ export default async function MembersPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Members</h1>
-          <p className="text-sm text-ink-500">{members.length} people across {new Set(members.map(m=>m.locationId)).size} locations</p>
-        </div>
+      <PageHeader
+        eyebrow="Team"
+        icon={Users}
+        title="Members"
+        subtitle={`${members.length} ${members.length === 1 ? "person" : "people"} across ${new Set(members.map(m=>m.locationId)).size} location${new Set(members.map(m=>m.locationId)).size === 1 ? "" : "s"}`}
+      >
         {isManager && <InviteButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />}
-      </header>
+      </PageHeader>
 
       <section className="card overflow-hidden">
         <table className="w-full text-sm">

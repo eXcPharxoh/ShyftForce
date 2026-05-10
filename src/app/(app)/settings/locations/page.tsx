@@ -2,6 +2,7 @@ import { requireManagerOrAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { LocationSettingsRow } from "@/components/locations/location-settings-row";
 import { Building2 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function LocationSettingsPage() {
   const u = await requireManagerOrAdmin();
@@ -12,12 +13,12 @@ export default async function LocationSettingsPage() {
 
   return (
     <div className="space-y-5 max-w-3xl">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Building2 className="w-6 h-6 text-brand-500" /> Locations & geofences
-        </h1>
-        <p className="text-sm text-ink-500">Set GPS coordinates and geofence radius for each site. Affects clock-in verification.</p>
-      </header>
+      <PageHeader
+        eyebrow="Workspace"
+        icon={Building2}
+        title="Locations & geofences"
+        subtitle="Set GPS coordinates and geofence radius for each site. Affects clock-in verification."
+      />
 
       <section className="card overflow-hidden">
         <ul className="divide-y divide-ink-100">

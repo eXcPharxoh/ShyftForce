@@ -5,6 +5,7 @@ import { checkCompliance, RULE_META, type Violation } from "@/lib/compliance/eng
 import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 import { ShieldCheck, AlertTriangle, AlertOctagon, Sparkles, Settings as SettingsIcon } from "lucide-react";
 import { ComplianceSettingsButton } from "@/components/compliance/settings-button";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function CompliancePage() {
   const u = await requireUser();
@@ -42,15 +43,14 @@ export default async function CompliancePage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-brand-500" /> Compliance Autopilot
-          </h1>
-          <p className="text-sm text-ink-500">{dateLabel(start)} → {dateLabel(addDays(end, -1))} · {shifts.length} shifts checked</p>
-        </div>
+      <PageHeader
+        eyebrow="Labor compliance"
+        icon={ShieldCheck}
+        title="Compliance Autopilot"
+        subtitle={`${dateLabel(start)} → ${dateLabel(addDays(end, -1))} · ${shifts.length} shifts checked`}
+      >
         <ComplianceSettingsButton settings={settings} />
-      </header>
+      </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <Stat tone={isClean ? "emerald" : "ink"} icon={<ShieldCheck className="w-5 h-5" />} label="Status" value={isClean ? "All clear" : "Action needed"} />

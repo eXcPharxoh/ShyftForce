@@ -9,6 +9,7 @@ import Link from "next/link";
 import { AlertCircle, Cake, CheckCircle2, FileText, Gift, MessageCircle, Sparkles, Users, ShieldCheck, AlertOctagon, AlertTriangle } from "lucide-react";
 import { checkCompliance } from "@/lib/compliance/engine";
 import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
+import { DashboardHero } from "@/components/dashboard/hero";
 
 export default async function Dashboard() {
   const u = await requireUser();
@@ -99,12 +100,15 @@ export default async function Dashboard() {
   const complianceWarnings = complianceViolations.filter(v => v.severity === "warning").length;
 
   return (
-    <div className="space-y-5">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Welcome back, {u.name.split(" ")[0]} 👋</h1>
-          <p className="text-sm text-ink-500 mt-0.5">{u.organizationName} · {locations.length} locations · {totalMembers} active members</p>
-        </div>
+    <div className="space-y-6">
+      <DashboardHero
+        name={u.name}
+        orgName={u.organizationName}
+        locationCount={locations.length}
+        memberCount={totalMembers}
+      />
+
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <select className="input h-9 w-44">
             <option>All Locations</option>
@@ -117,9 +121,9 @@ export default async function Dashboard() {
             <option>Patrol</option>
             <option>Dispatcher</option>
           </select>
-          <button className="btn-outline h-9">Customize</button>
         </div>
-      </header>
+        <button className="btn-ghost text-xs">Customize widgets</button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* 1 — Date / Time */}
@@ -364,12 +368,21 @@ export default async function Dashboard() {
         </WidgetCard>
       </div>
 
-      <div className="rounded-2xl bg-gradient-to-br from-brand-500 via-brand-600 to-rose-500 text-white p-5 flex items-center justify-between">
-        <div>
-          <div className="text-sm opacity-90">New feature</div>
-          <h3 className="text-lg font-bold">Tip Management — automated tip calc & distribution</h3>
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-500 via-brand-600 to-rose-500 text-white p-6 md:p-8">
+        <div className="absolute inset-0 bg-noise opacity-30 mix-blend-overlay pointer-events-none" />
+        <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <div className="badge bg-white/20 text-white ring-white/30 mb-2">
+              <Sparkles className="w-3 h-3" /> New
+            </div>
+            <h3 className="text-xl md:text-2xl font-bold tracking-tight-2">Tip Management — automated calc & distribution</h3>
+            <p className="text-sm text-white/80 mt-1.5">Hours-weighted, role-weighted, or custom rules. Powered by your POS data.</p>
+          </div>
+          <Link href="/attendance" className="bg-white text-brand-700 hover:bg-white/95 btn shadow-soft self-start md:self-auto">
+            Set up tipping →
+          </Link>
         </div>
-        <Link href="/attendance" className="bg-white text-brand-700 hover:bg-white/90 btn">Set up tipping</Link>
       </div>
     </div>
   );

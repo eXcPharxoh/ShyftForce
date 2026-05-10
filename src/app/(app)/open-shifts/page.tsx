@@ -4,6 +4,7 @@ import { dateLabel, fmtHours, initials, relTime, timeLabel } from "@/lib/utils";
 import { ClaimButton } from "@/components/marketplace/claim-button";
 import { ManagerOpenShiftRow } from "@/components/marketplace/manager-open-shift-row";
 import { CalendarClock, ShoppingBag, Users, AlertTriangle } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function OpenShiftsPage() {
   const u = await requireUser();
@@ -34,14 +35,12 @@ export default async function OpenShiftsPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <ShoppingBag className="w-6 h-6 text-brand-500" /> Open Shifts Marketplace
-          </h1>
-          <p className="text-sm text-ink-500">{openShifts.length} open shifts · {myOffers.length} {myOffers.length === 1 ? "offer is" : "offers are"} waiting for you</p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Marketplace"
+        icon={ShoppingBag}
+        title="Open shifts"
+        subtitle={`${openShifts.length} open shift${openShifts.length === 1 ? "" : "s"} · ${myOffers.length} ${myOffers.length === 1 ? "offer waiting for you" : "offers waiting for you"}`}
+      />
 
       {!isManager && myOffers.length > 0 && (
         <section className="card p-4 border-brand-200 bg-gradient-to-br from-brand-50 to-rose-50">

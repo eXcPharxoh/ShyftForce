@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { PLAN_LIMITS } from "@/lib/stripe";
 import { BillingActions } from "@/components/billing/billing-actions";
 import { CreditCard, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function BillingPage() {
   const u = await requireUser();
@@ -18,12 +19,12 @@ export default async function BillingPage() {
 
   return (
     <div className="space-y-5 max-w-4xl">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <CreditCard className="w-6 h-6 text-brand-500" /> Billing & plan
-        </h1>
-        <p className="text-sm text-ink-500">Manage your subscription, view invoices, change card.</p>
-      </header>
+      <PageHeader
+        eyebrow="Billing"
+        icon={CreditCard}
+        title="Billing & plan"
+        subtitle="Manage your subscription, view invoices, update your card."
+      />
 
       {/* Current plan */}
       <section className="card p-5 bg-gradient-to-br from-brand-50 to-rose-50 border-brand-200">
