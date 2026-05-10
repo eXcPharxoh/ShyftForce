@@ -1,15 +1,17 @@
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { dateLabel, fmtHours, fmtMoney, initials, timeLabel } from "@/lib/utils";
+import { fmtDistance } from "@/lib/geo";
 import { ClockButton } from "@/components/attendance/clock-button";
 import { TimesheetActions } from "@/components/attendance/timesheet-actions";
 import Link from "next/link";
+import { MapPin, ShieldCheck, AlertTriangle, Camera } from "lucide-react";
 
 export default async function AttendancePage() {
   const u = await requireUser();
   const orgId = u.organizationId;
 
-  const [period, members, allLogs] = await Promise.all([
+  const [period, members, allLogs, recentLogs] = await Promise.all([
     prisma.payPeriod.findFirst({
       where: { organizationId: orgId, status: "open" },
       include: {
@@ -18,7 +20,13 @@ export default async function AttendancePage() {
     }),
     prisma.member.findMany({ where: { organizationId: orgId, status: "active" }, include: { user: true, location: true } }),
     prisma.attendanceLog.findMany({ where: { member: { organizationId: orgId } }, orderBy: { at: "asc" } }),
+    prisma.attendanceLog.findMany({
+      where: { member: { organizationId: orgId } },
+      orderBy: { at: "desc" }, take: 12,
+      include: { member: { include: { user: true, location: true } } },
+    }),
   ]);
+  const isManager = u.role === "ADMIN" || u.role === "MANAGER";
 
   // current status per member
   const status = new Map<string, { state: "in" | "break" | "out"; since: Date }>();
@@ -77,7 +85,16 @@ export default async function AttendancePage() {
                 {myState === "out" && <span className="text-ink-500">● Off duty</span>}
               </div>
             </div>
-            <ClockButton memberId={me.id} state={myState} />
+            <ClockButton
+              memberId={me.id}
+              state={myState}
+              assignedLocation={me.location ? {
+                name: me.location.name,
+                latitude: me.location.latitude,
+                longitude: me.location.longitude,
+                geofenceRadiusMeters: me.location.geofenceRadiusMeters ?? 100,
+              } : null}
+            />
           </div>
         </section>
       )}
@@ -134,6 +151,50 @@ export default async function AttendancePage() {
         </div>
       </section>
 
+      {isManager && (
+        <section className="card overflow-hidden">
+          <header className="px-5 py-3 border-b border-ink-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-brand-500" /> Clock-in proof</h3>
+              <p className="text-[11px] text-ink-500">Recent events with GPS + selfie verification.</p>
+            </div>
+            <span className="badge bg-emerald-50 text-emerald-700">{recentLogs.filter(l => l.verified).length} of {recentLogs.length} verified</span>
+          </header>
+          <ul className="divide-y divide-ink-100">
+            {recentLogs.length === 0 && <li className="p-6 text-center text-sm text-ink-500">No clock events yet.</li>}
+            {recentLogs.map(l => (
+              <li key={l.id} className="px-5 py-3 flex items-center gap-3">
+                {l.photoData
+                  ? <img src={l.photoData} alt="" className="w-12 h-12 rounded-lg object-cover border border-ink-200" />
+                  : <div className="w-12 h-12 rounded-lg bg-ink-100 text-ink-400 flex items-center justify-center"><Camera className="w-5 h-5" /></div>}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm">
+                    <span className="font-medium">{l.member.user.name}</span>
+                    <span className="text-ink-500"> · {labelForType(l.type)}</span>
+                    <span className="text-[11px] text-ink-400 ml-2">{l.at.toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</span>
+                  </div>
+                  <div className="text-[11px] text-ink-500 truncate flex items-center gap-1">
+                    {l.member.location?.name ?? "—"}
+                    {l.distanceMeters != null && <>
+                      <span className="mx-1">·</span>
+                      <MapPin className="w-3 h-3" /> {fmtDistance(l.distanceMeters)} from site
+                    </>}
+                  </div>
+                </div>
+                <div className="text-right text-[11px] shrink-0">
+                  {l.withinGeofence === true   && <span className="badge bg-emerald-50 text-emerald-700 flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> in geofence</span>}
+                  {l.withinGeofence === false  && <span className="badge bg-amber-50 text-amber-700 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> outside</span>}
+                  {l.withinGeofence == null    && <span className="badge-gray">unverified</span>}
+                  {l.latitude != null && l.longitude != null && (
+                    <a className="block mt-1 text-brand-600 hover:underline" target="_blank" rel="noopener" href={`https://www.google.com/maps?q=${l.latitude},${l.longitude}`}>view on map ↗</a>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section id="tipping" className="card p-5">
         <h3 className="text-sm font-semibold mb-1">Tip Management</h3>
         <p className="text-xs text-ink-500 mb-3">Automated calculation & distribution. Configure your pool rules and let the engine handle the rest.</p>
@@ -163,4 +224,14 @@ function Stat({ label, value, tone = "ink" }: { label: string; value: string | n
       <div className={`text-2xl font-bold mt-1 ${map[tone]}`}>{value}</div>
     </div>
   );
+}
+
+function labelForType(t: string): string {
+  switch (t) {
+    case "clock_in":    return "clocked in";
+    case "clock_out":   return "clocked out";
+    case "break_start": return "started break";
+    case "break_end":   return "ended break";
+    default:            return t;
+  }
 }

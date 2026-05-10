@@ -44,6 +44,9 @@ model Location {
   name            String
   weeklyBudget    Float?
   projectedRevenue Float?
+  latitude               Float?
+  longitude              Float?
+  geofenceRadiusMeters   Int      @default(100)
   createdAt       DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -218,10 +221,18 @@ model TimesheetEntry {
 }
 
 model AttendanceLog {
-  id       String   @id @default(uuid())
-  memberId String
-  type     String
-  at       DateTime @default(now())
+  id              String   @id @default(uuid())
+  memberId        String
+  type            String
+  at              DateTime @default(now())
+  latitude        Float?
+  longitude       Float?
+  accuracyMeters  Float?
+  photoData       String?      // base64 data URL (~50KB JPEG); for production swap to S3 URL
+  locationId      String?      // location they were assigned to at time of clock
+  distanceMeters  Float?       // computed distance to assigned location
+  withinGeofence  Boolean?     // null = unknown (no GPS), true/false = computed
+  verified        Boolean      @default(false)  // true if both GPS+photo were captured
 
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }

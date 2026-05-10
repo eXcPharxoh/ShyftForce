@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Award, Bell, BookOpen, BrainCircuit, Building2, FileBarChart, Gift, KeyRound, Receipt, Settings, ShieldCheck, Wrench } from "lucide-react";
 
 const ITEMS = [
-  { href: "/hr/members", label: "Locations & sites", icon: Building2 },
+  { href: "/settings/locations", label: "Locations & geofences", icon: Building2 },
   { href: "/attendance#tipping", label: "Tip management", icon: Receipt },
   { href: "/reports", label: "Advanced reports", icon: FileBarChart },
   { href: "/hr/surveys", label: "Survey library", icon: BookOpen },

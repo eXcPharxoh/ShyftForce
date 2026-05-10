@@ -38,10 +38,10 @@ async function main() {
   });
 
   const locationsData = [
-    { name: "yoko luna",          weeklyBudget: 12500, projectedRevenue: 14200 },
-    { name: "Supermarché PA",     weeklyBudget: 9800,  projectedRevenue: 10100 },
-    { name: "9487-6752 Québec inc", weeklyBudget: 7200, projectedRevenue: 6900 },
-    { name: "PANGEA",             weeklyBudget: 11000, projectedRevenue: 11800 },
+    { name: "yoko luna",            weeklyBudget: 12500, projectedRevenue: 14200, latitude: 45.5088, longitude: -73.5878, geofenceRadiusMeters: 75  },
+    { name: "Supermarché PA",       weeklyBudget: 9800,  projectedRevenue: 10100, latitude: 45.5230, longitude: -73.5870, geofenceRadiusMeters: 50  },
+    { name: "9487-6752 Québec inc", weeklyBudget: 7200,  projectedRevenue: 6900,  latitude: 45.5582, longitude: -73.6580, geofenceRadiusMeters: 120 },
+    { name: "PANGEA",               weeklyBudget: 11000, projectedRevenue: 11800, latitude: 45.4972, longitude: -73.5784, geofenceRadiusMeters: 100 },
   ];
   const locations = await Promise.all(
     locationsData.map((d) => db.location.create({ data: { ...d, organizationId: org.id } })),
