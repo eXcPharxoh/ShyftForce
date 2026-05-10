@@ -122,7 +122,7 @@ export default async function Dashboard() {
             <option>Dispatcher</option>
           </select>
         </div>
-        <button className="btn-ghost text-xs">Customize widgets</button>
+        <Link href="/more" className="btn-ghost text-xs">Workspace settings →</Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

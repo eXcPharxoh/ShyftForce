@@ -36,7 +36,7 @@ export function MessengerClient({
   }
 
   return (
-    <div className="card overflow-hidden grid grid-cols-1 md:grid-cols-[280px_1fr] h-[calc(100vh-7.5rem)]">
+    <div className="card overflow-hidden grid grid-cols-1 md:grid-cols-[280px_1fr] h-[calc(100vh-14rem)] min-h-[480px]">
       <aside className="border-r border-ink-200 overflow-y-auto scroll-thin">
         <div className="p-3 border-b border-ink-100">
           <input className="input h-9" placeholder="Search teammates" />

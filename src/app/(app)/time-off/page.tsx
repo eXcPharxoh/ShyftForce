@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { dateLabel, initials, relTime } from "@/lib/utils";
 import { TimeOffActions } from "@/components/time-off/time-off-actions";
 import { TimeOffForm } from "@/components/time-off/time-off-form";
+import { PageHeader } from "@/components/ui/page-header";
+import { Moon } from "lucide-react";
 
 export default async function TimeOffPage() {
   const u = await requireUser();
@@ -20,12 +22,12 @@ export default async function TimeOffPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Time Off</h1>
-          <p className="text-sm text-ink-500">{requests.length} total requests · {pending.length} pending</p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Leave management"
+        icon={Moon}
+        title="Time Off"
+        subtitle={`${requests.length} total request${requests.length === 1 ? "" : "s"} · ${pending.length} pending`}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-3">

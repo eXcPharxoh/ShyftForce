@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { dateLabel, initials, relTime } from "@/lib/utils";
 import { Award, Cake, FileCheck2, GraduationCap, MessageSquareHeart, Users } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function HRPage() {
   const u = await requireUser();
@@ -17,10 +18,12 @@ export default async function HRPage() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight">HR</h1>
-        <p className="text-sm text-ink-500">People operations — members, recognition, surveys, onboarding.</p>
-      </header>
+      <PageHeader
+        eyebrow="People operations"
+        icon={Users}
+        title="HR"
+        subtitle="Members, recognition, surveys, onboarding."
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Tile icon={<Users className="w-5 h-5" />} href="/hr/members" title="Members" subtitle={`${members} active`} />

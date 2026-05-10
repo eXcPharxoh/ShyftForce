@@ -1,10 +1,11 @@
 "use client";
-import { Bell, Settings, LogOut, Clock, Sparkles, User as UserIcon, CreditCard, ChevronDown } from "lucide-react";
+import { Settings, LogOut, Clock, Sparkles, User as UserIcon, CreditCard, ChevronDown } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { initials } from "@/lib/utils";
 import Link from "next/link";
 import { CopilotPanel } from "@/components/copilot/copilot-panel";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 
 export function Topbar({ name, role, image }: { name: string; role?: string; image?: string | null }) {
   const [open, setOpen] = useState(false);
@@ -22,14 +23,16 @@ export function Topbar({ name, role, image }: { name: string; role?: string; ima
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Close user menu on outside click
+  // Close user menu on outside click — always-on
   useEffect(() => {
     function onClick(e: MouseEvent) {
-      if (open && menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+      if (!menuRef.current) return;
+      if (menuRef.current.contains(e.target as Node)) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
+  }, []);
 
   return (
     <>
@@ -58,12 +61,7 @@ export function Topbar({ name, role, image }: { name: string; role?: string; ima
         </Link>
 
         {/* Notifications */}
-        <button className="relative w-10 h-10 rounded-xl hover:bg-ink-100 flex items-center justify-center transition">
-          <Bell className="w-[18px] h-[18px] text-ink-600" />
-          <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] text-[10px] font-bold
-                           bg-brand-500 text-white rounded-full px-1 flex items-center justify-center
-                           ring-2 ring-white">75</span>
-        </button>
+        <NotificationsBell />
 
         {/* User menu */}
         <div className="relative" ref={menuRef}>

@@ -5,7 +5,8 @@ import { fmtDistance } from "@/lib/geo";
 import { ClockButton } from "@/components/attendance/clock-button";
 import { TimesheetActions } from "@/components/attendance/timesheet-actions";
 import Link from "next/link";
-import { MapPin, ShieldCheck, AlertTriangle, Camera } from "lucide-react";
+import { MapPin, ShieldCheck, AlertTriangle, Camera, Clock as ClockIcon } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function AttendancePage() {
   const u = await requireUser();
@@ -49,18 +50,15 @@ export default async function AttendancePage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Attendance & Payroll</h1>
-          <p className="text-sm text-ink-500">
-            {period ? `Pay period: ${dateLabel(period.startsOn)} → ${dateLabel(period.endsOn)}` : "No active pay period"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="#tipping" className="btn-outline">Tip Management</Link>
-          <button className="btn-primary">Run payroll</button>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Time tracking"
+        icon={ClockIcon}
+        title="Attendance & Payroll"
+        subtitle={period ? `Pay period · ${dateLabel(period.startsOn)} → ${dateLabel(period.endsOn)}` : "No active pay period"}
+      >
+        <Link href="#tipping" className="btn-outline">Tip Management</Link>
+        <button className="btn-primary">Run payroll</button>
+      </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         <Stat label="Hours this period" value={fmtHours(totalHours)} />

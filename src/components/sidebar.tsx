@@ -115,14 +115,17 @@ export function Sidebar({ orgName, pendingOffers = 0 }: { orgName: string; pendi
       <div className="p-3">
         <Link
           href="/billboard"
-          className="block p-3 rounded-2xl bg-gradient-to-br from-brand-50 to-rose-50 border border-brand-100 hover:shadow-soft transition"
+          className="group block p-3.5 rounded-2xl bg-gradient-to-br from-brand-500 to-rose-500 text-white hover:shadow-ring transition relative overflow-hidden"
         >
-          <div className="flex items-center gap-2 text-brand-700">
-            <Gift className="w-4 h-4" />
-            <div className="text-xs font-bold">Refer & earn $500</div>
-          </div>
-          <div className="text-[11px] text-ink-600 mt-1 leading-snug">
-            Send a teammate. They sign up. You both win.
+          <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-white/15 blur-xl group-hover:bg-white/25 transition" />
+          <div className="relative">
+            <div className="flex items-center gap-2">
+              <Gift className="w-4 h-4" />
+              <div className="text-xs font-bold">Refer & earn $500</div>
+            </div>
+            <div className="text-[11px] text-white/85 mt-1 leading-snug">
+              Send a teammate · they sign up · you both win.
+            </div>
           </div>
         </Link>
       </div>

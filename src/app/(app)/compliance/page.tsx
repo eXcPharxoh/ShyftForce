@@ -53,7 +53,12 @@ export default async function CompliancePage() {
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Stat tone={isClean ? "emerald" : "ink"} icon={<ShieldCheck className="w-5 h-5" />} label="Status" value={isClean ? "All clear" : "Action needed"} />
+        <Stat
+          tone={isClean ? "emerald" : errors.length > 0 ? "rose" : "amber"}
+          icon={<ShieldCheck className="w-5 h-5" />}
+          label="Status"
+          value={isClean ? "All clear" : "Action needed"}
+        />
         <Stat tone="rose"   icon={<AlertOctagon className="w-5 h-5" />} label="Errors"   value={errors.length} />
         <Stat tone="amber"  icon={<AlertTriangle className="w-5 h-5" />} label="Warnings" value={warnings.length} />
         <Stat tone="ink"    icon={<Sparkles className="w-5 h-5" />} label="Affected members" value={affectedIds.size} />
@@ -121,18 +126,24 @@ export default async function CompliancePage() {
 }
 
 function Stat({ icon, label, value, tone = "ink" }: { icon: React.ReactNode; label: string; value: string | number; tone?: "ink" | "rose" | "amber" | "emerald" }) {
-  const map: any = {
+  const iconCls: any = {
     ink:     "bg-ink-50 text-ink-700",
     rose:    "bg-rose-50 text-rose-700",
     amber:   "bg-amber-50 text-amber-700",
     emerald: "bg-emerald-50 text-emerald-700",
   };
+  const valCls: any = {
+    ink:     "text-ink-900",
+    rose:    "text-rose-700",
+    amber:   "text-amber-800",
+    emerald: "text-emerald-700",
+  };
   return (
     <div className="card p-4 flex items-center gap-3">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${map[tone]}`}>{icon}</div>
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconCls[tone]}`}>{icon}</div>
       <div>
-        <div className="text-[11px] uppercase text-ink-500 font-medium">{label}</div>
-        <div className="text-xl font-bold">{value}</div>
+        <div className="text-[11px] uppercase text-ink-500 font-semibold tracking-wider">{label}</div>
+        <div className={`text-xl font-bold tracking-tight-2 ${valCls[tone]}`}>{value}</div>
       </div>
     </div>
   );
