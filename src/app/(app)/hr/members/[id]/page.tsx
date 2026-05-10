@@ -10,6 +10,8 @@ import {
   MessageSquareHeart, Clock, AlertTriangle, CheckCircle2, BadgeCheck, Briefcase, Award,
 } from "lucide-react";
 import { ChevronLeft } from "lucide-react";
+import { snapshotForMember } from "@/lib/pto/service";
+import { PtoBalanceCard } from "@/components/pto/balance-card";
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
@@ -53,6 +55,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const now = new Date();
   const expiringSoon = member.certifications.filter(c => c.expiresOn && c.expiresOn > now && (+c.expiresOn - +now) < 60 * 86400 * 1000);
   const expired      = member.certifications.filter(c => c.expiresOn && c.expiresOn <= now);
+
+  // PTO balances
+  const ptoBalances = await snapshotForMember(member.id, u.organizationId);
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -209,6 +214,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               </ul>
             )}
           </section>
+
+          {/* PTO balances */}
+          <PtoBalanceCard balances={ptoBalances} compact />
 
           {/* Time off */}
           <section className="card p-5">

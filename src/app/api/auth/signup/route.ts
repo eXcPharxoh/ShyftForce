@@ -5,6 +5,7 @@ import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import { Email, sendEmail } from "@/lib/email";
 import { audit } from "@/lib/audit";
+import { ensureDefaultPolicies } from "@/lib/pto/service";
 
 const Schema = z.object({
   name:    z.string().min(2).max(60),
@@ -48,6 +49,9 @@ export async function POST(req: Request) {
     });
     return { org, user };
   });
+
+  // Seed default PTO policies for new org
+  await ensureDefaultPolicies(result.org.id);
 
   // Send verification email
   const token = randomBytes(32).toString("hex");

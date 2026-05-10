@@ -41,6 +41,7 @@ model Organization {
   dayNotes        DayNote[]
   hrReminders     HRReminder[]
   complianceSettings ComplianceSettings?
+  ptoPolicies     PtoPolicy[]
   invitations     Invitation[]
   auditLogs       AuditLog[]
 }
@@ -135,6 +136,40 @@ model Invitation {
   @@index([organizationId, email])
 }
 
+model PtoPolicy {
+  id              String   @id @default(uuid())
+  organizationId  String
+  category        String   // "vacation" | "sick" | "personal" | "bereavement" | "unpaid"
+  name            String
+  annualHours     Float    @default(0)               // 0 = not tracked / unlimited
+  accrualMethod   String   @default("annual_lump_sum") // annual_lump_sum | per_pay_period | per_hour_worked | unlimited
+  hoursPerDay     Float    @default(8)               // used to convert PTO days → hours when reviewing
+  maxBalance      Float?
+  allowNegative   Boolean  @default(false)
+  active          Boolean  @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  balances     PtoBalance[]
+
+  @@unique([organizationId, category])
+}
+
+model PtoBalance {
+  id              String   @id @default(uuid())
+  memberId        String
+  policyId        String
+  hoursAccrued    Float    @default(0)   // total ever accrued (lifetime)
+  hoursUsed       Float    @default(0)   // total ever used (lifetime)
+  lastAccrualAt   DateTime?              // last time we ran accrual logic for this member
+  lastAccrualYear Int?                   // year of last lump-sum accrual (for annual reset detection)
+
+  member Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  policy PtoPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, policyId])
+  @@index([memberId])
+}
+
 model MemberCertification {
   id        String    @id @default(uuid())
   memberId  String
@@ -194,6 +229,7 @@ model Member {
   payrollProvider     String?     // "adp_workforce_now" | "gusto" | "paychex" | etc.
 
   certifications  MemberCertification[]
+  ptoBalances     PtoBalance[]
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -275,14 +311,18 @@ model OpenShiftOffer {
 }
 
 model TimeOffRequest {
-  id        String   @id @default(uuid())
-  memberId  String
-  startsOn  DateTime
-  endsOn    DateTime
-  reason    String?
-  category  String   @default("vacation")
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  memberId        String
+  startsOn        DateTime
+  endsOn          DateTime
+  reason          String?
+  category        String   @default("vacation")
+  status          String   @default("pending")
+  hoursRequested  Float?            // computed at creation (business days × hours/day)
+  hoursDeducted   Float?            // set on approval (so we know exactly what to refund if reversed)
+  createdAt       DateTime @default(now())
+  decidedAt       DateTime?
+  decidedById     String?
 
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }
