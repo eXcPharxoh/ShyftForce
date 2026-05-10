@@ -50,6 +50,7 @@ model Organization {
   ewaWithdrawals          EwaWithdrawal[]
   demandForecasts         DemandForecast[]
   demandContexts          DemandContext[]
+  networkShiftOffers      NetworkShiftOffer[]
 }
 
 model ComplianceSettings {
@@ -153,6 +154,67 @@ model EwaSettings {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
+model WorkerProfile {
+  id                   String    @id @default(uuid())
+  userId               String    @unique
+  // Identity (collected once, used everywhere)
+  legalFirstName       String?
+  legalLastName        String?
+  dateOfBirth          DateTime?
+  identityVerifiedAt   DateTime?
+  identityProvider     String? // stripe_identity | persona | manual
+  // Discoverability + profile
+  discoverable         Boolean   @default(false)
+  bio                  String?
+  city                 String?
+  stateRegion          String?
+  skills               String? // JSON array of strings
+  // Cross-employer reputation cache
+  totalShiftsCompleted Int       @default(0)
+  totalNoShows         Int       @default(0)
+  totalEmployers       Int       @default(0)
+  reputationScore      Float? // 0-100
+  reputationUpdatedAt  DateTime?
+  // Cross-employer payment routing (tokenized only — never raw bank data)
+  payoutMethodToken    String?
+  payoutMethodLast4    String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  networkClaims  NetworkShiftOffer[] @relation("ClaimedByWorker")
+  invitedOffers  NetworkShiftOffer[] @relation("InvitedWorker")
+  externalShifts Shift[]             @relation("ExternalWorker")
+
+  @@index([discoverable, reputationScore])
+}
+
+model NetworkShiftOffer {
+  id                   String    @id @default(uuid())
+  shiftId              String
+  postingOrgId         String
+  postedById           String? // memberId of the manager who posted
+  invitedWorkerId      String? // null = open to all discoverable workers
+  status               String    @default("open") // open | claimed | filled_internally | closed | canceled
+  payoutType           String    @default("w2") // w2 | 1099
+  payRateOverrideCents Int?
+  message              String?
+  claimedById          String? // workerProfileId
+  claimedAt            DateTime?
+  closedAt             DateTime?
+  createdAt            DateTime  @default(now())
+
+  shift         Shift          @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  postingOrg    Organization   @relation(fields: [postingOrgId], references: [id], onDelete: Cascade)
+  invitedWorker WorkerProfile? @relation("InvitedWorker", fields: [invitedWorkerId], references: [id])
+  claimedBy     WorkerProfile? @relation("ClaimedByWorker", fields: [claimedById], references: [id])
+
+  @@index([postingOrgId, status])
+  @@index([invitedWorkerId, status])
+  @@index([claimedById, status])
+  @@index([shiftId])
+}
+
 model DemandForecast {
   id                    String   @id @default(uuid())
   organizationId        String
@@ -247,6 +309,7 @@ model User {
   lockedUntil         DateTime?
 
   member         Member?
+  workerProfile  WorkerProfile?
   emailTokens    EmailVerification[]
   passwordResets PasswordReset[]
   auditLogs      AuditLog[]
@@ -477,24 +540,27 @@ model Member {
 }
 
 model Shift {
-  id         String   @id @default(uuid())
-  locationId String
-  memberId   String?
-  startsAt   DateTime
-  endsAt     DateTime
-  position   String?
-  notes      String?
-  status     String   @default("draft")
-  isOpen     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id                      String   @id @default(uuid())
+  locationId              String
+  memberId                String?
+  externalWorkerProfileId String? // set when shift is filled by a cross-org network worker
+  startsAt                DateTime
+  endsAt                  DateTime
+  position                String?
+  notes                   String?
+  status                  String   @default("draft")
+  isOpen                  Boolean  @default(false)
+  createdAt               DateTime @default(now())
 
   location                Location                 @relation(fields: [locationId], references: [id], onDelete: Cascade)
   member                  Member?                  @relation(fields: [memberId], references: [id])
+  externalWorker          WorkerProfile?           @relation("ExternalWorker", fields: [externalWorkerProfileId], references: [id])
   tasks                   ShiftTask[]
   openRequests            OpenShiftRequest[]
   openShiftOffers         OpenShiftOffer[]
   swapRequests            ShiftSwapRequest[]
   predictabilityPayEvents PredictabilityPayEvent[]
+  networkShiftOffers      NetworkShiftOffer[]
 }
 
 model ShiftTask {
