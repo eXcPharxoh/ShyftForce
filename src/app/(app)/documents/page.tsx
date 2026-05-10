@@ -4,6 +4,7 @@ import { dateLabel } from "@/lib/utils";
 import { FileText, FileCheck, FileX, Inbox, FolderClosed } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { UploadButton } from "@/components/documents/upload-button";
 
 export default async function DocumentsPage() {
   const u = await requireUser();
@@ -28,7 +29,7 @@ export default async function DocumentsPage() {
         title="Documents"
         subtitle={`${documents.length} on file · ${requests.filter(r => r.status === "pending").length} pending requests`}
       >
-        <button className="btn-primary">Upload</button>
+        <UploadButton />
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -36,13 +37,16 @@ export default async function DocumentsPage() {
           <h3 className="text-sm font-semibold mb-3">Recent documents</h3>
           <ul className="space-y-2">
             {documents.map(d => (
-              <li key={d.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-ink-200 hover:bg-ink-50/40">
-                <div className="w-9 h-9 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center"><FileText className="w-5 h-5" /></div>
+              <li key={d.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-ink-200 dark:border-ink-800 hover:bg-ink-50/40 dark:hover:bg-ink-800/40">
+                <div className="w-9 h-9 rounded-lg bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-300 flex items-center justify-center"><FileText className="w-5 h-5" /></div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{d.name}</div>
-                  <div className="text-[11px] text-ink-500 truncate">{d.member?.user.name ?? "—"} · {d.category} · {dateLabel(d.uploadedAt)}</div>
+                  <div className="text-sm font-medium truncate text-ink-900 dark:text-ink-100">{d.name}</div>
+                  <div className="text-[11px] text-ink-500 dark:text-ink-400 truncate">
+                    {d.member?.user.name ?? "—"} · {d.category ?? "uncategorized"} · {dateLabel(d.uploadedAt)}
+                    {d.sizeBytes != null && <> · {(d.sizeBytes / 1024).toFixed(1)} KB</>}
+                  </div>
                 </div>
-                <a href={d.url} className="btn-ghost text-xs">Open</a>
+                <a href={d.data ? `/api/documents/${d.id}/file` : (d.url ?? "#")} target="_blank" rel="noopener" className="btn-ghost text-xs">Open</a>
               </li>
             ))}
             {documents.length === 0 && (

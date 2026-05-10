@@ -26,6 +26,12 @@ model Organization {
   trialEndsAt           DateTime?
   subscriptionStatus    String?  // active | past_due | canceled | incomplete
 
+  // Payroll integration (Finch)
+  finchAccessToken      String?  // encrypted in production
+  finchProviderId       String?  // e.g. "adp_workforce_now", "gusto", "paychex"
+  finchCompanyId        String?  // Finch's internal company id
+  finchConnectedAt      DateTime?
+
   locations       Location[]
   members         Member[]
   payPeriods      PayPeriod[]
@@ -129,6 +135,23 @@ model Invitation {
   @@index([organizationId, email])
 }
 
+model MemberCertification {
+  id        String    @id @default(uuid())
+  memberId  String
+  name      String       // "Food Handler", "First Aid", "Firearm Permit", "OSHA-30"
+  issuedOn  DateTime?
+  expiresOn DateTime?
+  number    String?      // license/cert number
+  fileUrl   String?      // optional file ref
+  notes     String?
+  createdAt DateTime  @default(now())
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([expiresOn])
+}
+
 model AuditLog {
   id              String   @id @default(uuid())
   organizationId  String
@@ -161,6 +184,16 @@ model Member {
   hireDate        DateTime @default(now())
   birthday        DateTime?
   status          String   @default("active")
+
+  // Profile additions
+  phone               String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  notes               String?     // manager notes about this member
+  externalEmployeeId  String?     // ID from payroll/HRIS provider (e.g. Finch)
+  payrollProvider     String?     // "adp_workforce_now" | "gusto" | "paychex" | etc.
+
+  certifications  MemberCertification[]
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -325,9 +358,13 @@ model Document {
   id              String   @id @default(uuid())
   organizationId  String
   memberId        String?
+  uploadedById    String?
   name            String
-  url             String
+  url             String?         // optional external link
   category        String?
+  mimeType        String?
+  sizeBytes       Int?
+  data            Bytes?          // for in-DB storage; production should use external blob storage
   uploadedAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

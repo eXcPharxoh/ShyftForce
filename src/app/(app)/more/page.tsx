@@ -12,7 +12,7 @@ const ITEMS = [
   { href: "#", label: "Permissions & roles",   icon: ShieldCheck },
   { href: "#", label: "Notification rules",    icon: Bell },
   { href: "#", label: "API keys",              icon: KeyRound },
-  { href: "#", label: "Integrations",          icon: Wrench },
+  { href: "/settings/integrations", label: "Integrations", icon: Wrench },
   { href: "#", label: "Referral program",      icon: Gift },
   { href: "#", label: "Workspace settings",    icon: Settings },
 ];
