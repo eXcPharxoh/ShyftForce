@@ -4,6 +4,8 @@ import type { SessionUser } from "@/lib/session";
 import { addDays, dateLabel, fmtMoney, startOfWeek, timeLabel } from "@/lib/utils";
 import { checkCompliance } from "@/lib/compliance/engine";
 import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
+import { rankForShift, sendOffers } from "@/lib/marketplace/service";
+import { WAVES } from "@/lib/marketplace/ranker";
 
 // ---------- Schemas surfaced to Claude ----------
 export const TOOLS: Tool[] = [
@@ -134,6 +136,18 @@ export const TOOLS: Tool[] = [
         from: { type: "string", description: "ISO YYYY-MM-DD. Defaults to last week." },
         to:   { type: "string", description: "ISO YYYY-MM-DD. Defaults to two weeks out." },
       },
+    },
+  },
+  {
+    name: "auto_offer_shift",
+    description: "Auto-offer an open shift to ranked candidates. Manager+ only. Sends DM offers and creates OpenShiftOffer records. Use when the user says 'find someone for the open Saturday shift' or 'offer this shift to people'. Defaults to wave 1 (top 3) if not specified.",
+    input_schema: {
+      type: "object",
+      properties: {
+        shiftId: { type: "string" },
+        wave:    { type: "number", description: "1 (top 3, 1h expiry), 2 (next 5, 2h), or 3 (all eligible, 24h). Defaults to 1." },
+      },
+      required: ["shiftId"],
     },
   },
 ];
@@ -377,6 +391,27 @@ export async function runTool(name: string, input: any, user: SessionUser) {
         data: { fromId: user.memberId, toId: m.id, message: input.message, emoji: input.emoji ?? "🙌" },
       });
       return { posted: true, to: m.user.name, message: input.message, emoji: k.emoji };
+    }
+
+    case "auto_offer_shift": {
+      if (!isManager(user)) return forbid();
+      const wave = (input.wave ?? 1) as 1 | 2 | 3;
+      try {
+        const { ranked } = await rankForShift(input.shiftId, orgId);
+        const plan = WAVES[wave];
+        const chosen = ranked.slice(0, plan.size);
+        if (chosen.length === 0) return { error: "No eligible candidates" };
+        const offers = await sendOffers({
+          shiftId: input.shiftId, organizationId: orgId, fromMemberId: user.memberId, wave,
+          candidates: chosen.map(c => ({ memberId: c.id, rationale: c.rationale })),
+        });
+        return {
+          sent: offers.length, wave, expiresAt: offers[0].expiresAt,
+          offered: chosen.map(c => ({ name: c.name, score: Math.round(c.score), rationale: c.rationale })),
+        };
+      } catch (e: any) {
+        return { error: e.message ?? "auto-offer failed" };
+      }
     }
 
     case "check_compliance": {

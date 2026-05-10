@@ -94,6 +94,7 @@ model Member {
   billboardPosts    BillboardPost[] @relation("PostAuthor")
   dayNotesAuthored  DayNote[] @relation("NoteAuthor")
   documents         Document[]
+  openShiftOffers   OpenShiftOffer[]
 }
 
 model Shift {
@@ -112,6 +113,7 @@ model Shift {
   member   Member?  @relation(fields: [memberId], references: [id])
   tasks    ShiftTask[]
   openRequests OpenShiftRequest[]
+  openShiftOffers OpenShiftOffer[]
 }
 
 model ShiftTask {
@@ -131,6 +133,25 @@ model OpenShiftRequest {
   createdAt DateTime @default(now())
 
   shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+}
+
+model OpenShiftOffer {
+  id          String   @id @default(uuid())
+  shiftId     String
+  memberId    String
+  wave        Int      @default(1)
+  status      String   @default("pending") // pending | claimed | declined | expired | superseded
+  sentAt      DateTime @default(now())
+  expiresAt   DateTime
+  respondedAt DateTime?
+  rationale   String?
+
+  shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, memberId])
+  @@index([memberId, status])
+  @@index([shiftId, status])
 }
 
 model TimeOffRequest {
