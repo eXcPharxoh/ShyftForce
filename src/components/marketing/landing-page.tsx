@@ -3,6 +3,7 @@ import {
   Sparkles, ShieldCheck, Workflow, MapPin, ShoppingBag, BarChart3,
   CheckCircle2, ArrowRight, Star, Building2, Utensils, ShoppingCart,
   Stethoscope, HardHat, Briefcase, Dumbbell, Zap, Users, Clock, MessageSquare,
+  ShieldAlert,
 } from "lucide-react";
 import { Logo, Wordmark } from "@/components/ui/logo";
 
@@ -204,12 +205,14 @@ function Features() {
 /* ------------------- INDUSTRIES ------------------- */
 function Industries() {
   const items = [
-    { icon: Utensils,   label: "Restaurant" },
+    { icon: Utensils,    label: "Restaurant" },
+    { icon: ShoppingBag, label: "Grocery" },
+    { icon: ShieldAlert, label: "Security" },
     { icon: ShoppingCart, label: "Retail" },
     { icon: Stethoscope, label: "Healthcare" },
-    { icon: HardHat,    label: "Field Service" },
-    { icon: Briefcase,  label: "Office" },
-    { icon: Dumbbell,   label: "Fitness" },
+    { icon: HardHat,     label: "Field Service" },
+    { icon: Briefcase,   label: "Office" },
+    { icon: Dumbbell,    label: "Fitness" },
   ];
   return (
     <section id="industries" className="bg-ink-50 dark:bg-ink-900/40 border-y border-ink-200/60 dark:border-ink-800/60 py-24">

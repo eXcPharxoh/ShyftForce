@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { WithdrawModal } from "./withdraw-modal";
 
-type Balance = { enabled: boolean; availableCents: number; feeCentsPerWithdrawal: number; minWithdrawalCents: number; blockReason: string | null };
+type Balance = { enabled: boolean; availableCents: number; feeCentsPerWithdrawal: number; minWithdrawalCents: number; blockReason?: string | null };
 
 export function WithdrawButton({ balance }: { balance: Balance }) {
   const [open, setOpen] = useState(false);

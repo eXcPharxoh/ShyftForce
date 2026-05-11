@@ -1,9 +1,19 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 
+export const dynamic = "force-dynamic";
+
 export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen flex items-center justify-center p-6"><div className="text-sm text-ink-500">Loading…</div></main>}>
+      <AcceptInviteInner />
+    </Suspense>
+  );
+}
+
+function AcceptInviteInner() {
   const sp = useSearchParams();
   const r = useRouter();
   const token = sp.get("token") ?? "";
@@ -53,7 +63,7 @@ export default function AcceptInvitePage() {
         {step === "form"    && (
           <form onSubmit={submit} className="space-y-3">
             <h1 className="text-xl font-bold">Create your account</h1>
-            <p className="text-sm text-ink-500">You're being added to the workspace as <b>{email}</b>.</p>
+            <p className="text-sm text-ink-500">You&apos;re being added to the workspace as <b>{email}</b>.</p>
             <div>
               <label className="label">Your name</label>
               <input className="input" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />

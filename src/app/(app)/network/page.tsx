@@ -38,7 +38,11 @@ export default async function NetworkPage({ searchParams }: { searchParams: Prom
   ]);
 
   const ownUserIds = ownMembers.map((m) => m.userId);
-  const workers = await findAvailableWorkers({ city, skill, excludeUserIds: ownUserIds, limit: 30 });
+  const rawWorkers = await findAvailableWorkers({ city, skill, excludeUserIds: ownUserIds, limit: 30 });
+  const workers = rawWorkers.map((w) => ({
+    ...w,
+    skills: (() => { try { return w.skills ? JSON.parse(w.skills) as string[] : []; } catch { return [] as string[]; } })(),
+  }));
 
   const unposted = openShifts.filter((s) => !s.networkShiftOffers.some((o) => o.status === "open"));
 

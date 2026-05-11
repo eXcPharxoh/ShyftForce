@@ -1,9 +1,19 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen flex items-center justify-center p-6"><div className="text-sm text-ink-500">Loading…</div></main>}>
+      <ResetPasswordInner />
+    </Suspense>
+  );
+}
+
+function ResetPasswordInner() {
   const sp = useSearchParams();
   const r = useRouter();
   const token = sp.get("token") ?? "";

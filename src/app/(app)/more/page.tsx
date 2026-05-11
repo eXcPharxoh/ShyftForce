@@ -29,10 +29,6 @@ const ITEMS = [
   { href: "/reports",                   label: "Advanced reports",      icon: FileBarChart },
   { href: "/hr/surveys",                label: "Survey library",        icon: BookOpen },
   { href: "/compliance",                label: "Compliance Autopilot",  icon: ShieldCheck },
-  { href: "#", label: "Permissions & roles",   icon: ShieldCheck },
-  { href: "#", label: "Notification rules",    icon: Bell },
-  { href: "#", label: "API keys",              icon: KeyRound },
-  { href: "#", label: "Referral program",      icon: Gift },
 ];
 
 export default function MorePage() {

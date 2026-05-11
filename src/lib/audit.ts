@@ -9,8 +9,18 @@ export type AuditAction =
   | "timesheet.approve" | "timesheet.flag"
   | "time_off.create" | "time_off.approve" | "time_off.reject"
   | "expense.create" | "expense.approve" | "expense.reject"
-  | "compliance.settings_update"
-  | "billing.checkout" | "billing.subscription_active" | "billing.subscription_canceled";
+  | "compliance.settings_update" | "compliance.update"
+  | "billing.checkout" | "billing.subscription_active" | "billing.subscription_canceled"
+  // Sprints added later (loose union — keeps lib generic for future modules)
+  | "pos.connect" | "pos.disconnect" | "pos.manual_revenue"
+  | "ewa.withdraw" | "ewa.settings_update"
+  | "forecast.regenerate" | "forecast.apply" | "forecast.context_add" | "forecast.context_delete"
+  | "network.post" | "network.cancel" | "network.claim"
+  | "worker_profile.update"
+  | "incident.create" | "incident.update"
+  | "checkpoint.create" | "checkpoint.deactivate" | "checkpoint.scan"
+  | "client.create" | "client.update" | "client.deactivate"
+  | "tips.distribute";
 
 export async function audit(opts: {
   organizationId: string;

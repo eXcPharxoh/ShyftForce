@@ -32,10 +32,13 @@ export async function POST(req: Request) {
     mode: "subscription",
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${origin}/settings/billing?success=true&session={CHECKOUT_SESSION_ID}`,
+    success_url: `${origin}/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${origin}/settings/billing?canceled=true`,
     allow_promotion_codes: true,
-    subscription_data: { metadata: { organizationId: org.id } },
+    // Metadata is set on BOTH the session and the subscription so webhooks can
+    // resolve org from either checkout.session.completed or customer.subscription.*
+    metadata: { organizationId: org.id, plan },
+    subscription_data: { metadata: { organizationId: org.id, plan } },
   });
 
   await audit({

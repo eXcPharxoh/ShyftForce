@@ -8,7 +8,7 @@ type Balance = {
   availableCents: number;
   feeCentsPerWithdrawal: number;
   minWithdrawalCents: number;
-  blockReason: string | null;
+  blockReason?: string | null;
 };
 
 export function WithdrawModal({ balance, onClose, onDone }: { balance: Balance; onClose: () => void; onDone: () => void }) {

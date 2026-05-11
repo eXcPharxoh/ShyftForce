@@ -24,9 +24,16 @@ export async function GET(req: Request) {
   });
 
   if (format === "csv") {
-    const flat = rows.flatMap((r) => r.byLocation.length === 0
-      ? [{ client: r.clientName, location: "—", hours: 0, billRate: r.billRateCents / 100, subtotal: 0 }]
-      : r.byLocation.map((l) => ({ client: r.clientName, location: l.locationName, hours: l.hours.toFixed(2), billRate: r.billRateCents / 100, subtotal: (l.cents / 100).toFixed(2) }))
+    type FlatRow = { client: string; location: string; hours: string; billRate: string; subtotal: string };
+    const flat: FlatRow[] = rows.flatMap((r): FlatRow[] => r.byLocation.length === 0
+      ? [{ client: r.clientName, location: "—", hours: "0.00", billRate: (r.billRateCents / 100).toFixed(2), subtotal: "0.00" }]
+      : r.byLocation.map((l) => ({
+          client: r.clientName,
+          location: l.locationName,
+          hours: l.hours.toFixed(2),
+          billRate: (r.billRateCents / 100).toFixed(2),
+          subtotal: (l.cents / 100).toFixed(2),
+        }))
     );
     const csv = toCsv(flat, ["client", "location", "hours", "billRate", "subtotal"]);
     return csvResponse(csv, `client-billing-${(from ?? defaultFrom.toISOString().slice(0,10))}.csv`);
