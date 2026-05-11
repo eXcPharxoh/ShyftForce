@@ -51,6 +51,10 @@ model Organization {
   demandForecasts         DemandForecast[]
   demandContexts          DemandContext[]
   networkShiftOffers      NetworkShiftOffer[]
+  incidentReports         IncidentReport[]
+  checkpointPosts         CheckpointPost[]
+  clientAccounts          ClientAccount[]
+  tipPools                TipPool[]
 }
 
 model ComplianceSettings {
@@ -152,6 +156,131 @@ model EwaSettings {
   updatedAt             DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model IncidentReport {
+  id              String    @id @default(uuid())
+  organizationId  String
+  locationId      String?
+  reportedById    String // memberId
+  shiftId         String?
+  occurredAt      DateTime
+  category        String // theft | trespass | medical | altercation | property_damage | policy_violation | safety | other
+  severity        String    @default("low") // low | medium | high | critical
+  title           String
+  body            String
+  witnessNames    String?
+  photoData       String? // base64 small image or external URL
+  policeReportNo  String?
+  status          String    @default("open") // open | reviewing | resolved | escalated
+  reviewedById    String?
+  reviewedAt      DateTime?
+  resolutionNotes String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id])
+  reportedBy   Member       @relation("IncidentReporter", fields: [reportedById], references: [id], onDelete: Cascade)
+  reviewedBy   Member?      @relation("IncidentReviewer", fields: [reviewedById], references: [id])
+  shift        Shift?       @relation(fields: [shiftId], references: [id])
+
+  @@index([organizationId, status, occurredAt])
+  @@index([locationId, occurredAt])
+}
+
+model CheckpointPost {
+  id               String   @id @default(uuid())
+  organizationId   String
+  locationId       String
+  name             String
+  qrToken          String   @unique
+  latitude         Float?
+  longitude        Float?
+  expectedSequence Int      @default(0) // order in patrol; 0 = unordered
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  scans        CheckpointScan[]
+
+  @@index([locationId, active])
+}
+
+model CheckpointScan {
+  id             String   @id @default(uuid())
+  postId         String
+  memberId       String
+  shiftId        String?
+  at             DateTime @default(now())
+  latitude       Float?
+  longitude      Float?
+  withinGeofence Boolean?
+  notes          String?
+
+  post   CheckpointPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  member Member         @relation("CheckpointScanner", fields: [memberId], references: [id], onDelete: Cascade)
+  shift  Shift?         @relation(fields: [shiftId], references: [id])
+
+  @@index([postId, at])
+  @@index([memberId, at])
+  @@index([shiftId])
+}
+
+model ClientAccount {
+  id                 String   @id @default(uuid())
+  organizationId     String
+  name               String
+  contactName        String?
+  contactEmail       String?
+  contactPhone       String?
+  billRateCents      Int      @default(3500) // default $35/hr
+  overtimeMultiplier Float    @default(1.5)
+  invoiceTerms       String   @default("net_30") // net_15 | net_30 | net_60 | due_on_receipt
+  active             Boolean  @default(true)
+  notes              String?
+  createdAt          DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  locations    Location[]   @relation("LocationClient")
+
+  @@index([organizationId, active])
+}
+
+model TipPool {
+  id               String   @id @default(uuid())
+  organizationId   String
+  locationId       String
+  date             DateTime
+  totalTipsCents   Int
+  distributionRule String   @default("hours") // hours | role_weighted | equal | custom
+  notes            String?
+  createdById      String?
+  status           String   @default("draft") // draft | distributed | finalized
+  createdAt        DateTime @default(now())
+
+  organization  Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location      Location          @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  distributions TipDistribution[]
+
+  @@index([organizationId, date])
+  @@index([locationId, date])
+}
+
+model TipDistribution {
+  id          String @id @default(uuid())
+  tipPoolId   String
+  memberId    String
+  hoursWorked Float
+  weight      Float  @default(1.0)
+  amountCents Int
+
+  pool   TipPool @relation(fields: [tipPoolId], references: [id], onDelete: Cascade)
+  member Member  @relation("TipRecipient", fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([tipPoolId, memberId])
+  @@index([memberId])
 }
 
 model WorkerProfile {
@@ -287,6 +416,7 @@ model Location {
   geofenceRadiusMeters Int      @default(100)
   createdAt            DateTime @default(now())
 
+  clientId        String?
   organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   members         Member[]
   shifts          Shift[]
@@ -294,6 +424,10 @@ model Location {
   posRevenue      PosRevenueSnapshot[]
   demandForecasts DemandForecast[]
   demandContexts  DemandContext[]
+  incidentReports IncidentReport[]
+  checkpointPosts CheckpointPost[]
+  tipPools        TipPool[]
+  client          ClientAccount?       @relation("LocationClient", fields: [clientId], references: [id])
 }
 
 model User {
@@ -537,6 +671,10 @@ model Member {
   openShiftOffers         OpenShiftOffer[]
   predictabilityPayEvents PredictabilityPayEvent[]
   ewaWithdrawals          EwaWithdrawal[]
+  incidentsReported       IncidentReport[]         @relation("IncidentReporter")
+  incidentsReviewed       IncidentReport[]         @relation("IncidentReviewer")
+  checkpointScans         CheckpointScan[]         @relation("CheckpointScanner")
+  tipDistributions        TipDistribution[]        @relation("TipRecipient")
 }
 
 model Shift {
@@ -561,6 +699,8 @@ model Shift {
   swapRequests            ShiftSwapRequest[]
   predictabilityPayEvents PredictabilityPayEvent[]
   networkShiftOffers      NetworkShiftOffer[]
+  incidentReports         IncidentReport[]
+  checkpointScans         CheckpointScan[]
 }
 
 model ShiftTask {

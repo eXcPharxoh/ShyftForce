@@ -1,7 +1,15 @@
 import Link from "next/link";
-import { Activity, Award, Bell, BookOpen, BrainCircuit, Building2, CalendarX, CreditCard, DollarSign, FileBarChart, FileText, Gift, Globe, KeyRound, Plane, Plug, Receipt, Repeat, Settings, ShieldAlert, ShieldCheck, TrendingUp, UserCircle, Wallet, Wrench } from "lucide-react";
+import { Activity, Award, Bell, BookOpen, BrainCircuit, Building2, CalendarX, ClipboardCheck, CreditCard, DollarSign, FileBarChart, FileText, Gift, Globe, KeyRound, Plane, Plug, QrCode, Receipt, Repeat, Settings, ShieldAlert, ShieldCheck, TrendingUp, UserCircle, Wallet, Wrench } from "lucide-react";
 
 const ITEMS = [
+  // Vertical workflows
+  { href: "/incidents",                 label: "Incident reports",      icon: ShieldAlert },
+  { href: "/checkpoints/scan",          label: "Scan checkpoint",       icon: QrCode },
+  { href: "/settings/checkpoints",      label: "Patrol checkpoints",    icon: ClipboardCheck },
+  { href: "/clients",                   label: "Clients (billing)",     icon: Building2 },
+  { href: "/reports/client-billing",    label: "Client billing report", icon: DollarSign },
+  { href: "/tips",                      label: "Tip pooling",           icon: Wallet },
+  // Core
   { href: "/settings/billing",          label: "Billing & plan",        icon: CreditCard },
   { href: "/settings/locations",        label: "Locations & geofences", icon: Building2 },
   { href: "/settings/pto",              label: "Time-off policies",     icon: Plane },
@@ -18,7 +26,6 @@ const ITEMS = [
   { href: "/network/available",         label: "Network shifts (mine)", icon: Globe },
   { href: "/settings/integrations",     label: "Integrations",          icon: Wrench },
   { href: "/settings/audit",            label: "Audit log",             icon: FileText },
-  { href: "/attendance#tipping",        label: "Tip management",        icon: Receipt },
   { href: "/reports",                   label: "Advanced reports",      icon: FileBarChart },
   { href: "/hr/surveys",                label: "Survey library",        icon: BookOpen },
   { href: "/compliance",                label: "Compliance Autopilot",  icon: ShieldCheck },

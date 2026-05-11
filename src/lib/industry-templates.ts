@@ -1,7 +1,7 @@
 // Industry templates picked at signup. Pre-populates the new org with
 // sensible defaults so the user is productive in <5 minutes.
 
-export type IndustryKey = "restaurant" | "retail" | "healthcare" | "field_service" | "office" | "fitness" | "other";
+export type IndustryKey = "restaurant" | "retail" | "grocery" | "security" | "healthcare" | "field_service" | "office" | "fitness" | "other";
 
 export type Template = {
   key: IndustryKey;
@@ -56,15 +56,44 @@ export const INDUSTRY_TEMPLATES: Template[] = [
     recommendedComplianceTweaks: { mealBreakRequiredAfterHours: 6 },
   },
   {
-    key: "field_service", label: "Field Service / Security", emoji: "🛠️",
-    description: "Technicians, security officers, drivers. GPS-verified, multi-site coverage.",
-    positions: ["Security Officer", "Technician", "Driver", "Site Supervisor", "Patrol", "Dispatcher"],
+    key: "grocery", label: "Grocery / Supermarket", emoji: "🛒",
+    description: "Cashiers, deli, produce, bakery, stockers. Department-based scheduling, minor labor rules.",
+    positions: ["Cashier", "Bagger", "Deli Clerk", "Bakery", "Produce", "Meat Cutter", "Stocker", "Customer Service", "Self-Checkout Attendant", "Floor Manager", "Pharmacy Tech"],
+    shiftBlocks: [
+      { name: "Early Stock",   startTime: "05:00", endTime: "13:00" },
+      { name: "Mid",           startTime: "10:00", endTime: "18:00" },
+      { name: "Close",         startTime: "14:00", endTime: "22:00" },
+      { name: "Overnight",     startTime: "22:00", endTime: "06:00" },
+    ],
+    dayNoteSamples: ["Truck arrives 4am", "Senior hour 7-8am", "Weekly ad changes Wednesday", "Pharmacy closed 2-3pm lunch"],
+    defaultGeofenceMeters: 80,
+    recommendedComplianceTweaks: { mealBreakRequiredAfterHours: 6, predictiveSchedulingDays: 14 },
+  },
+  {
+    key: "security", label: "Security Services", emoji: "🛡️",
+    description: "Guards, patrol, post coverage. Client billing, incident reports, checkpoint tours.",
+    positions: ["Unarmed Guard", "Armed Guard", "Patrol", "Site Supervisor", "Dispatcher", "Console Operator", "Event Security", "Loss Prevention"],
+    shiftBlocks: [
+      { name: "1st Shift (Day)",   startTime: "06:00", endTime: "14:00" },
+      { name: "2nd Shift (Eve)",   startTime: "14:00", endTime: "22:00" },
+      { name: "3rd Shift (Night)", startTime: "22:00", endTime: "06:00" },
+      { name: "12h Day",           startTime: "06:00", endTime: "18:00" },
+      { name: "12h Night",         startTime: "18:00", endTime: "06:00" },
+    ],
+    dayNoteSamples: ["VIP escort 3pm", "Client walkthrough 10am", "Post inspection scheduled", "Alarm test 2pm"],
+    defaultGeofenceMeters: 150,
+    recommendedComplianceTweaks: { mealBreakRequiredAfterHours: 6 },
+  },
+  {
+    key: "field_service", label: "Field Service", emoji: "🛠️",
+    description: "Technicians, drivers, installers. GPS-verified, multi-site coverage.",
+    positions: ["Technician", "Senior Tech", "Driver", "Dispatcher", "Service Manager", "Installer"],
     shiftBlocks: [
       { name: "Morning",   startTime: "06:00", endTime: "14:00" },
       { name: "Afternoon", startTime: "14:00", endTime: "22:00" },
       { name: "Overnight", startTime: "22:00", endTime: "06:00" },
     ],
-    dayNoteSamples: ["VIP escort 3pm", "Equipment audit", "Client walkthrough 10am"],
+    dayNoteSamples: ["Equipment audit", "Service routes leave 7am", "Customer survey deadline"],
     defaultGeofenceMeters: 120,
   },
   {
