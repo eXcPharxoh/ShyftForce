@@ -10,6 +10,8 @@ import { AlertCircle, Cake, CheckCircle2, FileText, Gift, MessageCircle, Sparkle
 import { checkCompliance } from "@/lib/compliance/engine";
 import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 import { DashboardHero } from "@/components/dashboard/hero";
+import { VerticalWidgets } from "@/components/dashboard/vertical-widgets";
+import { verticalFor } from "@/lib/verticals/config";
 
 export default async function Dashboard() {
   const u = await requireUser();
@@ -107,6 +109,8 @@ export default async function Dashboard() {
         locationCount={locations.length}
         memberCount={totalMembers}
       />
+
+      <VerticalWidgets organizationId={u.organizationId} memberId={u.memberId} industry={u.organizationIndustry} />
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -368,21 +372,28 @@ export default async function Dashboard() {
         </WidgetCard>
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-500 via-brand-600 to-rose-500 text-white p-6 md:p-8">
-        <div className="absolute inset-0 bg-noise opacity-30 mix-blend-overlay pointer-events-none" />
-        <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/10 blur-3xl pointer-events-none" />
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
-            <div className="badge bg-white/20 text-white ring-white/30 mb-2">
-              <Sparkles className="w-3 h-3" /> New
-            </div>
-            <h3 className="text-xl md:text-2xl font-bold tracking-tight-2">Tip Management — automated calc & distribution</h3>
-            <p className="text-sm text-white/80 mt-1.5">Hours-weighted, role-weighted, or custom rules. Powered by your POS data.</p>
+      <VerticalPromoCard industry={u.organizationIndustry} />
+    </div>
+  );
+}
+
+function VerticalPromoCard({ industry }: { industry: string | null }) {
+  const v = verticalFor(industry);
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-500 via-brand-600 to-rose-500 text-white p-6 md:p-8">
+      <div className="absolute inset-0 bg-noise opacity-30 mix-blend-overlay pointer-events-none" />
+      <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+      <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <div className="badge bg-white/20 text-white ring-white/30 mb-2 flex items-center gap-1.5 w-fit">
+            <span>{v.emoji}</span> {v.label}
           </div>
-          <Link href="/attendance" className="bg-white text-brand-700 hover:bg-white/95 btn shadow-soft self-start md:self-auto">
-            Set up tipping →
-          </Link>
+          <h3 className="text-xl md:text-2xl font-bold tracking-tight-2">{v.promoCard.emoji} {v.promoCard.title}</h3>
+          <p className="text-sm text-white/80 mt-1.5">{v.promoCard.subtitle}</p>
         </div>
+        <Link href={v.promoCard.href} className="bg-white text-brand-700 hover:bg-white/95 btn shadow-soft self-start md:self-auto">
+          Open →
+        </Link>
       </div>
     </div>
   );

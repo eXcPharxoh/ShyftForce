@@ -1,53 +1,68 @@
 import Link from "next/link";
-import { Activity, Award, Bell, BookOpen, BrainCircuit, Building2, CalendarX, ClipboardCheck, CreditCard, DollarSign, FileBarChart, FileText, Gift, Globe, KeyRound, Plane, Plug, QrCode, Receipt, Repeat, Settings, ShieldAlert, ShieldCheck, TrendingUp, UserCircle, Wallet, Wrench } from "lucide-react";
+import { requireUser } from "@/lib/session";
+import { secondaryNavFor, verticalFor } from "@/lib/verticals/config";
 
-const ITEMS = [
-  // Vertical workflows
-  { href: "/incidents",                 label: "Incident reports",      icon: ShieldAlert },
-  { href: "/checkpoints/scan",          label: "Scan checkpoint",       icon: QrCode },
-  { href: "/settings/checkpoints",      label: "Patrol checkpoints",    icon: ClipboardCheck },
-  { href: "/clients",                   label: "Clients (billing)",     icon: Building2 },
-  { href: "/reports/client-billing",    label: "Client billing report", icon: DollarSign },
-  { href: "/tips",                      label: "Tip pooling",           icon: Wallet },
-  // Core
-  { href: "/settings/billing",          label: "Billing & plan",        icon: CreditCard },
-  { href: "/settings/locations",        label: "Locations & geofences", icon: Building2 },
-  { href: "/settings/pto",              label: "Time-off policies",     icon: Plane },
-  { href: "/settings/recurring-shifts", label: "Recurring patterns",    icon: Repeat },
-  { href: "/settings/availability",     label: "My availability",       icon: CalendarX },
-  { href: "/schedule/coverage",         label: "Coverage Center",       icon: ShieldAlert },
-  { href: "/schedule/forecast",         label: "Demand Forecast",       icon: TrendingUp },
-  { href: "/reports/labor-live",        label: "Live Labor",            icon: Activity },
-  { href: "/settings/pos",              label: "POS connections",       icon: Plug },
-  { href: "/ewa",                       label: "Get paid early",        icon: Wallet },
-  { href: "/settings/ewa",              label: "EWA settings",          icon: DollarSign },
-  { href: "/worker/profile",            label: "Worker profile",        icon: UserCircle },
-  { href: "/network",                   label: "Worker Network",        icon: Globe },
-  { href: "/network/available",         label: "Network shifts (mine)", icon: Globe },
-  { href: "/settings/integrations",     label: "Integrations",          icon: Wrench },
-  { href: "/settings/audit",            label: "Audit log",             icon: FileText },
-  { href: "/reports",                   label: "Advanced reports",      icon: FileBarChart },
-  { href: "/hr/surveys",                label: "Survey library",        icon: BookOpen },
-  { href: "/compliance",                label: "Compliance Autopilot",  icon: ShieldCheck },
-];
+export default async function MorePage() {
+  const u = await requireUser();
+  const vertical = verticalFor(u.organizationIndustry);
+  const items = secondaryNavFor(u.organizationIndustry, u.role);
 
-export default function MorePage() {
+  // Group items by rough category for visual scanning
+  const groups: { label: string; items: typeof items }[] = [
+    {
+      label: "Money & retention",
+      items: items.filter((m) => ["/ewa", "/settings/ewa", "/reports/labor-live", "/settings/pos", "/reports/client-billing"].includes(m.href)),
+    },
+    {
+      label: "Schedule & coverage",
+      items: items.filter((m) => ["/schedule/coverage", "/schedule/forecast", "/settings/recurring-shifts", "/settings/availability"].includes(m.href)),
+    },
+    {
+      label: "Network",
+      items: items.filter((m) => ["/worker/profile", "/network", "/network/available"].includes(m.href)),
+    },
+    {
+      label: "People & policy",
+      items: items.filter((m) => ["/hr", "/documents", "/messenger", "/billboard", "/settings/pto", "/compliance", "/hr/surveys"].includes(m.href)),
+    },
+    {
+      label: "Reporting",
+      items: items.filter((m) => ["/reports", "/expenses"].includes(m.href)),
+    },
+    {
+      label: "Workspace",
+      items: items.filter((m) => ["/settings/billing", "/settings/locations", "/settings/integrations", "/settings/audit"].includes(m.href)),
+    },
+  ];
+  const placed = new Set(groups.flatMap((g) => g.items.map((i) => i.href)));
+  const other = items.filter((m) => !placed.has(m.href));
+  if (other.length > 0) groups.push({ label: "Other", items: other });
+
   return (
     <div className="space-y-5">
       <header>
+        <div className="text-[11px] uppercase tracking-wider font-bold text-ink-400 mb-1 flex items-center gap-1.5">
+          <span>{vertical.emoji}</span> {vertical.label} workspace
+        </div>
         <h1 className="text-2xl font-bold tracking-tight">More</h1>
-        <p className="text-sm text-ink-500">Extras, settings, and integrations.</p>
+        <p className="text-sm text-ink-500">{vertical.pitch}</p>
       </header>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {ITEMS.map(({ href, label, icon: Icon }) => (
-          <Link key={label} href={href} className="card card-hover p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-ink-100 text-ink-700 flex items-center justify-center">
-              <Icon className="w-5 h-5" />
-            </div>
-            <div className="font-medium text-sm">{label}</div>
-          </Link>
-        ))}
-      </div>
+
+      {groups.filter((g) => g.items.length > 0).map((g) => (
+        <section key={g.label}>
+          <h2 className="text-[11px] uppercase tracking-wider font-bold text-ink-500 dark:text-ink-400 mb-2">{g.label}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {g.items.map(({ href, label, icon: Icon, highlight }) => (
+              <Link key={href} href={href} className={`card card-hover p-4 flex items-center gap-3 ${highlight ? "ring-1 ring-rose-200 dark:ring-rose-500/20" : ""}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${highlight ? "bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300" : "bg-ink-100 text-ink-700 dark:bg-ink-800 dark:text-ink-300"}`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="font-medium text-sm">{label}</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

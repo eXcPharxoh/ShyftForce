@@ -11,6 +11,7 @@ export type SessionUser = {
   role: "ADMIN" | "MANAGER" | "EMPLOYEE";
   organizationId: string;
   organizationName: string;
+  organizationIndustry: string | null;
   locationId?: string | null;
 };
 
@@ -26,6 +27,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     role: s.role,
     organizationId: s.organizationId,
     organizationName: s.organizationName,
+    organizationIndustry: s.organizationIndustry ?? null,
     locationId: s.locationId,
   };
 }

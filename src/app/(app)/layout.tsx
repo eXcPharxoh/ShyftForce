@@ -10,7 +10,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
   return (
     <div className="min-h-screen flex">
-      <Sidebar orgName={u.organizationName} pendingOffers={pendingOffers} />
+      <Sidebar
+        orgName={u.organizationName}
+        industry={u.organizationIndustry}
+        role={u.role}
+        pendingOffers={pendingOffers}
+      />
       <div className="flex-1 min-w-0">
         <Topbar name={u.name} role={u.role} image={u.image} />
         <main className="p-6">{children}</main>
