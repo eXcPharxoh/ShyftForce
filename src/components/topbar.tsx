@@ -1,5 +1,5 @@
 "use client";
-import { Settings, LogOut, Clock, Sparkles, User as UserIcon, CreditCard, ChevronDown } from "lucide-react";
+import { Settings, LogOut, Clock, Sparkles, User as UserIcon, CreditCard, ChevronDown, Shield } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { initials } from "@/lib/utils";
@@ -8,7 +8,7 @@ import { CopilotPanel } from "@/components/copilot/copilot-panel";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { ThemeToggleIcon } from "@/components/ui/theme-toggle";
 
-export function Topbar({ name, role, image }: { name: string; role?: string; image?: string | null }) {
+export function Topbar({ name, role, image, showPlatformAdmin = false }: { name: string; role?: string; image?: string | null; showPlatformAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -96,6 +96,14 @@ export function Topbar({ name, role, image }: { name: string; role?: string; ima
               <MenuLink href="/hr/members"      icon={UserIcon}    label="Profile" />
               <MenuLink href="/settings/billing" icon={CreditCard} label="Billing & plan" />
               <MenuLink href="/more"            icon={Settings}    label="Settings" />
+              {showPlatformAdmin && (
+                <>
+                  <div className="my-1 mx-1 border-t border-ink-100 dark:border-ink-800" />
+                  <Link href="/platform" className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition font-semibold">
+                    <Shield className="w-4 h-4" /> Platform admin
+                  </Link>
+                </>
+              )}
               <div className="my-1 mx-1 border-t border-ink-100 dark:border-ink-800" />
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}

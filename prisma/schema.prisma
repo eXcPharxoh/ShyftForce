@@ -283,6 +283,24 @@ model TipDistribution {
   @@index([memberId])
 }
 
+model ImpersonationGrant {
+  id           String    @id @default(uuid())
+  adminUserId  String
+  targetUserId String
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+  expiresAt    DateTime
+  reason       String?
+  ipAddress    String?
+  userAgent    String?
+
+  adminUser  User @relation("ImpersonationAdmin", fields: [adminUserId], references: [id], onDelete: Cascade)
+  targetUser User @relation("ImpersonationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId, endedAt])
+  @@index([targetUserId, endedAt])
+}
+
 model WorkerProfile {
   id                   String    @id @default(uuid())
   userId               String    @unique
@@ -442,11 +460,13 @@ model User {
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
 
-  member         Member?
-  workerProfile  WorkerProfile?
-  emailTokens    EmailVerification[]
-  passwordResets PasswordReset[]
-  auditLogs      AuditLog[]
+  member                 Member?
+  workerProfile          WorkerProfile?
+  emailTokens            EmailVerification[]
+  passwordResets         PasswordReset[]
+  auditLogs              AuditLog[]
+  impersonationsGiven    ImpersonationGrant[] @relation("ImpersonationAdmin")
+  impersonationsReceived ImpersonationGrant[] @relation("ImpersonationTarget")
 }
 
 model EmailVerification {
