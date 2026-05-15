@@ -26,6 +26,15 @@ export function MessengerClient({
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }); }, [thread.length, active?.id]);
 
+  // When opening a thread, mark every unread message from that contact as read.
+  useEffect(() => {
+    if (!active) return;
+    fetch("/api/messages/read", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fromId: active.id }),
+    }).catch(() => {});
+  }, [active?.id]);
+
   async function send(e: React.FormEvent) {
     e.preventDefault();
     if (!active || !draft.trim()) return;
