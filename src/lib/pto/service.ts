@@ -138,3 +138,94 @@ export async function snapshotForMember(memberId: string, organizationId: string
   }
   return out;
 }
+
+/** Batched snapshot for many members at once. Used by the manager time-off page
+ *  so we don't issue 50+ queries per pending requester (the old per-member loop). */
+export async function snapshotForMembers(memberIds: string[], organizationId: string): Promise<Map<string, BalanceSnapshot[]>> {
+  if (memberIds.length === 0) return new Map();
+  await ensureDefaultPolicies(organizationId);
+
+  const [policies, members, balances] = await Promise.all([
+    prisma.ptoPolicy.findMany({ where: { organizationId, active: true }, orderBy: { name: "asc" } }),
+    prisma.member.findMany({ where: { id: { in: memberIds } }, select: { id: true, hireDate: true } }),
+    prisma.ptoBalance.findMany({ where: { memberId: { in: memberIds }, policy: { organizationId } } }),
+  ]);
+
+  const memberById = new Map(members.map(m => [m.id, m]));
+  // Key: `${memberId}|${policyId}` → balance
+  const balanceByKey = new Map<string, { id: string; hoursAccrued: number; hoursUsed: number; lastAccrualYear: number | null }>();
+  for (const b of balances) {
+    balanceByKey.set(`${b.memberId}|${b.policyId}`, b);
+  }
+
+  // Identify which (member, policy) pairs need a balance row created and which
+  // need an annual accrual. We'll fire those as concurrent writes after the read pass.
+  type Pending = { memberId: string; policyId: string };
+  const toCreate: Pending[] = [];
+  type AccrualUpdate = { id: string; hoursAccrued: number };
+  const toAccrue: AccrualUpdate[] = [];
+  const year = new Date().getFullYear();
+
+  for (const memberId of memberIds) {
+    const member = memberById.get(memberId);
+    if (!member) continue;
+    for (const p of policies) {
+      const key = `${memberId}|${p.id}`;
+      let b = balanceByKey.get(key);
+      if (!b) {
+        toCreate.push({ memberId, policyId: p.id });
+        continue;
+      }
+      if (p.accrualMethod === "unlimited" || p.annualHours <= 0) continue;
+      if (b.lastAccrualYear === year) continue;
+      const hireYear = member.hireDate.getFullYear();
+      const hireMonth = member.hireDate.getMonth();
+      const isFirstYear = b.lastAccrualYear == null && hireYear === year;
+      const monthsRemaining = isFirstYear ? (12 - hireMonth) : 12;
+      const proRated = Math.round((p.annualHours * (monthsRemaining / 12)) * 100) / 100;
+      let newAccrued = b.hoursAccrued + proRated;
+      if (p.maxBalance != null) {
+        const available = newAccrued - b.hoursUsed;
+        if (available > p.maxBalance) newAccrued = b.hoursUsed + p.maxBalance;
+      }
+      toAccrue.push({ id: b.id, hoursAccrued: newAccrued });
+      balanceByKey.set(key, { ...b, hoursAccrued: newAccrued, lastAccrualYear: year });
+    }
+  }
+
+  // Fire writes in parallel (createMany would be cleaner, but we need IDs back)
+  await Promise.all([
+    ...toCreate.map(p =>
+      prisma.ptoBalance.create({ data: { memberId: p.memberId, policyId: p.policyId } })
+        .then(b => balanceByKey.set(`${p.memberId}|${p.policyId}`, b))
+    ),
+    ...toAccrue.map(u =>
+      prisma.ptoBalance.update({
+        where: { id: u.id },
+        data: { hoursAccrued: u.hoursAccrued, lastAccrualAt: new Date(), lastAccrualYear: year },
+      })
+    ),
+  ]);
+
+  // Build the result
+  const result = new Map<string, BalanceSnapshot[]>();
+  for (const memberId of memberIds) {
+    const snaps: BalanceSnapshot[] = [];
+    for (const p of policies) {
+      const b = balanceByKey.get(`${memberId}|${p.id}`);
+      const accrued = b?.hoursAccrued ?? 0;
+      const used = b?.hoursUsed ?? 0;
+      const unlimited = p.accrualMethod === "unlimited" || p.annualHours <= 0;
+      snaps.push({
+        policyId: p.id, category: p.category, name: p.name,
+        annualHours: p.annualHours, hoursPerDay: p.hoursPerDay,
+        accrualMethod: p.accrualMethod,
+        accrued, used,
+        available: unlimited ? Infinity : accrued - used,
+        unlimited,
+      });
+    }
+    result.set(memberId, snaps);
+  }
+  return result;
+}

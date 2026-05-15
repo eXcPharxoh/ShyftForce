@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { relTime } from "@/lib/utils";
 import { Search, Building2 } from "lucide-react";
+import { CreateOrgDialog } from "@/components/platform/create-org-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -26,25 +27,28 @@ export default async function PlatformOrgsPage({ searchParams }: { searchParams:
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>
           <p className="text-sm text-ink-500">{orgs.length} shown · use filters to narrow</p>
         </div>
-        <form className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
-            <input name="q" defaultValue={q} placeholder="Search name or slug" className="input h-9 pl-8 w-64 text-sm" />
-          </div>
-          <select name="plan" defaultValue={plan} className="input h-9 text-sm w-32">
-            <option value="">All plans</option>
-            <option value="trial">Trial</option>
-            <option value="starter">Starter</option>
-            <option value="pro">Pro</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
-          <button className="btn-outline h-9 text-xs">Filter</button>
-        </form>
+        <div className="flex items-center gap-2 flex-wrap">
+          <form className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
+              <input name="q" defaultValue={q} placeholder="Search name or slug" className="input h-9 pl-8 w-64 text-sm" />
+            </div>
+            <select name="plan" defaultValue={plan} className="input h-9 text-sm w-32">
+              <option value="">All plans</option>
+              <option value="trial">Trial</option>
+              <option value="starter">Starter</option>
+              <option value="pro">Pro</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+            <button className="btn-outline h-9 text-xs">Filter</button>
+          </form>
+          <CreateOrgDialog />
+        </div>
       </header>
 
       <section className="card overflow-hidden">

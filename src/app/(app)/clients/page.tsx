@@ -2,6 +2,7 @@ import { requireManagerOrAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { AddClientForm } from "@/components/clients/add-form";
+import { ClientRowActions } from "@/components/clients/client-row-actions";
 import { Building2, DollarSign, MapPin } from "lucide-react";
 import Link from "next/link";
 
@@ -64,6 +65,7 @@ export default async function ClientsPage() {
                     </div>
                   )}
                 </div>
+                <ClientRowActions id={c.id} name={c.name} active={c.active} />
               </li>
             ))}
           </ul>

@@ -5,7 +5,7 @@ import { TimeOffActions } from "@/components/time-off/time-off-actions";
 import { TimeOffForm } from "@/components/time-off/time-off-form";
 import { PageHeader } from "@/components/ui/page-header";
 import { PtoBalanceCard } from "@/components/pto/balance-card";
-import { snapshotForMember } from "@/lib/pto/service";
+import { snapshotForMember, snapshotForMembers } from "@/lib/pto/service";
 import { Moon } from "lucide-react";
 
 export default async function TimeOffPage() {
@@ -25,14 +25,12 @@ export default async function TimeOffPage() {
   const approved = requests.filter(r => r.status === "approved");
   const rejected = requests.filter(r => r.status === "rejected");
 
-  // For manager: precompute the requester's available balance per pending request
+  // For manager: precompute the requester's available balance per pending request.
+  // Single batched query rather than N round-trips per requester.
   const requesterIds = [...new Set(pending.map(r => r.memberId))];
-  const requesterBalances = new Map<string, Awaited<ReturnType<typeof snapshotForMember>>>();
-  if (isManager) {
-    await Promise.all(requesterIds.map(async mid => {
-      requesterBalances.set(mid, await snapshotForMember(mid, u.organizationId));
-    }));
-  }
+  const requesterBalances = isManager
+    ? await snapshotForMembers(requesterIds, u.organizationId)
+    : new Map<string, Awaited<ReturnType<typeof snapshotForMember>>>();
 
   return (
     <div className="space-y-5">

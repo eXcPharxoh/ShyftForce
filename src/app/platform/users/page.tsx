@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { relTime } from "@/lib/utils";
 import { ImpersonateButton } from "@/components/platform/impersonate-button";
+import { UserActionsMenu } from "@/components/platform/user-actions-menu";
 import { Search, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +78,18 @@ export default async function PlatformUsersPage({ searchParams }: { searchParams
                   </td>
                   <td className="px-4 py-2.5 text-right text-[11px] text-ink-500">{relTime(u.createdAt)}</td>
                   <td className="px-4 py-2.5 text-right">
-                    {u.member && <ImpersonateButton userId={u.id} email={u.email} name={u.name} />}
+                    <div className="inline-flex items-center gap-1.5">
+                      {u.member && <ImpersonateButton userId={u.id} email={u.email} name={u.name} />}
+                      <UserActionsMenu
+                        userId={u.id}
+                        email={u.email}
+                        name={u.name}
+                        locked={!!locked}
+                        verified={!!u.emailVerified}
+                        role={u.member?.role as any}
+                        status={u.member?.status as any}
+                      />
+                    </div>
                   </td>
                 </tr>
               );

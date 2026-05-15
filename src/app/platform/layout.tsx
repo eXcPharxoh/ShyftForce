@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getRealSessionUser } from "@/lib/session";
 import { isPlatformAdminEmail, getActiveImpersonation } from "@/lib/platform/admin";
 import { Logo, Wordmark } from "@/components/ui/logo";
+import { EndImpersonationButton } from "@/components/platform/end-impersonation-button";
 import { LayoutDashboard, Building2, Users, FileText, Activity, ArrowLeft, LogOut } from "lucide-react";
 
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
@@ -49,9 +50,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
               <span className="font-semibold">⚠ You are impersonating a user</span>
               <span className="text-white/85">Started {Math.floor((Date.now() - +imp.startedAt) / 60_000)} min ago</span>
             </div>
-            <form action="/api/platform/impersonate" method="post" className="contents">
-              <button formMethod="DELETE" className="underline hover:no-underline">End impersonation</button>
-            </form>
+            <EndImpersonationButton />
           </div>
         )}
         <header className="bg-white dark:bg-ink-900 border-b border-ink-200 dark:border-ink-800 px-6 py-3 flex items-center justify-between">

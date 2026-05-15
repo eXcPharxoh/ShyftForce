@@ -4,8 +4,9 @@ import { addDays, dateLabel, initials, startOfWeek, timeLabel } from "@/lib/util
 import { ScheduleControls } from "@/components/schedule/schedule-controls";
 import { AutoScheduleButton } from "@/components/schedule/auto-schedule-button";
 import { ScheduleActions } from "@/components/schedule/schedule-actions";
+import { PublishWeekButton } from "@/components/schedule/publish-week-button";
 import { ShiftCell } from "@/components/schedule/shift-cell";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 export default async function SchedulePage({ searchParams }: { searchParams: Promise<{ w?: string }> }) {
@@ -59,9 +60,9 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
             <>
               <ScheduleActions weekStart={weekStart.toISOString().slice(0,10)} />
               <AutoScheduleButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />
+              <PublishWeekButton weekStart={weekStart.toISOString().slice(0,10)} draftCount={drafts.length} />
             </>
           )}
-          <button className="btn-primary h-9"><Plus className="w-4 h-4" /> Publish week</button>
         </div>
       </header>
 
