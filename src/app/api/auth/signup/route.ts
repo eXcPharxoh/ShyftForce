@@ -25,13 +25,14 @@ export async function POST(req: Request) {
 
   const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50) + "-" + randomBytes(3).toString("hex");
   const passwordHash = await bcrypt.hash(password, 10);
-  const trialEndsAt = new Date(Date.now() + 14 * 24 * 3600 * 1000);
 
   const result = await prisma.$transaction(async (tx) => {
     const org = await tx.organization.create({
       data: {
         name: orgName, slug,
-        plan: "trial", trialEndsAt,
+        // New plan model: every signup lands on the forever-free tier
+        // (5 seats, 1 location, core scheduling). No expiry date to babysit.
+        plan: "free",
       },
     });
     const user = await tx.user.create({
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
   await audit({
     organizationId: result.org.id, actorId: result.user.id,
     action: "org.create", entityType: "Organization", entityId: result.org.id,
-    metadata: { orgName, plan: "trial", trialEndsAt },
+    metadata: { orgName, plan: "free" },
   });
   await audit({
     organizationId: result.org.id, actorId: result.user.id,

@@ -9,6 +9,7 @@ import { getRealSessionUser } from "@/lib/session";
 import { isPlatformAdminEmail } from "@/lib/platform/admin";
 import { Email, sendEmail } from "@/lib/email";
 import { audit } from "@/lib/audit";
+import { syncSeatsForOrg } from "@/lib/billing/sync-seats";
 
 const ActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("send_reset_password") }),
@@ -81,7 +82,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       case "set_status": {
         if (!user.member) return NextResponse.json({ error: "user has no member record" }, { status: 400 });
         await prisma.member.update({ where: { id: user.member.id }, data: { status: parsed.data.status } });
-        if (orgId) await audit({ organizationId: orgId, actorId: real.id, action: parsed.data.status === "inactive" ? "member.deactivate" : "user.login", entityType: "Member", entityId: user.member.id, metadata: { byPlatformAdmin: real.email, to: parsed.data.status } });
+        if (orgId) {
+          await audit({ organizationId: orgId, actorId: real.id, action: parsed.data.status === "inactive" ? "member.deactivate" : "user.login", entityType: "Member", entityId: user.member.id, metadata: { byPlatformAdmin: real.email, to: parsed.data.status } });
+          // Status change moves the seat count, so update Stripe overage.
+          syncSeatsForOrg(orgId).catch(() => {});
+        }
         return NextResponse.json({ ok: true, status: parsed.data.status });
       }
     }

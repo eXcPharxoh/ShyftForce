@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { Email, sendEmail } from "@/lib/email";
 import { audit } from "@/lib/audit";
+import { PLANS, normalizePlanKey } from "@/lib/stripe";
 
 const Schema = z.object({
   invitations: z.array(z.object({
@@ -26,6 +27,27 @@ export async function POST(req: Request) {
   const inviterName = inviter?.name ?? "A teammate";
   const org = await prisma.organization.findUnique({ where: { id: u.organizationId } });
   if (!org) return NextResponse.json({ error: "Org not found" }, { status: 404 });
+
+  // Hard-cap enforcement: Free plan can't queue invites beyond its seat limit
+  // (active members + pending non-expired invites must stay <= maxMembersHard).
+  const planKey = normalizePlanKey(org.plan);
+  const planDef = PLANS[planKey];
+  if (planDef.maxMembersHard < 9999) {
+    const [activeMembers, pendingInvites] = await Promise.all([
+      prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
+      prisma.invitation.count({
+        where: { organizationId: u.organizationId, acceptedAt: null, expiresAt: { gt: new Date() } },
+      }),
+    ]);
+    const requested = parsed.data.invitations.length;
+    if (activeMembers + pendingInvites + requested > planDef.maxMembersHard) {
+      const room = Math.max(0, planDef.maxMembersHard - activeMembers - pendingInvites);
+      return NextResponse.json({
+        error: `Plan cap: ${planDef.label} allows ${planDef.maxMembersHard} members. You have ${activeMembers} active + ${pendingInvites} pending invite${pendingInvites === 1 ? "" : "s"} — room for ${room} more. Upgrade to Pro to invite ${requested}.`,
+        planCapHit: true, room,
+      }, { status: 402 });
+    }
+  }
 
   const created: any[] = [];
   for (const inv of parsed.data.invitations) {

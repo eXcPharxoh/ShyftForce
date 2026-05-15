@@ -40,9 +40,9 @@ export default async function PlatformOrgsPage({ searchParams }: { searchParams:
             </div>
             <select name="plan" defaultValue={plan} className="input h-9 text-sm w-32">
               <option value="">All plans</option>
-              <option value="trial">Trial</option>
-              <option value="starter">Starter</option>
+              <option value="free">Free</option>
               <option value="pro">Pro</option>
+              <option value="business">Business</option>
               <option value="enterprise">Enterprise</option>
             </select>
             <button className="btn-outline h-9 text-xs">Filter</button>

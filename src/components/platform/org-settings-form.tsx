@@ -94,10 +94,10 @@ export function OrgSettingsForm({ org }: { org: Org }) {
           <div>
             <label className="label">Plan</label>
             <select className="input" value={plan} onChange={(e) => setPlan(e.target.value)}>
-              <option value="trial">Trial</option>
-              <option value="starter">Starter</option>
-              <option value="pro">Pro</option>
-              <option value="enterprise">Enterprise</option>
+              <option value="free">Free · 5 seats · 1 location</option>
+              <option value="pro">Pro · $29 + 5 seats + $4/seat</option>
+              <option value="business">Business · $79 + 15 seats + $6/seat</option>
+              <option value="enterprise">Enterprise · custom</option>
             </select>
           </div>
           <div>

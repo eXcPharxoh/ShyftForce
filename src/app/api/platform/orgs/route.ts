@@ -19,8 +19,8 @@ import { ensureDefaultPolicies } from "@/lib/pto/service";
 const CreateSchema = z.object({
   name:     z.string().min(2).max(80),
   industry: z.enum(["restaurant", "retail", "healthcare", "field_service", "office", "fitness", "security", "other"]).optional(),
-  plan:     z.enum(["trial", "starter", "pro", "enterprise"]).default("trial"),
-  trialDays:z.number().int().min(0).max(365).default(14),
+  plan:     z.enum(["free", "pro", "business", "enterprise"]).default("free"),
+  trialDays:z.number().int().min(0).max(365).default(0),
   timezone: z.string().max(60).default("America/New_York"),
   isDemo:   z.boolean().default(false),
   mode:     z.enum(["invite", "create"]).default("invite"),
@@ -54,7 +54,9 @@ export async function POST(req: Request) {
   }
 
   const slug = slugFor(data.name);
-  const trialEndsAt = data.plan === "trial" && data.trialDays > 0
+  // Trial only applies to paid plans where admin is comping a customer onto Pro/Business.
+  // Forever-free has no expiry; Enterprise is handled out-of-band.
+  const trialEndsAt = data.trialDays > 0 && (data.plan === "pro" || data.plan === "business")
     ? new Date(Date.now() + data.trialDays * 24 * 3600 * 1000)
     : null;
 

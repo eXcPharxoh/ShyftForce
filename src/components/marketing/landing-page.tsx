@@ -6,6 +6,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { Logo, Wordmark } from "@/components/ui/logo";
+import { PricingSection } from "@/components/marketing/pricing-section";
 
 export function LandingPage() {
   return (
@@ -16,7 +17,7 @@ export function LandingPage() {
       <Features />
       <Industries />
       <ProductShowcase />
-      <Pricing />
+      <PricingSection />
       <Testimonials />
       <FinalCTA />
       <MarketingFooter />
@@ -306,56 +307,8 @@ function ProductShowcase() {
   );
 }
 
-/* ------------------- PRICING ------------------- */
-function Pricing() {
-  const tiers = [
-    { name: "Starter",    price: 29,  seats: "10",  cta: "Start free trial",       features: ["All scheduling + payroll", "AI Co-pilot & Auto-Scheduler", "Compliance Autopilot", "Geofenced clock-in", "Email support"] },
-    { name: "Pro",        price: 79,  seats: "100", cta: "Start free trial", featured: true, features: ["Everything in Starter", "Open-Shift Marketplace", "Advanced analytics", "Audit log + GDPR tools", "Priority support"] },
-    { name: "Enterprise", price: null, seats: "∞",  cta: "Contact sales",          features: ["Everything in Pro", "SSO (SAML)", "Custom SLA · 99.99%", "Dedicated CSM", "On-premise option"] },
-  ];
-  return (
-    <section id="pricing" className="py-24 bg-ink-50 dark:bg-ink-900/40 border-y border-ink-200/60 dark:border-ink-800/60">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="text-center mb-14">
-          <div className="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400 mb-2">Pricing</div>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight-2">Simple, seat-based.</h2>
-          <p className="text-ink-600 dark:text-ink-400 mt-4 max-w-xl mx-auto">
-            14-day free trial. No credit card. Switch tiers anytime.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-          {tiers.map(t => (
-            <div key={t.name} className={`card p-7 relative ${t.featured ? "ring-2 ring-brand-500 shadow-card-hover scale-[1.02]" : ""}`}>
-              {t.featured && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 badge-orange flex items-center gap-1 px-3 py-1">
-                  <Star className="w-3 h-3 fill-brand-700" /> Most popular
-                </div>
-              )}
-              <div className="font-bold text-lg">{t.name}</div>
-              <div className="mt-3 flex items-baseline gap-1">
-                {t.price != null
-                  ? <><span className="text-5xl font-bold tracking-tight-2">${t.price}</span><span className="text-sm text-ink-500 dark:text-ink-400">/mo</span></>
-                  : <span className="text-5xl font-bold tracking-tight-2">Custom</span>}
-              </div>
-              <div className="text-xs text-ink-500 dark:text-ink-400 mt-1">Up to {t.seats} {t.seats === "∞" ? "" : "seats"}</div>
-              <Link href={t.cta === "Contact sales" ? "mailto:sales@shyftforce.com" : "/signup"}
-                    className={t.featured ? "btn-primary w-full mt-6 py-2.5" : "btn-outline w-full mt-6 py-2.5"}>
-                {t.cta}
-              </Link>
-              <ul className="mt-6 space-y-2 text-sm">
-                {t.features.map(f => (
-                  <li key={f} className="flex items-start gap-2 text-ink-700 dark:text-ink-300">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+/* Pricing is now in @/components/marketing/pricing-section.tsx with an
+ * interactive seat slider and live competitor comparison. */
 
 /* ------------------- TESTIMONIALS ------------------- */
 function Testimonials() {

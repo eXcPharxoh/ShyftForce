@@ -10,7 +10,7 @@ import { audit } from "@/lib/audit";
 const PatchSchema = z.object({
   name:               z.string().min(2).max(80).optional(),
   industry:           z.string().max(40).nullable().optional(),
-  plan:               z.enum(["trial", "starter", "pro", "enterprise"]).optional(),
+  plan:               z.enum(["free", "pro", "business", "enterprise"]).optional(),
   subscriptionStatus: z.enum(["active", "past_due", "canceled", "incomplete"]).nullable().optional(),
   trialEndsAt:        z.string().datetime().nullable().optional(),
   timezone:           z.string().max(60).optional(),

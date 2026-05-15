@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
 import { audit } from "@/lib/audit";
+import { PLANS, normalizePlanKey } from "@/lib/stripe";
 
 const CreateSchema = z.object({
   name:                 z.string().min(2).max(80),
@@ -29,6 +30,20 @@ export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
   const parsed = CreateSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
+
+  // Plan-level location cap
+  const [org, locationCount] = await Promise.all([
+    prisma.organization.findUnique({ where: { id: u.organizationId }, select: { plan: true } }),
+    prisma.location.count({ where: { organizationId: u.organizationId } }),
+  ]);
+  const planKey = normalizePlanKey(org?.plan);
+  const planDef = PLANS[planKey];
+  if (locationCount >= planDef.maxLocations) {
+    return NextResponse.json({
+      error: `${planDef.label} allows ${planDef.maxLocations} location${planDef.maxLocations === 1 ? "" : "s"}. Upgrade to add more sites.`,
+      planCapHit: true,
+    }, { status: 402 });
+  }
 
   // If a clientId is supplied, verify it belongs to this org
   if (parsed.data.clientId) {

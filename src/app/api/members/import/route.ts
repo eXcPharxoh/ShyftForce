@@ -6,6 +6,8 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { Email, sendEmail } from "@/lib/email";
 import { audit } from "@/lib/audit";
+import { PLANS, normalizePlanKey } from "@/lib/stripe";
+import { syncSeatsForOrg } from "@/lib/billing/sync-seats";
 
 const RowSchema = z.object({
   email:    z.string().email().toLowerCase().trim(),
@@ -45,8 +47,18 @@ export async function POST(req: Request) {
   const parsed = Body.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
 
-  const locations = await prisma.location.findMany({ where: { organizationId: u.organizationId } });
+  const [locations, org, existingActive] = await Promise.all([
+    prisma.location.findMany({ where: { organizationId: u.organizationId } }),
+    prisma.organization.findUnique({ where: { id: u.organizationId }, select: { plan: true } }),
+    prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
+  ]);
   const locByName = new Map(locations.map(l => [l.name.toLowerCase(), l]));
+
+  // Free plan caps active members. We'll count toward the cap as we import.
+  const planKey = normalizePlanKey(org?.plan);
+  const planDef = PLANS[planKey];
+  const hardCap = planDef.maxMembersHard;
+  let runningActive = existingActive;
 
   const results: Array<{ row: number; email?: string; status: "created" | "invited" | "exists" | "error"; message?: string }> = [];
 
@@ -84,6 +96,15 @@ export async function POST(req: Request) {
       const existing = await prisma.user.findUnique({ where: { email: r.email }, include: { member: true } });
       if (existing?.member) {
         results.push({ row: i + 2, email: r.email, status: "exists", message: "Already a member" });
+        continue;
+      }
+
+      // Hard-cap enforcement (Free plan only — Pro/Business are uncapped + overage-billed)
+      if (hardCap < 9999 && runningActive >= hardCap) {
+        results.push({
+          row: i + 2, email: r.email, status: "error",
+          message: `Plan cap hit (${hardCap} active members on ${planDef.label}). Upgrade to add more.`,
+        });
         continue;
       }
 
@@ -129,6 +150,7 @@ export async function POST(req: Request) {
             },
           },
         });
+        runningActive++; // direct-create immediately occupies a seat
         results.push({ row: i + 2, email: r.email, status: "created" });
       }
     } catch (e: any) {
@@ -141,6 +163,8 @@ export async function POST(req: Request) {
     action: "member.invite", entityType: "Import",
     metadata: { total: parsed.data.rows.length, results: results.reduce((acc, r) => { acc[r.status] = (acc[r.status] ?? 0) + 1; return acc; }, {} as any) },
   });
+  // Push the new seat count to Stripe (fire-and-forget).
+  syncSeatsForOrg(u.organizationId).catch(() => {});
 
   return NextResponse.json({
     summary: results.reduce((acc, r) => { acc[r.status] = (acc[r.status] ?? 0) + 1; return acc; }, {} as Record<string, number>),

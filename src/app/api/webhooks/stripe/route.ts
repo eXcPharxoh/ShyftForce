@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       if (orgId) {
         await prisma.organization.update({
           where: { id: orgId },
-          data: { plan: "trial", subscriptionStatus: "canceled" },
+          data: { plan: "free", subscriptionStatus: "canceled" },
         });
         await audit({ organizationId: orgId, action: "billing.subscription_canceled" });
       }
@@ -70,9 +70,14 @@ export async function POST(req: Request) {
   return NextResponse.json({ received: true });
 }
 
+/** Map a subscription's price IDs back to our plan key. Subscriptions have one
+ *  base line + (optionally) one per-seat overage line; either reveals the plan. */
 function derivePlanFromSub(sub: any): string {
-  const priceId: string = sub?.items?.data?.[0]?.price?.id ?? "";
-  if (priceId === process.env.STRIPE_PRICE_PRO)     return "pro";
-  if (priceId === process.env.STRIPE_PRICE_STARTER) return "starter";
-  return "starter";
+  const priceIds: string[] = (sub?.items?.data ?? []).map((i: any) => i?.price?.id).filter(Boolean);
+  const matches = (...envs: (string | undefined)[]) => priceIds.some(id => envs.filter(Boolean).includes(id));
+  if (matches(process.env.STRIPE_PRICE_BUSINESS_BASE, process.env.STRIPE_PRICE_BUSINESS_SEAT)) return "business";
+  if (matches(process.env.STRIPE_PRICE_PRO_BASE, process.env.STRIPE_PRICE_PRO_SEAT, process.env.STRIPE_PRICE_PRO)) return "pro";
+  // Legacy alias
+  if (matches(process.env.STRIPE_PRICE_STARTER)) return "pro";
+  return "pro";
 }

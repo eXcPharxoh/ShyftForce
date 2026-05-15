@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { audit } from "@/lib/audit";
+import { PLANS, normalizePlanKey } from "@/lib/stripe";
+import { syncSeatsForOrg } from "@/lib/billing/sync-seats";
 
 const Schema = z.object({
   token: z.string().min(20),
@@ -43,6 +45,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User is already a member of another workspace; multi-org accounts coming soon." }, { status: 409 });
   }
   if (!user.member) {
+    // Enforce the hard seat cap on the Free plan before accepting a new member.
+    // Pro/Business have no hard cap — they just incur per-seat overage.
+    const orgPlan = normalizePlanKey(inv.organization.plan);
+    const def = PLANS[orgPlan];
+    if (def.maxMembersHard < 9999) {
+      const activeMembers = await prisma.member.count({
+        where: { organizationId: inv.organizationId, status: "active" },
+      });
+      if (activeMembers >= def.maxMembersHard) {
+        return NextResponse.json({
+          error: `This workspace is on the ${def.label} plan, which caps active members at ${def.maxMembersHard}. The owner needs to upgrade to add more.`,
+          planCapHit: true,
+        }, { status: 402 });
+      }
+    }
     await prisma.member.create({
       data: {
         userId: user.id, organizationId: inv.organizationId,
@@ -58,6 +75,8 @@ export async function POST(req: Request) {
     action: "member.invite_accept", entityType: "Invitation", entityId: inv.id,
     metadata: { email: inv.email, role: inv.role },
   });
+  // Push the new seat count to Stripe so the per-seat overage line stays accurate.
+  syncSeatsForOrg(inv.organizationId).catch(() => {});
 
   return NextResponse.json({ ok: true, email: user.email, organizationName: inv.organization.name });
 }

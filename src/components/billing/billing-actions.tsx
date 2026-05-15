@@ -6,7 +6,7 @@ export function BillingActions({ hasSubscription, currentPlan }: { hasSubscripti
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function checkout(plan: "starter" | "pro") {
+  async function checkout(plan: "pro" | "business") {
     setError(null); setLoading(plan);
     const res = await fetch("/api/billing/checkout", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -28,21 +28,21 @@ export function BillingActions({ hasSubscription, currentPlan }: { hasSubscripti
   }
 
   return (
-    <div className="mt-4 flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap">
       {hasSubscription ? (
         <button onClick={openPortal} disabled={!!loading} className="btn-primary">
           {loading === "portal" ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />} Manage subscription <ExternalLink className="w-3 h-3 ml-1" />
         </button>
       ) : (
         <>
-          {currentPlan !== "starter" && (
-            <button onClick={() => checkout("starter")} disabled={!!loading} className="btn-outline">
-              {loading === "starter" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpCircle className="w-4 h-4" />} Upgrade to Starter
+          {currentPlan !== "pro" && (
+            <button onClick={() => checkout("pro")} disabled={!!loading} className="btn-outline">
+              {loading === "pro" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpCircle className="w-4 h-4" />} Upgrade to Pro
             </button>
           )}
-          {currentPlan !== "pro" && (
-            <button onClick={() => checkout("pro")} disabled={!!loading} className="btn-primary">
-              {loading === "pro" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpCircle className="w-4 h-4" />} Upgrade to Pro
+          {currentPlan !== "business" && (
+            <button onClick={() => checkout("business")} disabled={!!loading} className="btn-primary">
+              {loading === "business" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpCircle className="w-4 h-4" />} Upgrade to Business
             </button>
           )}
         </>

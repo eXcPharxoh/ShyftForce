@@ -15,10 +15,10 @@ const INDUSTRIES = [
 ] as const;
 
 const PLANS = [
-  { v: "trial",      l: "Trial",      hint: "14-day trial (default)" },
-  { v: "starter",    l: "Starter",    hint: "Up to 25 employees" },
-  { v: "pro",        l: "Pro",        hint: "Unlimited employees + integrations" },
-  { v: "enterprise", l: "Enterprise", hint: "Custom contract" },
+  { v: "free",       l: "Free",       hint: "5 seats · 1 location · forever free" },
+  { v: "pro",        l: "Pro",        hint: "$29/mo + 5 seats · $4 per extra seat" },
+  { v: "business",   l: "Business",   hint: "$79/mo + 15 seats · $6 per extra seat" },
+  { v: "enterprise", l: "Enterprise", hint: "Custom contract · SSO + SLA" },
 ] as const;
 
 type Result = {
@@ -39,7 +39,7 @@ export function CreateOrgDialog() {
   // Form state
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState<typeof INDUSTRIES[number]["v"]>("restaurant");
-  const [plan, setPlan] = useState<typeof PLANS[number]["v"]>("trial");
+  const [plan, setPlan] = useState<typeof PLANS[number]["v"]>("free");
   const [trialDays, setTrialDays] = useState(14);
   const [isDemo, setIsDemo] = useState(false);
   const [mode, setMode] = useState<"invite" | "create">("invite");
@@ -49,7 +49,7 @@ export function CreateOrgDialog() {
   const [copied, setCopied] = useState(false);
 
   function reset() {
-    setName(""); setIndustry("restaurant"); setPlan("trial"); setTrialDays(14); setIsDemo(false);
+    setName(""); setIndustry("restaurant"); setPlan("free"); setTrialDays(14); setIsDemo(false);
     setMode("invite"); setOwnerName(""); setOwnerEmail(""); setOwnerPassword("");
     setError(null); setResult(null); setBusy(false); setCopied(false);
   }
@@ -64,7 +64,8 @@ export function CreateOrgDialog() {
           name: name.trim(),
           industry,
           plan,
-          trialDays: plan === "trial" ? trialDays : 0,
+          // Trial days only apply when comping a paid plan (Pro/Business)
+          trialDays: plan === "pro" || plan === "business" ? trialDays : 0,
           isDemo,
           mode,
           owner: {
@@ -136,12 +137,12 @@ export function CreateOrgDialog() {
                   </div>
                 </div>
 
-                {plan === "trial" && (
+                {(plan === "pro" || plan === "business") && (
                   <div>
-                    <label className="label">Trial length</label>
+                    <label className="label">Free trial length (optional)</label>
                     <div className="flex items-center gap-2">
                       <input className="input w-24" type="number" min={0} max={365} value={trialDays} onChange={(e) => setTrialDays(parseInt(e.target.value) || 0)} />
-                      <span className="text-sm text-ink-500">days</span>
+                      <span className="text-sm text-ink-500">days · 0 = bill immediately</span>
                     </div>
                   </div>
                 )}
