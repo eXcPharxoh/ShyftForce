@@ -1,8 +1,28 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import AzureADProvider from "next-auth/providers/azure-ad";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { verifyCode } from "./totp";
+
+// OAuth providers are only added when their client IDs are configured. Lets
+// us deploy without setting them up and skip the "this provider isn't
+// configured" screen.
+const oauthProviders = [
+  process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && GoogleProvider({
+    clientId:     process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    // Restricted to verified emails; we'll only allow login if the email
+    // matches an existing User (or accepted invitation).
+    authorization: { params: { prompt: "select_account" } },
+  }),
+  process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET && AzureADProvider({
+    clientId:     process.env.AZURE_AD_CLIENT_ID,
+    clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
+    tenantId:     process.env.AZURE_AD_TENANT_ID ?? "common", // "common" = any AAD or personal MS account
+  }),
+].filter(Boolean) as any[];
 
 // When the app is deployed on multiple subdomains (app.shyftforce.com,
 // admin.shyftforce.com), set NEXTAUTH_COOKIE_DOMAIN=.shyftforce.com so the
@@ -37,6 +57,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   providers: [
+    ...oauthProviders,
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -99,7 +120,61 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    // OAuth gate: an external IdP can only sign you in if the email it
+    // returns already exists as a User (so randoms can't claim an org).
+    // We then upsert an OAuthIdentity link so future logins are 1-click.
+    async signIn({ user, account, profile }) {
+      if (!account || account.provider === "credentials") return true;
+      const email = (profile as any)?.email ?? user.email;
+      if (!email) return false;
+      const dbUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+      if (!dbUser) {
+        // Brand-new email coming via OAuth — refuse. Customer admins invite
+        // them through normal flow; THEN they can SSO in.
+        return "/login?error=AccessDenied&reason=not_invited";
+      }
+      // 2FA still applies — if the user enrolled in TOTP, refuse OAuth.
+      // OAuth bypassing TOTP would silently downgrade their security.
+      if (dbUser.totpEnabled) {
+        return "/login?error=AccessDenied&reason=2fa_use_password";
+      }
+      try {
+        await prisma.oAuthIdentity.upsert({
+          where:  { provider_providerId: { provider: account.provider, providerId: account.providerAccountId } },
+          create: {
+            userId:     dbUser.id,
+            provider:   account.provider,
+            providerId: account.providerAccountId,
+            email:      email.toLowerCase(),
+          },
+          update: { userId: dbUser.id, lastUsedAt: new Date() },
+        });
+      } catch (e) {
+        console.error("[oauth] failed to upsert identity:", e);
+      }
+      return true;
+    },
+    async jwt({ token, user, trigger, account }) {
+      // OAuth users hit jwt() without going through authorize(), so we need
+      // to enrich the token with their member context here.
+      if (account && account.provider !== "credentials" && token.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email.toLowerCase() },
+          include: { member: { include: { organization: true } } },
+        });
+        if (dbUser?.member) {
+          Object.assign(token, {
+            sub: dbUser.id,
+            memberId: dbUser.member.id,
+            role: dbUser.member.role,
+            organizationId: dbUser.member.organizationId,
+            organizationName: dbUser.member.organization.name,
+            organizationIndustry: dbUser.member.organization.industry ?? null,
+            locationId: dbUser.member.locationId ?? null,
+          });
+        }
+      }
+
       if (user) {
         Object.assign(token, {
           memberId: (user as any).memberId,

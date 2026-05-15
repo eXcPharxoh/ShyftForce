@@ -72,6 +72,9 @@ model Organization {
   apiKeys                 ApiKey[]
   kioskDevices            KioskDevice[]
   slackConnection         SlackConnection?
+  customRoles             CustomRole[]
+  courses                 Course[]
+  reviewCycles            ReviewCycle[]
 }
 
 model ComplianceSettings {
@@ -496,6 +499,7 @@ model User {
   impersonationsGiven    ImpersonationGrant[] @relation("ImpersonationAdmin")
   impersonationsReceived ImpersonationGrant[] @relation("ImpersonationTarget")
   pushSubscriptions      PushSubscription[]
+  oauthIdentities        OAuthIdentity[]
 }
 
 // ============================================================================
@@ -829,6 +833,11 @@ model Member {
   incidentsReviewed       IncidentReport[]         @relation("IncidentReviewer")
   checkpointScans         CheckpointScan[]         @relation("CheckpointScanner")
   tipDistributions        TipDistribution[]        @relation("TipRecipient")
+  customRoleAssignments   MemberRoleAssignment[]
+  courseEnrollments       CourseEnrollment[]
+  shiftBids               ShiftBid[]
+  reviewsAsSubject        PerformanceReview[]      @relation("ReviewSubject")
+  reviewsAsReviewer       PerformanceReview[]      @relation("ReviewReviewer")
 
   @@index([organizationId, status])
   @@index([organizationId, locationId])
@@ -859,6 +868,7 @@ model Shift {
   networkShiftOffers      NetworkShiftOffer[]
   incidentReports         IncidentReport[]
   checkpointScans         CheckpointScan[]
+  bids                    ShiftBid[]
 
   @@index([locationId, startsAt])
   @@index([memberId, startsAt])
@@ -1232,4 +1242,206 @@ model SmsMessage {
 
   @@index([organizationId, createdAt])
   @@index([memberId, createdAt])
+}
+
+// ============================================================================
+// OAuth identity link. Multiple providers per user (Google + Microsoft can be
+// linked to the same account). Login flow checks here for an existing link
+// and signs the user in if found.
+// ============================================================================
+model OAuthIdentity {
+  id         String    @id @default(uuid())
+  userId     String
+  provider   String // "google" | "microsoft"
+  providerId String // the provider's "sub" / object id
+  email      String // email from the provider (for audit / debugging)
+  linkedAt   DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+}
+
+// ============================================================================
+// GDPR / CCPA data export requests. User clicks "export my data" → we build
+// a JSON blob → return downloadable link. Tracks completion + expiry.
+// ============================================================================
+model DataExportRequest {
+  id             String    @id @default(uuid())
+  userId         String
+  organizationId String?
+  status         String    @default("pending") // pending | building | ready | failed | expired
+  payload        String? // JSON blob
+  sizeBytes      Int?
+  errorMessage   String?
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+  expiresAt      DateTime?
+
+  @@index([userId, status])
+}
+
+// ============================================================================
+// Custom roles + permissions. Per-org named roles that complement the three
+// built-in roles. A member can opt into a custom role on top of their built-in
+// role; permission checks union both.
+// ============================================================================
+model CustomRole {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  permissions    String // JSON array, e.g. ["schedule.write","timesheets.approve"]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      MemberRoleAssignment[]
+
+  @@unique([organizationId, name])
+}
+
+model MemberRoleAssignment {
+  id           String   @id @default(uuid())
+  memberId     String
+  customRoleId String
+  assignedAt   DateTime @default(now())
+
+  member     Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  customRole CustomRole @relation(fields: [customRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, customRoleId])
+  @@index([memberId])
+}
+
+// ============================================================================
+// Training & LMS. Org-level Course with ordered Lessons (text + optional
+// embedded quiz). Members get a CourseEnrollment tracking progress.
+// ============================================================================
+model Course {
+  id               String   @id @default(uuid())
+  organizationId   String
+  title            String
+  description      String?
+  category         String? // "onboarding" | "safety" | "compliance" | "skills" | "other"
+  estimatedMinutes Int      @default(15)
+  passingScore     Int      @default(80)
+  published        Boolean  @default(true)
+  createdById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lessons      Lesson[]
+  enrollments  CourseEnrollment[]
+
+  @@index([organizationId, published])
+}
+
+model Lesson {
+  id        String   @id @default(uuid())
+  courseId  String
+  order     Int      @default(0)
+  title     String
+  body      String // markdown-ish text; supports embedded video / image URLs
+  quizJson  String? // JSON: [{ question, choices[], correctIndex }]
+  createdAt DateTime @default(now())
+
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@index([courseId, order])
+}
+
+model CourseEnrollment {
+  id          String    @id @default(uuid())
+  courseId    String
+  memberId    String
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  score       Int?
+
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  member   Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@unique([courseId, memberId])
+  @@index([memberId, completedAt])
+}
+
+model LessonProgress {
+  id           String    @id @default(uuid())
+  enrollmentId String
+  lessonId     String
+  completedAt  DateTime?
+  lastScore    Int?
+  attempts     Int       @default(0)
+
+  enrollment CourseEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, lessonId])
+}
+
+// ============================================================================
+// Bid-based shift selection. Employees bid on open shifts (1 = top choice).
+// Manager sees demand heatmap + uses bids when assigning.
+// ============================================================================
+model ShiftBid {
+  id        String   @id @default(uuid())
+  shiftId   String
+  memberId  String
+  priority  Int      @default(1) // 1 = top choice; higher = less preferred
+  note      String?
+  createdAt DateTime @default(now())
+
+  shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, memberId])
+  @@index([shiftId])
+  @@index([memberId, createdAt])
+}
+
+// ============================================================================
+// Performance reviews. ReviewCycle is an org-level review period; Review
+// is the manager↔employee record inside that cycle (or peer/self).
+// ============================================================================
+model ReviewCycle {
+  id             String    @id @default(uuid())
+  organizationId String
+  name           String
+  rubric         String? // JSON: [{ key, label, weight 0-1 }]
+  status         String    @default("draft") // draft | active | closed
+  opensAt        DateTime?
+  closesAt       DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviews      PerformanceReview[]
+
+  @@index([organizationId, status])
+}
+
+model PerformanceReview {
+  id               String    @id @default(uuid())
+  cycleId          String
+  subjectMemberId  String
+  reviewerMemberId String
+  type             String    @default("manager") // manager | peer | self
+  payload          String? // JSON { ratings: {key:1-5}, comment, strengths, growth }
+  overallRating    Int? // 1-5
+  submittedAt      DateTime?
+  acknowledgedAt   DateTime?
+  createdAt        DateTime  @default(now())
+
+  cycle          ReviewCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  subjectMember  Member      @relation("ReviewSubject", fields: [subjectMemberId], references: [id], onDelete: Cascade)
+  reviewerMember Member      @relation("ReviewReviewer", fields: [reviewerMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, subjectMemberId, reviewerMemberId])
+  @@index([subjectMemberId, submittedAt])
+  @@index([reviewerMemberId, submittedAt])
 }

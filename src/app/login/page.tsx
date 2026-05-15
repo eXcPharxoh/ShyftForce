@@ -6,6 +6,11 @@ import Link from "next/link";
 import { Logo, Wordmark } from "@/components/ui/logo";
 import { Sparkles, ShieldCheck, Zap, Workflow, Loader2, ArrowRight } from "lucide-react";
 
+// Show the SSO buttons only if the server is configured for them.
+// Each NEXT_PUBLIC_* flag is set when the corresponding provider's client ID exists.
+const GOOGLE_ENABLED    = !!process.env.NEXT_PUBLIC_GOOGLE_LOGIN;
+const MICROSOFT_ENABLED = !!process.env.NEXT_PUBLIC_MICROSOFT_LOGIN;
+
 const DEMOS: { email: string; password: string; badge: string; tone: "orange" | "blue" | "gray"; sub: string }[] = [
   { email: "admin@platinum.com",  password: "password", badge: "Admin",    tone: "orange", sub: "Full org access" },
   { email: "sarah@platinum.com",  password: "password", badge: "Manager",  tone: "blue",   sub: "Sees only their location" },
@@ -157,6 +162,35 @@ export default function LoginPage() {
           <button className="btn-primary w-full py-2.5 mt-4" disabled={loading || !!demoLoading}>
             {loading ? "Signing in…" : needsTotp ? "Verify & sign in" : "Sign in"}
           </button>
+
+          {(GOOGLE_ENABLED || MICROSOFT_ENABLED) && !needsTotp && (
+            <>
+              <div className="my-4 flex items-center gap-3 text-[11px] text-ink-400 dark:text-ink-500">
+                <div className="flex-1 h-px bg-ink-200 dark:bg-ink-800" />
+                <span>OR</span>
+                <div className="flex-1 h-px bg-ink-200 dark:bg-ink-800" />
+              </div>
+              <div className="space-y-2">
+                {GOOGLE_ENABLED && (
+                  <button type="button" onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-ink-200 dark:border-ink-800 bg-white dark:bg-ink-900 hover:bg-ink-50 dark:hover:bg-ink-800/60 text-sm font-medium transition">
+                    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden><path fill="#4285F4" d="M22 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.6c-.2 1.3-1 2.4-2 3.1v2.6h3.3c1.9-1.8 3.1-4.4 3.1-7.7Z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.7-2.5l-3.3-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3v2.6C4.7 19.7 8 22 12 22Z"/><path fill="#FBBC05" d="M6.4 13.9c-.2-.6-.3-1.3-.3-2s.1-1.3.3-1.9V7.4H3a10 10 0 0 0 0 9.2l3.4-2.7Z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9C16.9 3 14.7 2 12 2 8 2 4.7 4.3 3 7.4l3.4 2.6C7.2 7.8 9.4 6 12 6Z"/></svg>
+                    Continue with Google
+                  </button>
+                )}
+                {MICROSOFT_ENABLED && (
+                  <button type="button" onClick={() => signIn("azure-ad", { callbackUrl: "/dashboard" })}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-ink-200 dark:border-ink-800 bg-white dark:bg-ink-900 hover:bg-ink-50 dark:hover:bg-ink-800/60 text-sm font-medium transition">
+                    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden><rect width="10" height="10" x="2" y="2" fill="#F25022"/><rect width="10" height="10" x="12" y="2" fill="#7FBA00"/><rect width="10" height="10" x="2" y="12" fill="#00A4EF"/><rect width="10" height="10" x="12" y="12" fill="#FFB900"/></svg>
+                    Continue with Microsoft
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-ink-500 dark:text-ink-400 text-center mt-2">
+                Your account must already exist (your admin invites you first). Accounts with 2FA enabled must use password sign-in.
+              </p>
+            </>
+          )}
 
           <div className="text-center text-[11px] text-ink-500 dark:text-ink-400 mt-4">
             Don&apos;t have an account? <Link href="/signup" className="text-brand-600 font-semibold hover:underline">Start free trial →</Link>
