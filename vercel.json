@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/coverage/tick",     "schedule": "*/2 * * * *" },
-    { "path": "/api/pos/sync",          "schedule": "*/15 * * * *" },
-    { "path": "/api/network/reputation","schedule": "0 */6 * * *" }
+    { "path": "/api/coverage/tick",      "schedule": "0 9 * * *"  },
+    { "path": "/api/pos/sync",           "schedule": "0 10 * * *" },
+    { "path": "/api/network/reputation", "schedule": "0 11 * * *" }
   ]
 }
