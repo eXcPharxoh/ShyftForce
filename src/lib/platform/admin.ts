@@ -97,6 +97,8 @@ export async function startImpersonation(opts: {
     secure: process.env.NODE_ENV === "production",
     maxAge: MAX_IMPERSONATION_HOURS * 3600,
     path: "/",
+    // Share across subdomains in production (admin starts the grant, app reads it)
+    domain: process.env.NEXTAUTH_COOKIE_DOMAIN || undefined,
   });
 
   return grant;
@@ -112,5 +114,9 @@ export async function endImpersonation(opts: { adminUserId?: string } = {}) {
       data: { endedAt: new Date() },
     });
   }
-  c.set(IMPERSONATION_COOKIE, "", { path: "/", maxAge: 0 });
+  c.set(IMPERSONATION_COOKIE, "", {
+    path: "/",
+    maxAge: 0,
+    domain: process.env.NEXTAUTH_COOKIE_DOMAIN || undefined,
+  });
 }

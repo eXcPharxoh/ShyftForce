@@ -1,0 +1,22 @@
+# ShyftForce robots policy
+# Marketing site: allow indexing
+# App + admin subdomains: see X-Robots-Tag noindex header in next.config.mjs
+
+User-agent: *
+Disallow: /api/
+Disallow: /onboarding
+Disallow: /dashboard
+Disallow: /schedule
+Disallow: /attendance
+Disallow: /platform
+Disallow: /worker/
+Disallow: /settings/
+Disallow: /accept-invite
+Disallow: /verify-email
+Disallow: /reset-password
+
+Allow: /
+Allow: /pricing
+Allow: /legal/
+
+Sitemap: https://shyftforce.com/sitemap.xml

@@ -3,9 +3,38 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
+// When the app is deployed on multiple subdomains (app.shyftforce.com,
+// admin.shyftforce.com), set NEXTAUTH_COOKIE_DOMAIN=.shyftforce.com so the
+// session cookie is shared across them. In dev / single-host deploys, leave
+// the var unset and NextAuth uses host-only cookies (default behavior).
+const COOKIE_DOMAIN = process.env.NEXTAUTH_COOKIE_DOMAIN || undefined;
+const useSecureCookies = process.env.NODE_ENV === "production";
+const sessionCookieName = useSecureCookies ? "__Secure-next-auth.session-token" : "next-auth.session-token";
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
+  cookies: {
+    sessionToken: {
+      name: sessionCookieName,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+        domain: COOKIE_DOMAIN,
+      },
+    },
+    callbackUrl: {
+      name: useSecureCookies ? "__Secure-next-auth.callback-url" : "next-auth.callback-url",
+      options: { httpOnly: true, sameSite: "lax", path: "/", secure: useSecureCookies, domain: COOKIE_DOMAIN },
+    },
+    csrfToken: {
+      name: useSecureCookies ? "__Host-next-auth.csrf-token" : "next-auth.csrf-token",
+      // __Host- prefix forbids the Domain attribute; intentional — CSRF is host-bound.
+      options: { httpOnly: true, sameSite: "lax", path: "/", secure: useSecureCookies },
+    },
+  },
   providers: [
     CredentialsProvider({
       name: "credentials",
