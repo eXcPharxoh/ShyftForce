@@ -326,7 +326,7 @@ export default async function Dashboard() {
                   <td className="py-2 font-medium">{l.name}</td>
                   <td className="py-2 text-ink-700 dark:text-ink-300">{l.manager}</td>
                   <td className="py-2"><span className={l.alerts > 0 ? "badge-rose badge bg-rose-50 text-rose-700" : "badge-green"}>{l.alerts} alerts</span></td>
-                  <td className="py-2 text-right"><button className="btn-ghost text-xs">Send a Reminder</button></td>
+                  <td className="py-2 text-right"><Link href="/attendance" className="btn-ghost text-xs">Review</Link></td>
                 </tr>
               ))}
             </tbody>

@@ -150,12 +150,12 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           <ul className="space-y-2">
             {openShifts.length === 0 && <li className="text-xs text-ink-500">None this week.</li>}
             {openShifts.map(s => (
-              <li key={s.id} className="flex items-center justify-between p-2.5 rounded-lg border border-ink-200 dark:border-ink-800 hover:border-brand-300 hover:bg-brand-50/40">
+              <li key={s.id} className="flex items-center justify-between p-2.5 rounded-lg border border-ink-200 dark:border-ink-800 hover:border-brand-300 hover:bg-brand-50/40 dark:hover:bg-brand-500/10">
                 <div className="min-w-0">
                   <div className="text-sm font-medium">{s.position ?? "Open shift"}</div>
                   <div className="text-[11px] text-ink-500">{s.location.name} · {dateLabel(s.startsAt)} {timeLabel(s.startsAt)} – {timeLabel(s.endsAt)}</div>
                 </div>
-                <button className="btn-outline text-xs">Assign</button>
+                <Link href="/open-shifts" className="btn-outline text-xs">Assign</Link>
               </li>
             ))}
           </ul>

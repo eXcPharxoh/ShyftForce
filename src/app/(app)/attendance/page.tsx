@@ -4,6 +4,7 @@ import { dateLabel, fmtHours, fmtMoney, initials, timeLabel } from "@/lib/utils"
 import { fmtDistance } from "@/lib/geo";
 import { ClockButton } from "@/components/attendance/clock-button";
 import { TimesheetActions } from "@/components/attendance/timesheet-actions";
+import { RunPayrollButton } from "@/components/attendance/run-payroll-button";
 import Link from "next/link";
 import { MapPin, ShieldCheck, AlertTriangle, Camera, Clock as ClockIcon } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -12,7 +13,7 @@ export default async function AttendancePage() {
   const u = await requireUser();
   const orgId = u.organizationId;
 
-  const [period, members, allLogs, recentLogs] = await Promise.all([
+  const [period, members, allLogs, recentLogs, org] = await Promise.all([
     prisma.payPeriod.findFirst({
       where: { organizationId: orgId, status: "open" },
       include: {
@@ -26,6 +27,7 @@ export default async function AttendancePage() {
       orderBy: { at: "desc" }, take: 12,
       include: { member: { include: { user: true, location: true } } },
     }),
+    prisma.organization.findUnique({ where: { id: orgId }, select: { finchAccessToken: true } }),
   ]);
   const isManager = u.role === "ADMIN" || u.role === "MANAGER";
 
@@ -57,7 +59,13 @@ export default async function AttendancePage() {
         subtitle={period ? `Pay period · ${dateLabel(period.startsOn)} → ${dateLabel(period.endsOn)}` : "No active pay period"}
       >
         <Link href="#tipping" className="btn-outline">Tip Management</Link>
-        <button className="btn-primary">Run payroll</button>
+        {isManager && (
+          <RunPayrollButton
+            finchConnected={!!org?.finchAccessToken}
+            payPeriodId={period?.id ?? null}
+            unapprovedCount={unapproved}
+          />
+        )}
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
