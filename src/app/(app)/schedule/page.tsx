@@ -5,6 +5,7 @@ import { ScheduleControls } from "@/components/schedule/schedule-controls";
 import { AutoScheduleButton } from "@/components/schedule/auto-schedule-button";
 import { ScheduleActions } from "@/components/schedule/schedule-actions";
 import { PublishWeekButton } from "@/components/schedule/publish-week-button";
+import { TemplatesButton } from "@/components/schedule/templates-button";
 import { ShiftCell } from "@/components/schedule/shift-cell";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
@@ -58,6 +59,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           <Link href={`/schedule?w=${weekOffset + 1}`} className="btn-outline h-9"><ChevronRight className="w-4 h-4" /></Link>
           {(u.role === "ADMIN" || u.role === "MANAGER") && (
             <>
+              <TemplatesButton weekStart={weekStart.toISOString().slice(0,10)} />
               <ScheduleActions weekStart={weekStart.toISOString().slice(0,10)} />
               <AutoScheduleButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />
               <PublishWeekButton weekStart={weekStart.toISOString().slice(0,10)} draftCount={drafts.length} />

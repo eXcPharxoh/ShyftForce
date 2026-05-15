@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { addDays, startOfWeek } from "@/lib/utils";
 import { rankCandidates, WAVES, type RankedCandidate, type WavePlan } from "./ranker";
+import { smsShiftOffer } from "@/lib/sms";
+import { emitWebhook } from "@/lib/webhooks/emit";
 
 export async function rankForShift(shiftId: string, organizationId: string, opts?: { excludeMemberIds?: string[] }) {
   const shift = await prisma.shift.findUnique({
@@ -58,7 +60,18 @@ export async function sendOffers(opts: {
   });
   if (!shift) throw new Error("Shift not found");
 
+  // Look up member phone numbers once so we can SMS in parallel
+  const memberIds = opts.candidates.map(c => c.memberId);
+  const memberPhones = await prisma.member.findMany({
+    where: { id: { in: memberIds } },
+    select: { id: true, phone: true },
+  });
+  const phoneByMemberId = new Map(memberPhones.map(m => [m.id, m.phone]));
+
   const offers: any[] = [];
+  const startStr = shift.startsAt.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const endStr   = shift.endsAt.toLocaleTimeString("en-US",  { hour: "numeric", minute: "2-digit" });
+
   for (const cand of opts.candidates) {
     const upserted = await prisma.openShiftOffer.upsert({
       where: { shiftId_memberId: { shiftId: opts.shiftId, memberId: cand.memberId } },
@@ -66,9 +79,7 @@ export async function sendOffers(opts: {
       update: { wave: opts.wave, status: "pending", expiresAt, sentAt: new Date(), respondedAt: null, rationale: cand.rationale },
     });
     offers.push(upserted);
-    // DM the candidate
-    const startStr = shift.startsAt.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-    const endStr   = shift.endsAt.toLocaleTimeString("en-US",  { hour: "numeric", minute: "2-digit" });
+    // In-app DM
     await prisma.message.create({
       data: {
         fromId: opts.fromMemberId,
@@ -76,7 +87,27 @@ export async function sendOffers(opts: {
         body: `📅 Shift offered: ${shift.position ?? "shift"} at ${shift.location.name}, ${startStr}–${endStr}. First to claim wins → /open-shifts`,
       },
     });
+    // SMS the candidate (fire-and-forget; respects opt-in + quiet hours)
+    const phone = phoneByMemberId.get(cand.memberId);
+    if (phone) {
+      smsShiftOffer({
+        organizationId: opts.organizationId,
+        memberId: cand.memberId,
+        phone,
+        position: shift.position ?? "Shift",
+        locationName: shift.location.name,
+        startsAt: shift.startsAt,
+        expiresAt,
+        offerUrl: "https://app.shyftforce.com/open-shifts",
+      }).catch(() => {});
+    }
   }
+  // Fire-and-forget webhook for any customer integrations watching shift offers
+  emitWebhook({
+    organizationId: opts.organizationId,
+    event: "shift.published",
+    data: { shiftId: opts.shiftId, wave: opts.wave, offered: offers.length, locationId: shift.locationId, startsAt: shift.startsAt },
+  }).catch(() => {});
   return offers;
 }
 

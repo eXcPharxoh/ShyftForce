@@ -19,6 +19,16 @@ model Organization {
   industry String? // restaurant | retail | healthcare | field_service | office | fitness | other
   isDemo   Boolean @default(false)
 
+  // Default locale for new members (members can override on their own profile)
+  defaultLocale String @default("en") // "en" | "es" | "fr"
+
+  // BYO-Twilio credentials. If set, SMS is sent on this org's account; if null,
+  // we fall back to the platform-wide Twilio config (subject to per-message
+  // billing back to the customer).
+  twilioAccountSid String?
+  twilioAuthToken  String?
+  twilioFromNumber String?
+
   // Billing (Stripe)
   stripeCustomerId     String?
   stripeSubscriptionId String?
@@ -55,6 +65,10 @@ model Organization {
   checkpointPosts         CheckpointPost[]
   clientAccounts          ClientAccount[]
   tipPools                TipPool[]
+  scheduleTemplates       ScheduleTemplate[]
+  webhookSubscriptions    WebhookSubscription[]
+  webhookDeliveries       WebhookDelivery[]
+  smsMessages             SmsMessage[]
 }
 
 model ComplianceSettings {
@@ -665,6 +679,22 @@ model Member {
   externalEmployeeId    String? // ID from payroll/HRIS provider (e.g. Finch)
   payrollProvider       String? // "adp_workforce_now" | "gusto" | "paychex" | etc.
 
+  // SMS / notification preferences
+  smsOptIn               Boolean @default(true) // master switch
+  smsOptInShiftOffer     Boolean @default(true)
+  smsOptInScheduleChange Boolean @default(true)
+  smsOptInTimeOff        Boolean @default(true)
+  smsOptInAlerts         Boolean @default(true)
+  smsQuietStartHour      Int? // 0-23, no SMS during quiet hours
+  smsQuietEndHour        Int?
+
+  // iCal feed token (rotates on demand). Each member has their own URL they
+  // can subscribe to in Apple/Google/Outlook calendar.
+  calendarToken String? @unique @default(cuid())
+
+  // Locale override for this user; if null, falls back to org default
+  locale String? // "en" | "es" | "fr"
+
   certifications    MemberCertification[]
   ptoBalances       PtoBalance[]
   recurringShifts   RecurringShift[]
@@ -1008,4 +1038,97 @@ model HRReminder {
   done           Boolean  @default(false)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// Schedule templates — save a named week pattern and re-apply later.
+// Stronger version of "copy from last week" because the saved shape doesn't
+// drift with whatever happened to be on the calendar last Monday.
+// ============================================================================
+model ScheduleTemplate {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  // Snapshot of shifts captured at save time. JSON-encoded array of:
+  //   { dayOfWeek: 0-6, startTime: "HH:MM", endTime: "HH:MM",
+  //     locationId, memberId | null (open shift), position }
+  shifts         String // JSON
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, name])
+}
+
+// ============================================================================
+// Outbound webhooks — customer-managed integrations. Customer creates a
+// subscription pointing to their own endpoint; we POST signed events.
+// Common events: shift.published, member.invited, timesheet.approved, etc.
+// ============================================================================
+model WebhookSubscription {
+  id                  String    @id @default(uuid())
+  organizationId      String
+  url                 String
+  secret              String // HMAC-SHA256 signing secret (shown ONCE on create)
+  description         String?
+  events              String // JSON array of subscribed event types
+  active              Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  // Delivery health
+  lastDeliveryAt      DateTime?
+  lastDeliveryStatus  Int? // last HTTP status code
+  consecutiveFailures Int       @default(0)
+  disabledAt          DateTime? // auto-disabled after N consecutive failures
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries   WebhookDelivery[]
+
+  @@index([organizationId, active])
+}
+
+model WebhookDelivery {
+  id             String    @id @default(uuid())
+  subscriptionId String
+  organizationId String
+  eventType      String
+  payload        String // JSON; the body we POSTed
+  status         String // "pending" | "delivered" | "failed" | "skipped"
+  httpStatus     Int?
+  responseBody   String? // truncated to 1KB
+  attempts       Int       @default(0)
+  nextRetryAt    DateTime?
+  createdAt      DateTime  @default(now())
+  deliveredAt    DateTime?
+
+  subscription WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, status, nextRetryAt])
+  @@index([organizationId, createdAt])
+}
+
+// ============================================================================
+// SMS message log — outbound only. Lets managers audit what was sent and
+// supports rate-limiting + abuse detection.
+// ============================================================================
+model SmsMessage {
+  id             String    @id @default(uuid())
+  organizationId String
+  memberId       String? // null if sent to an external invitee
+  toNumber       String
+  body           String
+  category       String // "shift_offer" | "schedule_change" | "time_off" | "alert" | "test"
+  status         String    @default("queued") // queued | sent | failed
+  twilioSid      String?   @unique
+  errorMessage   String?
+  createdAt      DateTime  @default(now())
+  sentAt         DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([memberId, createdAt])
 }

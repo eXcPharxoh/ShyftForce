@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
 import { deduct, refund, hoursForRequest } from "@/lib/pto/service";
 import { audit } from "@/lib/audit";
+import { smsTimeOffDecision } from "@/lib/sms";
+import { emitWebhook } from "@/lib/webhooks/emit";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireManagerOrAdmin();
@@ -12,7 +14,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const existing = await prisma.timeOffRequest.findUnique({
     where: { id },
-    include: { member: true },
+    include: { member: { include: { user: true } } },
   });
   if (!existing || existing.member.organizationId !== u.organizationId) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -51,6 +53,31 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     entityType: "TimeOffRequest", entityId: id,
     metadata: { status, hoursDeducted },
   });
+
+  // Notify the requester via SMS + webhook (fire-and-forget; failures don't block)
+  if ((status === "approved" || status === "rejected") && existing.member.phone) {
+    smsTimeOffDecision({
+      organizationId: u.organizationId,
+      memberId: existing.memberId,
+      phone: existing.member.phone,
+      decision: status,
+      startsOn: existing.startsOn,
+      endsOn: existing.endsOn,
+    }).catch(() => {});
+  }
+  emitWebhook({
+    organizationId: u.organizationId,
+    event: status === "approved" ? "time_off.approved" : status === "rejected" ? "time_off.rejected" : "time_off.updated",
+    data: {
+      id: r.id,
+      memberId: existing.memberId,
+      memberName: existing.member.user.name,
+      startsOn: r.startsOn,
+      endsOn:   r.endsOn,
+      status:   r.status,
+      hoursDeducted,
+    },
+  }).catch(() => {});
 
   return NextResponse.json(r);
 }

@@ -11,6 +11,7 @@ import { checkCompliance } from "@/lib/compliance/engine";
 import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 import { DashboardHero } from "@/components/dashboard/hero";
 import { VerticalWidgets } from "@/components/dashboard/vertical-widgets";
+import { TurnoverWidget } from "@/components/dashboard/turnover-widget";
 import { verticalFor } from "@/lib/verticals/config";
 
 export default async function Dashboard() {
@@ -116,6 +117,10 @@ export default async function Dashboard() {
       />
 
       <VerticalWidgets organizationId={u.organizationId} memberId={u.memberId} industry={u.organizationIndustry} />
+
+      {(u.role === "ADMIN" || u.role === "MANAGER") && (
+        <TurnoverWidget organizationId={u.organizationId} />
+      )}
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">

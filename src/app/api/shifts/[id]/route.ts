@@ -4,6 +4,8 @@ import { requireManagerOrAdmin } from "@/lib/session";
 import { audit } from "@/lib/audit";
 import { recordPredictabilityIfOwed } from "@/lib/compliance/predictability";
 import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
+import { smsScheduleChange } from "@/lib/sms";
+import { emitWebhook } from "@/lib/webhooks/emit";
 
 function combine(date: string, time: string): Date {
   const [y, mo, d] = date.split("-").map(Number);
@@ -73,6 +75,31 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     organizationId: u.organizationId, actorId: u.id,
     action: "shift.update", entityType: "Shift", entityId: id, metadata: data,
   });
+
+  // Notify the assigned member by SMS if the time or assignee changed
+  if (existing.status === "published" && existing.member?.phone) {
+    const moved    = data.startsAt && +data.startsAt !== +existing.startsAt;
+    const changed  = data.memberId !== undefined && data.memberId !== existing.memberId;
+    if (moved || changed) {
+      smsScheduleChange({
+        organizationId: u.organizationId,
+        memberId: existing.memberId!,
+        phone: existing.member.phone,
+        changeType: changed ? "canceled" : "moved",
+        position: existing.position ?? "Shift",
+        locationName: existing.location.name,
+        startsAt: updated.startsAt,
+        url: "https://app.shyftforce.com/schedule",
+      }).catch(() => {});
+    }
+  }
+
+  emitWebhook({
+    organizationId: u.organizationId,
+    event: "shift.updated",
+    data: { id: updated.id, status: updated.status, memberId: updated.memberId, startsAt: updated.startsAt, endsAt: updated.endsAt },
+  }).catch(() => {});
+
   return NextResponse.json(updated);
 }
 
