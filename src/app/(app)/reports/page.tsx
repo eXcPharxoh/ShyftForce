@@ -16,7 +16,9 @@ export default async function ReportsPage() {
       where: { organizationId: orgId, status: "open" },
       include: { entries: { include: { member: true } } },
     }),
-    prisma.kudos.count(),
+    // Scope kudos count to this org via the recipient's organizationId — the
+    // previous unfiltered count() leaked global totals across tenants.
+    prisma.kudos.count({ where: { to: { organizationId: orgId } } }),
   ]);
 
   const entries = period?.entries ?? [];

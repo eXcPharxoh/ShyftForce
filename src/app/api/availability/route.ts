@@ -19,6 +19,13 @@ export async function GET(req: Request) {
   const memberId = url.searchParams.get("memberId") ?? u.memberId;
   // Allow self OR manager viewing anyone in org
   if (memberId !== u.memberId && u.role === "EMPLOYEE") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (memberId !== u.memberId) {
+    const targetMember = await prisma.member.findFirst({
+      where: { id: memberId, organizationId: u.organizationId },
+      select: { id: true },
+    });
+    if (!targetMember) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+  }
   const items = await prisma.availabilityRule.findMany({
     where: { memberId },
     orderBy: [{ date: "asc" }, { dayOfWeek: "asc" }],
@@ -28,27 +35,43 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const u = await requireUser();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = Schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   const targetId = parsed.data.memberId ?? u.memberId;
   if (targetId !== u.memberId && u.role === "EMPLOYEE") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  // Org scope: even managers can only touch members in their own org.
+  if (targetId !== u.memberId) {
+    const targetMember = await prisma.member.findFirst({
+      where: { id: targetId, organizationId: u.organizationId },
+      select: { id: true },
+    });
+    if (!targetMember) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+  }
+
   if (parsed.data.type === "recurring_unavailable" && (parsed.data.dayOfWeek == null)) {
     return NextResponse.json({ error: "dayOfWeek required for recurring rule" }, { status: 400 });
   }
   if (parsed.data.type === "one_off_unavailable" && !parsed.data.date) {
     return NextResponse.json({ error: "date required for one-off" }, { status: 400 });
   }
-  const r = await prisma.availabilityRule.create({
-    data: {
-      memberId: targetId,
-      type: parsed.data.type,
-      dayOfWeek: parsed.data.dayOfWeek ?? null,
-      startTime: parsed.data.startTime ?? null,
-      endTime:   parsed.data.endTime   ?? null,
-      date:      parsed.data.date      ? new Date(parsed.data.date) : null,
-      notes:     parsed.data.notes     ?? null,
-    },
-  });
-  return NextResponse.json(r);
+
+  try {
+    const r = await prisma.availabilityRule.create({
+      data: {
+        memberId: targetId,
+        type: parsed.data.type,
+        dayOfWeek: parsed.data.dayOfWeek ?? null,
+        startTime: parsed.data.startTime ?? null,
+        endTime:   parsed.data.endTime   ?? null,
+        date:      parsed.data.date      ? new Date(parsed.data.date) : null,
+        notes:     parsed.data.notes     ?? null,
+      },
+    });
+    return NextResponse.json(r);
+  } catch (e) {
+    console.error("availability create failed", e);
+    return NextResponse.json({ error: "Create failed" }, { status: 500 });
+  }
 }

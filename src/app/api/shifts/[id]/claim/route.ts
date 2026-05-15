@@ -8,18 +8,20 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   try {
     const shift = await claimShift(id, u.memberId, u.organizationId);
-    // Notify all managers in this org via DM
+    // Notify all managers in this org via DM (single batched insert)
     const managers = await prisma.member.findMany({
-      where: { organizationId: u.organizationId, role: { in: ["MANAGER", "ADMIN"] } },
+      where: {
+        organizationId: u.organizationId,
+        role: { in: ["MANAGER", "ADMIN"] },
+        id: { not: u.memberId },
+      },
+      select: { id: true },
     });
-    const startStr = shift!.startsAt.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-    for (const mgr of managers) {
-      if (mgr.id === u.memberId) continue;
-      await prisma.message.create({
-        data: {
-          fromId: u.memberId, toId: mgr.id,
-          body: `✅ ${u.name} claimed the open shift at ${shift!.location.name} on ${startStr}.`,
-        },
+    if (managers.length > 0) {
+      const startStr = shift!.startsAt.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+      const body = `✅ ${u.name} claimed the open shift at ${shift!.location.name} on ${startStr}.`;
+      await prisma.message.createMany({
+        data: managers.map(mgr => ({ fromId: u.memberId, toId: mgr.id, body })),
       });
     }
     return NextResponse.json({ ok: true, shift });

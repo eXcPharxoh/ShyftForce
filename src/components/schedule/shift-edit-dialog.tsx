@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Trash2, Save, Loader2, Send, Users, AlertOctagon, AlertTriangle, ShieldCheck, DollarSign } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export type ShiftEditPayload = {
   id: string;
@@ -29,6 +30,7 @@ export function ShiftEditDialog({
   onClose: () => void;
 }) {
   const r = useRouter();
+  const confirm = useConfirm();
   const [date, setDate] = useState(shift.date);
   const [startTime, setStartTime] = useState(shift.startTime);
   const [endTime, setEndTime] = useState(shift.endTime);
@@ -78,7 +80,12 @@ export function ShiftEditDialog({
 
   async function save(opts?: { publishToo?: boolean }) {
     if (errors.length > 0) {
-      const ok = confirm(`This shift has ${errors.length} compliance ERROR${errors.length === 1 ? "" : "s"}. Save anyway?`);
+      const ok = await confirm({
+        title: `${errors.length} compliance error${errors.length === 1 ? "" : "s"}`,
+        description: "Save this shift anyway? You'll see these violations on the Compliance page.",
+        tone: "danger",
+        confirmLabel: "Save anyway",
+      });
       if (!ok) return;
     }
     setSaving(opts?.publishToo ? "publish" : "save"); setError(null);
@@ -100,7 +107,13 @@ export function ShiftEditDialog({
   }
 
   async function remove() {
-    if (!confirm("Delete this shift? This cannot be undone.")) return;
+    const ok = await confirm({
+      title: "Delete this shift?",
+      description: "This cannot be undone. If the shift was published inside the predictability-pay window, the system will record the cancellation.",
+      tone: "danger",
+      confirmLabel: "Delete shift",
+    });
+    if (!ok) return;
     setSaving("delete"); setError(null);
     const res = await fetch(`/api/shifts/${shift.id}`, { method: "DELETE" });
     setSaving(null);

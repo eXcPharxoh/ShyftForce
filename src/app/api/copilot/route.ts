@@ -1,11 +1,19 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ContentBlock, MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { requireUser } from "@/lib/session";
 import { runTool, TOOLS } from "@/lib/copilot/tools";
 
 const MODEL = "claude-sonnet-4-6";
 const MAX_TURNS = 8;
+
+const PayloadSchema = z.object({
+  messages: z.array(z.object({
+    role:    z.enum(["user", "assistant"]),
+    content: z.string().min(1).max(8000),
+  })).min(1).max(40),
+});
 
 function systemPrompt(user: { name: string; role: string; organizationName: string }) {
   const today = new Date();
@@ -37,10 +45,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "SHYFTFORCE_AI_KEY not set in .env" }, { status: 500 });
   }
 
-  const { messages: incoming } = await req.json() as { messages: { role: "user" | "assistant"; content: string }[] };
-  if (!Array.isArray(incoming) || incoming.length === 0) {
-    return NextResponse.json({ error: "messages required" }, { status: 400 });
+  const parsed = PayloadSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
   }
+  const incoming = parsed.data.messages;
 
   const client = new Anthropic({ apiKey: process.env.SHYFTFORCE_AI_KEY });
 

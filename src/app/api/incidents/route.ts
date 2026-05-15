@@ -69,18 +69,21 @@ export async function POST(req: Request) {
     },
   });
 
-  // DM all managers on critical/high incidents
+  // DM all managers on critical/high incidents (single batched insert, no N+1)
   if (parsed.data.severity === "critical" || parsed.data.severity === "high") {
     const managers = await prisma.member.findMany({
-      where: { organizationId: u.organizationId, role: { in: ["ADMIN", "MANAGER"] }, status: "active" },
+      where: {
+        organizationId: u.organizationId,
+        role: { in: ["ADMIN", "MANAGER"] },
+        status: "active",
+        id: { not: u.memberId },
+      },
+      select: { id: true },
     });
-    for (const mgr of managers) {
-      if (mgr.id === u.memberId) continue;
-      await prisma.message.create({
-        data: {
-          fromId: u.memberId, toId: mgr.id,
-          body: `🚨 ${parsed.data.severity.toUpperCase()} incident: ${parsed.data.title} → /incidents/${created.id}`,
-        },
+    if (managers.length > 0) {
+      const body = `🚨 ${parsed.data.severity.toUpperCase()} incident: ${parsed.data.title} → /incidents/${created.id}`;
+      await prisma.message.createMany({
+        data: managers.map(mgr => ({ fromId: u.memberId, toId: mgr.id, body })),
       });
     }
   }

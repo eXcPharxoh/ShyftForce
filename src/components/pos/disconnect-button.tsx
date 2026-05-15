@@ -2,12 +2,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, Loader2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export function DisconnectButton({ id }: { id: string }) {
   const r = useRouter();
   const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
   async function go() {
-    if (!confirm("Disconnect this POS connection? Existing revenue snapshots will be kept.")) return;
+    const ok = await confirm({
+      title: "Disconnect this POS?",
+      description: "Existing revenue snapshots are preserved — you'll just stop receiving new data.",
+      tone: "warning",
+      confirmLabel: "Disconnect",
+    });
+    if (!ok) return;
     setBusy(true);
     await fetch(`/api/pos/connections/${id}`, { method: "DELETE" });
     setBusy(false);

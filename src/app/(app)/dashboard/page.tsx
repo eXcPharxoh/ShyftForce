@@ -30,7 +30,12 @@ export default async function Dashboard() {
     prisma.payPeriod.findFirst({ where: { organizationId: orgId, status: "open" }, include: { entries: true } }),
     prisma.shift.findMany({ where: { isOpen: true, location: { organizationId: orgId }, startsAt: { gte: now } }, orderBy: { startsAt: "asc" }, take: 5, include: { location: true } }),
     prisma.dayNote.findMany({ where: { organizationId: orgId, date: { gte: weekStart, lt: weekEnd } }, orderBy: { date: "asc" }, take: 6, include: { author: { include: { user: true } } } }),
-    prisma.kudos.findMany({ orderBy: { createdAt: "desc" }, take: 4, include: { from: { include: { user: true } }, to: { include: { user: true } } } }),
+    // Scope kudos to this org via the recipient — never global findMany.
+    prisma.kudos.findMany({
+      where: { to: { organizationId: orgId } },
+      orderBy: { createdAt: "desc" }, take: 4,
+      include: { from: { include: { user: true } }, to: { include: { user: true } } },
+    }),
     prisma.hRReminder.findMany({ where: { organizationId: orgId, done: false }, orderBy: { dueOn: "asc" }, take: 5 }),
     prisma.billboardPost.count({ where: { organizationId: orgId } }),
     prisma.survey.findMany({ where: { organizationId: orgId, status: "active" }, include: { responses: true } }),

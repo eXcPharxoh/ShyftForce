@@ -44,6 +44,19 @@ export async function POST(req: Request) {
   const target = await prisma.member.findUnique({ where: { id: parsed.data.targetMemberId } });
   if (!target || target.organizationId !== u.organizationId) return NextResponse.json({ error: "target not in org" }, { status: 404 });
 
+  // If this is a mutual swap, verify targetShiftId belongs to the target member AND this org.
+  if (parsed.data.targetShiftId) {
+    const targetShift = await prisma.shift.findFirst({
+      where: {
+        id: parsed.data.targetShiftId,
+        memberId: parsed.data.targetMemberId,
+        location: { organizationId: u.organizationId },
+      },
+      select: { id: true },
+    });
+    if (!targetShift) return NextResponse.json({ error: "target shift not found" }, { status: 404 });
+  }
+
   const r = await prisma.shiftSwapRequest.create({
     data: {
       shiftId:       parsed.data.shiftId,

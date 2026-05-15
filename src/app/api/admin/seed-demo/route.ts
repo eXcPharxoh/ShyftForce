@@ -37,7 +37,9 @@ async function handler(req: Request) {
     const summary = await runDemoSeed(prisma as any);
     return NextResponse.json({ ok: true, ...summary });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message ?? "seed failed", stack: e.stack }, { status: 500 });
+    // Log full error server-side; never leak stack traces to clients.
+    console.error("[seed-demo] failed:", e);
+    return NextResponse.json({ error: "Seed failed — see server logs." }, { status: 500 });
   }
 }
 

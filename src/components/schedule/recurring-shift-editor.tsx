@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Trash2, X, Save, Pencil } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const DOW = [
   { v: 1, l: "Mon" }, { v: 2, l: "Tue" }, { v: 3, l: "Wed" }, { v: 4, l: "Thu" },
@@ -21,6 +22,7 @@ export function RecurringShiftEditor({
   mode, members, locations, existing,
 }: { mode: "create" | "edit"; members: Member[]; locations: Loc[]; existing?: Existing }) {
   const r = useRouter();
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [memberId, setMemberId] = useState(existing?.memberId ?? members[0]?.id ?? "");
   const [locationId, setLocationId] = useState(existing?.locationId ?? locations[0]?.id ?? "");
@@ -46,7 +48,13 @@ export function RecurringShiftEditor({
 
   async function remove() {
     if (!existing) return;
-    if (!confirm("Delete this recurring pattern?")) return;
+    const ok = await confirm({
+      title: "Delete this recurring pattern?",
+      description: "Future weeks will no longer auto-generate this shift. Existing scheduled shifts are untouched.",
+      tone: "danger",
+      confirmLabel: "Delete pattern",
+    });
+    if (!ok) return;
     setSaving(true);
     await fetch(`/api/recurring-shifts/${existing.id}`, { method: "DELETE" });
     setSaving(false); setOpen(false); r.refresh();

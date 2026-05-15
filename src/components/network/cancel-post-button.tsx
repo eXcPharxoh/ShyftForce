@@ -2,12 +2,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Loader2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export function CancelPostButton({ offerId }: { offerId: string }) {
   const r = useRouter();
   const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
   async function go() {
-    if (!confirm("Withdraw this network post? The shift goes back to your internal team.")) return;
+    const ok = await confirm({
+      title: "Withdraw network post?",
+      description: "The shift goes back to your internal team.",
+      tone: "warning",
+      confirmLabel: "Withdraw",
+    });
+    if (!ok) return;
     setBusy(true);
     await fetch(`/api/network/post/${offerId}`, { method: "DELETE" });
     setBusy(false);

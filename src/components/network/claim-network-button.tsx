@@ -2,13 +2,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export function ClaimNetworkButton({ offerId }: { offerId: string }) {
   const r = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
   async function go() {
-    if (!confirm("Claim this network shift? You'll be expected to show up.")) return;
+    const ok = await confirm({
+      title: "Claim this shift?",
+      description: "You're committing to show up. No-shows hurt your reputation score on the network.",
+      confirmLabel: "Claim shift",
+    });
+    if (!ok) return;
     setBusy(true); setError(null);
     const res = await fetch(`/api/network/claim/${offerId}`, { method: "POST" });
     const data = await res.json();

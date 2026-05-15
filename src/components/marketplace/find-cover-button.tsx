@@ -2,16 +2,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Wand2, Loader2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export function FindCoverButton({ shiftId, size = "sm" }: { shiftId: string; size?: "sm" | "md" }) {
   const r = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(0);
+  const confirm = useConfirm();
 
   async function go() {
     if (busy) return;
-    if (!confirm("Open this shift for cover and auto-DM the top 3 candidates now?")) return;
+    const ok = await confirm({
+      title: "Open this shift for cover?",
+      description: "The top 3 eligible teammates will get a DM right now.",
+      confirmLabel: "Find cover",
+    });
+    if (!ok) return;
     setBusy(true); setError(null);
     const res = await fetch(`/api/shifts/${shiftId}/find-cover`, { method: "POST" });
     const data = await res.json();

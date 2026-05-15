@@ -12,9 +12,16 @@ export async function POST(req: Request) {
   if (!org?.finchAccessToken) return NextResponse.json({ error: "Finch not connected" }, { status: 400 });
 
   const { payPeriodId } = (await req.json().catch(() => ({}))) as { payPeriodId?: string };
+  // Always scope to org — even when payPeriodId is provided.
   const period = payPeriodId
-    ? await prisma.payPeriod.findUnique({ where: { id: payPeriodId }, include: { entries: { include: { member: true } } } })
-    : await prisma.payPeriod.findFirst({ where: { organizationId: org.id, status: "open" }, include: { entries: { include: { member: true } } } });
+    ? await prisma.payPeriod.findFirst({
+        where: { id: payPeriodId, organizationId: org.id },
+        include: { entries: { include: { member: true } } },
+      })
+    : await prisma.payPeriod.findFirst({
+        where: { organizationId: org.id, status: "open" },
+        include: { entries: { include: { member: true } } },
+      });
   if (!period) return NextResponse.json({ error: "No pay period" }, { status: 404 });
 
   // Aggregate hours per member for the period

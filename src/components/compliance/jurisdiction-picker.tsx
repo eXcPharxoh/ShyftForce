@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Globe, Check, Loader2, ChevronDown } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Jurisdiction = {
   id: string; label: string; region: string;
@@ -12,6 +13,7 @@ type Jurisdiction = {
 
 export function JurisdictionPicker({ current, options }: { current: string; options: Jurisdiction[] }) {
   const r = useRouter();
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,14 @@ export function JurisdictionPicker({ current, options }: { current: string; opti
 
   async function apply(id: string) {
     if (id === current) { setOpen(false); return; }
-    if (!confirm(`Apply ${options.find(o=>o.id===id)?.label}'s rule pack? This overwrites your current compliance settings (you can override individual rules afterwards).`)) return;
+    const label = options.find(o => o.id === id)?.label ?? "this jurisdiction";
+    const ok = await confirm({
+      title: `Apply ${label}'s rule pack?`,
+      description: "This overwrites your current compliance settings. You can fine-tune individual rules afterwards.",
+      tone: "warning",
+      confirmLabel: "Apply rules",
+    });
+    if (!ok) return;
     setBusy(id); setError(null);
     const res = await fetch("/api/compliance/jurisdiction", {
       method: "POST", headers: { "Content-Type": "application/json" },

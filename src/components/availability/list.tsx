@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -13,8 +14,14 @@ type Rule = {
 
 export function AvailabilityList({ items }: { items: Rule[] }) {
   const r = useRouter();
+  const confirm = useConfirm();
   async function remove(id: string) {
-    if (!confirm("Delete this rule?")) return;
+    const ok = await confirm({
+      title: "Delete this availability rule?",
+      tone: "danger",
+      confirmLabel: "Delete rule",
+    });
+    if (!ok) return;
     await fetch(`/api/availability/${id}`, { method: "DELETE" });
     r.refresh();
   }
@@ -32,7 +39,7 @@ export function AvailabilityList({ items }: { items: Rule[] }) {
               <div className="text-sm font-semibold text-ink-900 dark:text-ink-100">{when} · {time}</div>
               {i.notes && <div className="text-[11px] text-ink-500 dark:text-ink-400">{i.notes}</div>}
             </div>
-            <button onClick={() => remove(i.id)} className="btn-ghost text-xs text-rose-600 dark:text-rose-400">
+            <button onClick={() => remove(i.id)} aria-label="Delete rule" className="btn-ghost text-xs text-rose-600 dark:text-rose-400">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </li>

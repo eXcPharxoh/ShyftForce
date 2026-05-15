@@ -2,16 +2,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarX, Loader2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export function CantMakeItButton({ shiftId }: { shiftId: string }) {
   const r = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const confirm = useConfirm();
 
   async function go() {
     if (busy) return;
-    if (!confirm("Release this shift and ask teammates to cover? Your manager will be notified.")) return;
+    const ok = await confirm({
+      title: "Release this shift?",
+      description: "Teammates will be asked to cover and your manager will be notified.",
+      tone: "warning",
+      confirmLabel: "Release shift",
+    });
+    if (!ok) return;
     setBusy(true); setError(null);
     const res = await fetch(`/api/shifts/${shiftId}/call-out`, { method: "POST" });
     const data = await res.json();

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type CtxItem = {
   id: string;
@@ -15,6 +16,7 @@ type CtxItem = {
 
 export function ContextForm({ locationId, items }: { locationId: string; items: CtxItem[] }) {
   const r = useRouter();
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
@@ -44,7 +46,12 @@ export function ContextForm({ locationId, items }: { locationId: string; items: 
   }
 
   async function remove(id: string) {
-    if (!confirm("Remove this context event?")) return;
+    const ok = await confirm({
+      title: "Remove this context event?",
+      tone: "danger",
+      confirmLabel: "Remove",
+    });
+    if (!ok) return;
     await fetch(`/api/forecast/context/${id}`, { method: "DELETE" });
     r.refresh();
   }
