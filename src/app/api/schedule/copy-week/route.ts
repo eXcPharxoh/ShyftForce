@@ -45,7 +45,9 @@ export async function POST(req: Request) {
   const onTimeOff = (memberId: string | null, when: Date) =>
     !!memberId && offs.some(o => o.memberId === memberId && o.startsOn <= when && o.endsOn >= when);
 
-  let created = 0; let skipped = 0;
+  // Build the full row set first, then a single createMany — avoids N+1.
+  const rows: any[] = [];
+  let skipped = 0;
   for (const s of sourceShifts) {
     if (!includeOpen && s.isOpen) { skipped++; continue; }
     const newStart = new Date(+s.startsAt + offsetMs);
@@ -53,21 +55,20 @@ export async function POST(req: Request) {
     const candidate = { memberId: s.memberId, startsAt: newStart, endsAt: newEnd, locationId: s.locationId };
     if (overlap(candidate)) { skipped++; continue; }
     if (onTimeOff(s.memberId, newStart)) { skipped++; continue; }
-
-    await prisma.shift.create({
-      data: {
-        memberId:   s.memberId,
-        locationId: s.locationId,
-        startsAt: newStart,
-        endsAt:   newEnd,
-        position: s.position,
-        notes:    s.notes,
-        isOpen:   s.isOpen,
-        status:   publish ? "published" : "draft",
-      },
+    rows.push({
+      memberId:   s.memberId,
+      locationId: s.locationId,
+      startsAt: newStart,
+      endsAt:   newEnd,
+      position: s.position,
+      notes:    s.notes,
+      isOpen:   s.isOpen,
+      status:   publish ? "published" : "draft",
     });
-    created++;
   }
+  const created = rows.length > 0
+    ? (await prisma.shift.createMany({ data: rows })).count
+    : 0;
 
   await audit({
     organizationId: u.organizationId, actorId: u.id,

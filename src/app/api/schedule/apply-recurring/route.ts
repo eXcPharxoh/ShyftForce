@@ -45,7 +45,9 @@ export async function POST(req: Request) {
   const onTimeOff = (memberId: string, day: Date) =>
     offs.some(o => o.memberId === memberId && o.startsOn <= day && o.endsOn >= day);
 
-  let created = 0; let skipped = 0;
+  // Batched createMany — was creating one row per recurring pattern.
+  const rows: any[] = [];
+  let skipped = 0;
   for (const rs of recurring) {
     const day = addDays(weekStart, (rs.dayOfWeek + 6) % 7);   // weekStart is Mon, dayOfWeek is 0=Sun
     const [sh, sm] = rs.startTime.split(":").map(Number);
@@ -56,18 +58,18 @@ export async function POST(req: Request) {
 
     if (haveOverlap(rs.memberId, startsAt, endsAt) || onTimeOff(rs.memberId, day)) { skipped++; continue; }
 
-    await prisma.shift.create({
-      data: {
-        memberId: rs.memberId,
-        locationId: rs.locationId,
-        startsAt, endsAt,
-        position: rs.position ?? null,
-        status: publish ? "published" : "draft",
-        isOpen: false,
-      },
+    rows.push({
+      memberId: rs.memberId,
+      locationId: rs.locationId,
+      startsAt, endsAt,
+      position: rs.position ?? null,
+      status: publish ? "published" : "draft",
+      isOpen: false,
     });
-    created++;
   }
+  const created = rows.length > 0
+    ? (await prisma.shift.createMany({ data: rows })).count
+    : 0;
 
   await audit({
     organizationId: u.organizationId, actorId: u.id,
