@@ -8,7 +8,7 @@ import {
   Megaphone, ShieldCheck, ShieldAlert, BarChart3, Receipt, MapPin, Briefcase,
   Activity, Globe, Wallet, TrendingUp, FileWarning, QrCode, Building2, Plug,
   DollarSign, Plane, CalendarX, Repeat, FileBarChart, BookOpen, CreditCard,
-  Wrench, FileText, UserCircle, MoreHorizontal, Bell, Webhook,
+  Wrench, FileText, UserCircle, MoreHorizontal, Bell, Webhook, Key, Lock, Tablet,
 } from "lucide-react";
 
 export type VerticalKey = "grocery" | "security" | "restaurant" | "retail" | "healthcare" | "field_service" | "office" | "fitness" | "default";
@@ -84,6 +84,9 @@ const M = {
   surveys:         { href: "/hr/surveys",               label: "Survey library",    icon: BookOpen },
   notifications:   { href: "/settings/notifications",   label: "Notifications + language", icon: Bell },
   webhooks:        { href: "/settings/webhooks",        label: "Webhooks",          icon: Webhook },
+  apiKeys:         { href: "/settings/api-keys",        label: "API keys",          icon: Key },
+  security:        { href: "/settings/security",        label: "Security & 2FA",    icon: Lock },
+  kiosks:          { href: "/settings/kiosks",          label: "Kiosk devices",     icon: Tablet },
 } as const;
 
 // --- Vertical configs ---
@@ -112,7 +115,8 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.hr }, { ...M.documents }, { ...M.messenger }, { ...M.billboard },
       { ...M.reports }, { ...M.expenses }, { ...M.billing },
       { ...M.locations }, { ...M.integrations }, { ...M.audit }, { ...M.surveys },
-      { ...M.notifications }, { ...M.webhooks, role: "manager" },
+      { ...M.notifications }, { ...M.security }, { ...M.webhooks, role: "manager" },
+      { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
     ],
     dashboardWidgets: ["demandPeak", "laborLive", "coverageOpen", "upcomingShifts"],
     promoCard: { title: "Demand Forecast", subtitle: "AI-predicted staffing from POS history → one-click draft week", href: "/schedule/forecast", emoji: "📈" },
@@ -143,7 +147,8 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.hr }, { ...M.documents }, { ...M.messenger }, { ...M.billboard },
       { ...M.reports }, { ...M.expenses }, { ...M.billing },
       { ...M.locations }, { ...M.integrations }, { ...M.audit }, { ...M.surveys },
-      { ...M.notifications }, { ...M.webhooks, role: "manager" },
+      { ...M.notifications }, { ...M.security }, { ...M.webhooks, role: "manager" },
+      { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
     ],
     dashboardWidgets: ["incidentsOpen", "checkpointsToday", "clientHours", "coverageOpen"],
     promoCard: { title: "Client Billing", subtitle: "Per-client OT-aware invoicing exported in 2 clicks", href: "/reports/client-billing", emoji: "💼" },
@@ -174,7 +179,8 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.hr }, { ...M.documents }, { ...M.messenger }, { ...M.billboard },
       { ...M.reports }, { ...M.expenses }, { ...M.billing },
       { ...M.locations }, { ...M.integrations }, { ...M.audit }, { ...M.surveys },
-      { ...M.notifications }, { ...M.webhooks, role: "manager" },
+      { ...M.notifications }, { ...M.security }, { ...M.webhooks, role: "manager" },
+      { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
     ],
     dashboardWidgets: ["laborLive", "tipsToday", "demandPeak", "coverageOpen"],
     promoCard: { title: "Tip Management", subtitle: "Automated, IRS-friendly tip pooling powered by POS data", href: "/tips", emoji: "💰" },
@@ -229,7 +235,10 @@ function defaultModules(opts: { hideTips?: boolean; hideIncidents?: boolean; hid
     { ...M.reports }, { ...M.expenses }, { ...M.billing },
     { ...M.locations }, { ...M.integrations }, { ...M.audit }, { ...M.surveys },
     { ...M.notifications },
+    { ...M.security },
     { ...M.webhooks, role: "manager" },
+    { ...M.apiKeys, role: "manager" },
+    { ...M.kiosks, role: "manager" },
   ];
 }
 

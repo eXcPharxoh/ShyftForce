@@ -5,6 +5,8 @@ import { deduct, refund, hoursForRequest } from "@/lib/pto/service";
 import { audit } from "@/lib/audit";
 import { smsTimeOffDecision } from "@/lib/sms";
 import { emitWebhook } from "@/lib/webhooks/emit";
+import { sendPush } from "@/lib/push";
+import { notifySlack } from "@/lib/slack";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireManagerOrAdmin();
@@ -54,15 +56,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     metadata: { status, hoursDeducted },
   });
 
-  // Notify the requester via SMS + webhook (fire-and-forget; failures don't block)
-  if ((status === "approved" || status === "rejected") && existing.member.phone) {
-    smsTimeOffDecision({
-      organizationId: u.organizationId,
-      memberId: existing.memberId,
-      phone: existing.member.phone,
-      decision: status,
-      startsOn: existing.startsOn,
-      endsOn: existing.endsOn,
+  // Notify the requester via SMS + push + webhook (all fire-and-forget)
+  if (status === "approved" || status === "rejected") {
+    if (existing.member.phone) {
+      smsTimeOffDecision({
+        organizationId: u.organizationId,
+        memberId: existing.memberId,
+        phone: existing.member.phone,
+        decision: status,
+        startsOn: existing.startsOn,
+        endsOn: existing.endsOn,
+      }).catch(() => {});
+    }
+    sendPush(existing.member.userId, {
+      title: status === "approved" ? "Time off approved ✅" : "Time off rejected",
+      body:  `${existing.startsOn.toLocaleDateString("en-US",{month:"short",day:"numeric"})} → ${existing.endsOn.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`,
+      url:   "/time-off",
+      tag:   `time-off-${existing.id}`,
+    }).catch(() => {});
+    notifySlack({
+      organizationId: u.organizationId, category: "approval",
+      text: `${status === "approved" ? "✅ APPROVED" : "🛑 REJECTED"} — ${existing.member.user.name}: ${existing.startsOn.toLocaleDateString("en-US",{month:"short",day:"numeric"})} → ${existing.endsOn.toLocaleDateString("en-US",{month:"short",day:"numeric"})} (${existing.category})`,
     }).catch(() => {});
   }
   emitWebhook({

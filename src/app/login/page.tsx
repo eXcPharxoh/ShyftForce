@@ -19,13 +19,32 @@ export default function LoginPage() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState<string | null>(null);
+  // 2FA state. Once the server tells us TOTP_REQUIRED, we show the code field
+  // and reuse the same email/password on next submit.
+  const [needsTotp, setNeedsTotp] = useState(false);
+  const [totp, setTotp]     = useState("");
+  const [recovery, setRecovery] = useState("");
+  const [useRecovery, setUseRecovery] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true); setErr(null);
-    const res = await signIn("credentials", { email, password, redirect: false });
+    const res = await signIn("credentials", {
+      email, password,
+      totp: needsTotp && !useRecovery ? totp : undefined,
+      recoveryCode: needsTotp && useRecovery ? recovery : undefined,
+      redirect: false,
+    });
     setLoading(false);
-    if (res?.error) setErr("Invalid credentials");
-    else r.push("/dashboard");
+    if (res?.error === "TOTP_REQUIRED") {
+      setNeedsTotp(true);
+      setErr(null);
+      return;
+    }
+    if (res?.error) {
+      setErr(needsTotp ? "Invalid 2FA code" : "Invalid credentials");
+    } else {
+      r.push("/dashboard");
+    }
   }
 
   async function loginAsDemo(d: typeof DEMOS[number]) {
@@ -105,10 +124,38 @@ export default function LoginPage() {
             <Link href="/forgot-password" className="text-[11px] text-brand-600 hover:underline">Forgot password?</Link>
           </div>
 
+          {needsTotp && (
+            <div className="mt-4 rounded-xl border border-brand-200 dark:border-brand-500/30 bg-brand-50/60 dark:bg-brand-500/10 p-3">
+              <div className="text-xs font-semibold text-brand-900 dark:text-brand-200 mb-2">
+                🔐 Two-factor authentication
+              </div>
+              {!useRecovery ? (
+                <>
+                  <label className="label">6-digit code from your authenticator app</label>
+                  <input className="input" value={totp} onChange={(e) => setTotp(e.target.value)}
+                    inputMode="numeric" maxLength={6} pattern="[0-9]{6}" autoComplete="one-time-code"
+                    placeholder="000000" autoFocus required />
+                  <button type="button" onClick={() => { setUseRecovery(true); setTotp(""); }} className="text-[11px] text-brand-600 hover:underline mt-2">
+                    Use a recovery code instead
+                  </button>
+                </>
+              ) : (
+                <>
+                  <label className="label">Recovery code (####-####)</label>
+                  <input className="input" value={recovery} onChange={(e) => setRecovery(e.target.value)}
+                    maxLength={9} pattern="[0-9]{4}-[0-9]{4}" placeholder="0000-0000" autoFocus required />
+                  <button type="button" onClick={() => { setUseRecovery(false); setRecovery(""); }} className="text-[11px] text-brand-600 hover:underline mt-2">
+                    Use an authenticator code instead
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           {err && <div className="text-rose-600 text-xs mt-2 mb-2">{err}</div>}
 
           <button className="btn-primary w-full py-2.5 mt-4" disabled={loading || !!demoLoading}>
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Signing in…" : needsTotp ? "Verify & sign in" : "Sign in"}
           </button>
 
           <div className="text-center text-[11px] text-ink-500 dark:text-ink-400 mt-4">

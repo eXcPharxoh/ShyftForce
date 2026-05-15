@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { verifyCode } from "./totp";
 
 // When the app is deployed on multiple subdomains (app.shyftforce.com,
 // admin.shyftforce.com), set NEXTAUTH_COOKIE_DOMAIN=.shyftforce.com so the
@@ -41,6 +42,8 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        totp:  { label: "2FA code", type: "text" },
+        recoveryCode: { label: "Recovery code", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
@@ -51,6 +54,35 @@ export const authOptions: NextAuthOptions = {
         if (!user) return null;
         const ok = await bcrypt.compare(credentials.password, user.password);
         if (!ok) return null;
+
+        // 2FA gate. If TOTP is enabled, require a fresh code OR a recovery code.
+        // We throw a specifically-named Error so the login page can detect
+        // "password ok, code needed" and prompt for the code without losing state.
+        if (user.totpEnabled && user.totpSecret) {
+          const totp = credentials.totp?.trim();
+          const recovery = credentials.recoveryCode?.trim();
+          let passed = false;
+          if (totp && /^\d{6}$/.test(totp)) {
+            passed = verifyCode(user.totpSecret, totp);
+          } else if (recovery) {
+            const codes: string[] = user.recoveryCodes ? JSON.parse(user.recoveryCodes) : [];
+            for (let i = 0; i < codes.length; i++) {
+              if (await bcrypt.compare(recovery, codes[i])) {
+                // Burn the used recovery code so it can't be reused
+                const next = [...codes];
+                next.splice(i, 1);
+                await prisma.user.update({ where: { id: user.id }, data: { recoveryCodes: JSON.stringify(next) } });
+                passed = true;
+                break;
+              }
+            }
+          }
+          if (!passed) {
+            // NextAuth surfaces error.message via the ?error= URL param on /login.
+            throw new Error("TOTP_REQUIRED");
+          }
+        }
+
         return {
           id: user.id,
           email: user.email,

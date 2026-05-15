@@ -128,3 +128,35 @@ self.addEventListener("sync", (e) => {
 self.addEventListener("message", (e) => {
   if (e.data?.type === "drain-clock-queue") drainQueue();
 });
+
+// ---------- Web Push handler ----------
+// Server posts { title, body, url, tag, icon } as the JSON payload.
+self.addEventListener("push", (e) => {
+  if (!e.data) return;
+  let payload = {};
+  try { payload = e.data.json(); } catch { payload = { title: "shyftforce", body: e.data.text() }; }
+
+  const options = {
+    body:  payload.body || "",
+    icon:  payload.icon || "/icon-192.png",
+    badge: "/icon-192.png",
+    tag:   payload.tag,                    // dedupes successive notifications
+    data:  { url: payload.url || "/dashboard" },
+    requireInteraction: false,
+  };
+  e.waitUntil(self.registration.showNotification(payload.title || "shyftforce", options));
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = e.notification.data?.url || "/dashboard";
+  e.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    // If a window is already open at the target URL, focus it.
+    for (const c of all) {
+      if (c.url.includes(url) && "focus" in c) return c.focus();
+    }
+    // Otherwise open a new one.
+    if (self.clients.openWindow) return self.clients.openWindow(url);
+  })());
+});

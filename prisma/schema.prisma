@@ -69,6 +69,9 @@ model Organization {
   webhookSubscriptions    WebhookSubscription[]
   webhookDeliveries       WebhookDelivery[]
   smsMessages             SmsMessage[]
+  apiKeys                 ApiKey[]
+  kioskDevices            KioskDevice[]
+  slackConnection         SlackConnection?
 }
 
 model ComplianceSettings {
@@ -460,6 +463,7 @@ model Location {
   checkpointPosts CheckpointPost[]
   tipPools        TipPool[]
   client          ClientAccount?       @relation("LocationClient", fields: [clientId], references: [id])
+  KioskDevice     KioskDevice[]
 
   @@index([organizationId])
   @@index([clientId])
@@ -477,6 +481,13 @@ model User {
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
 
+  // 2FA / TOTP. totpSecret is base32-encoded; only populated after the user
+  // completes setup. recoveryCodes is a JSON array of bcrypt-hashed one-shot
+  // codes (shown once on enroll so user can stash them).
+  totpEnabled   Boolean @default(false)
+  totpSecret    String?
+  recoveryCodes String? // JSON array of hashed codes
+
   member                 Member?
   workerProfile          WorkerProfile?
   emailTokens            EmailVerification[]
@@ -484,6 +495,92 @@ model User {
   auditLogs              AuditLog[]
   impersonationsGiven    ImpersonationGrant[] @relation("ImpersonationAdmin")
   impersonationsReceived ImpersonationGrant[] @relation("ImpersonationTarget")
+  pushSubscriptions      PushSubscription[]
+}
+
+// ============================================================================
+// Web Push subscriptions. One row per (user, browser/device). Service worker
+// pushes land here; we delete on 410 Gone (subscription expired).
+// ============================================================================
+model PushSubscription {
+  id         String    @id @default(uuid())
+  userId     String
+  endpoint   String    @unique
+  p256dh     String // public key from PushSubscription.getKey('p256dh')
+  auth       String // public key from PushSubscription.getKey('auth')
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================================
+// Scoped API keys for the public REST API. Admins create keys with specific
+// scopes (read:shifts, write:shifts, etc.). We store a bcrypt hash — the raw
+// key is shown ONCE on creation.
+// ============================================================================
+model ApiKey {
+  id             String    @id @default(uuid())
+  organizationId String
+  name           String // human-friendly label, e.g. "Zapier prod"
+  prefix         String // first 12 chars of the key (e.g. "sfk_live_xy"); shown in lists
+  keyHash        String // bcrypt hash of the full key
+  scopes         String // JSON string array, e.g. ["read:shifts","write:shifts"]
+  createdById    String?
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, revokedAt])
+  @@index([prefix])
+}
+
+// ============================================================================
+// Kiosk sessions. Each location can have one or more shared tablets at a
+// clock-in station. Once paired, the device holds a long-lived kiosk token;
+// employees clock in via their org-unique PIN (4-6 digits).
+// ============================================================================
+model KioskDevice {
+  id             String    @id @default(uuid())
+  organizationId String
+  locationId     String
+  name           String // e.g. "Front desk tablet"
+  token          String    @unique // long-lived bearer; rotatable
+  pairedAt       DateTime  @default(now())
+  lastSeenAt     DateTime?
+  revokedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, locationId])
+}
+
+// ============================================================================
+// Slack workspace connection per org. OAuth bot token + per-event channel
+// routing. Set the channel once, we drop notifications there.
+// ============================================================================
+model SlackConnection {
+  id                    String   @id @default(uuid())
+  organizationId        String   @unique
+  teamId                String // Slack workspace ID
+  teamName              String
+  accessToken           String // bot token: xoxb-…
+  defaultChannel        String? // channel ID for fallback
+  installedById         String? // userId who completed OAuth
+  installedAt           DateTime @default(now())
+  // Granular routing
+  channelForApprovals   String?
+  channelForShiftOffers String?
+  channelForIncidents   String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
 model EmailVerification {
@@ -694,6 +791,10 @@ model Member {
 
   // Locale override for this user; if null, falls back to org default
   locale String? // "en" | "es" | "fr"
+
+  // 4-6 digit numeric PIN used at shared kiosk devices to clock in. Stored
+  // as a bcrypt hash so a DB read doesn't leak punch-in credentials.
+  kioskPinHash String?
 
   certifications    MemberCertification[]
   ptoBalances       PtoBalance[]
