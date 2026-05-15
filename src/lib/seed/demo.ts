@@ -89,28 +89,25 @@ export async function runDemoSeed(db: PrismaClient): Promise<DemoSeedSummary> {
     { name: "Léa Beaulieu",     email: "lea@platinum.com",     loc: 2, position: "Site Manager" },
     { name: "Daniel Park",      email: "daniel@platinum.com",  loc: 3, position: "Site Manager" },
   ];
-  const managers: any[] = [];
-  for (const m of managerSpecs) {
-    managers.push(await db.user.create({
-      data: {
-        email: m.email,
-        name: m.name,
-        password: passwordHash,
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(m.name)}&backgroundColor=22c55e`,
-        member: {
-          create: {
-            organizationId: org.id,
-            role: "MANAGER",
-            position: m.position,
-            locationId: locations[m.loc].id,
-            hireDate: new Date(2023, 1, 10),
-            hourlyRate: 38,
-          },
+  const managers: any[] = await Promise.all(managerSpecs.map((m) => db.user.create({
+    data: {
+      email: m.email,
+      name: m.name,
+      password: passwordHash,
+      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(m.name)}&backgroundColor=22c55e`,
+      member: {
+        create: {
+          organizationId: org.id,
+          role: "MANAGER",
+          position: m.position,
+          locationId: locations[m.loc].id,
+          hireDate: new Date(2023, 1, 10),
+          hourlyRate: 38,
         },
       },
-      include: { member: true },
-    }));
-  }
+    },
+    include: { member: true },
+  })));
 
   const empSpecs = [
     ["Jordan Lee",      "jordan@platinum.com",    0, "Security Officer"],
@@ -125,29 +122,26 @@ export async function runDemoSeed(db: PrismaClient): Promise<DemoSeedSummary> {
     ["Hannah Müller",   "hannah@platinum.com",    1, "Patrol"],
   ] as const;
 
-  const employees: any[] = [];
-  for (const [name, email, loc, position] of empSpecs) {
-    employees.push(await db.user.create({
-      data: {
-        email,
-        name,
-        password: passwordHash,
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
-        member: {
-          create: {
-            organizationId: org.id,
-            role: "EMPLOYEE",
-            position,
-            locationId: locations[loc].id,
-            hireDate: new Date(2024, Math.floor(Math.random() * 12), 1 + Math.floor(Math.random() * 27)),
-            birthday: new Date(1985 + Math.floor(Math.random() * 20), Math.floor(Math.random() * 12), 1 + Math.floor(Math.random() * 27)),
-            hourlyRate: 22 + Math.random() * 6,
-          },
+  const employees: any[] = await Promise.all(empSpecs.map(([name, email, loc, position]) => db.user.create({
+    data: {
+      email,
+      name,
+      password: passwordHash,
+      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+      member: {
+        create: {
+          organizationId: org.id,
+          role: "EMPLOYEE",
+          position,
+          locationId: locations[loc].id,
+          hireDate: new Date(2024, Math.floor(Math.random() * 12), 1 + Math.floor(Math.random() * 27)),
+          birthday: new Date(1985 + Math.floor(Math.random() * 20), Math.floor(Math.random() * 12), 1 + Math.floor(Math.random() * 27)),
+          hourlyRate: 22 + Math.random() * 6,
         },
       },
-      include: { member: true },
-    }));
-  }
+    },
+    include: { member: true },
+  })));
 
   // ---- Shifts (this week)
   const today = new Date(); today.setHours(0,0,0,0);
@@ -193,29 +187,30 @@ export async function runDemoSeed(db: PrismaClient): Promise<DemoSeedSummary> {
   }
   await Promise.all(shiftCreates);
 
-  // ---- Time off
-  for (let i = 0; i < 6; i++) {
-    const m = employees[i % employees.length].member!;
-    const start = new Date(today); start.setDate(today.getDate() + 7 + i*2);
-    const end = new Date(start); end.setDate(start.getDate() + 1 + Math.floor(Math.random()*3));
-    await db.timeOffRequest.create({
-      data: { memberId: m.id, startsOn: start, endsOn: end,
+  // ---- Time off + Expenses (bulk createMany)
+  await db.timeOffRequest.createMany({
+    data: Array.from({ length: 6 }, (_, i) => {
+      const m = employees[i % employees.length].member!;
+      const start = new Date(today); start.setDate(today.getDate() + 7 + i*2);
+      const end = new Date(start); end.setDate(start.getDate() + 1 + Math.floor(Math.random()*3));
+      return {
+        memberId: m.id, startsOn: start, endsOn: end,
         category: ["vacation","sick","personal"][i % 3],
         reason: ["Family trip","Doctor's appointment","Personal day"][i % 3],
-        status: i < 2 ? "pending" : i < 4 ? "approved" : "rejected" },
-    });
-  }
+        status: i < 2 ? "pending" : i < 4 ? "approved" : "rejected",
+      };
+    }),
+  });
 
-  // ---- Expenses
-  for (let i = 0; i < 5; i++) {
-    const m = employees[i % employees.length].member!;
-    await db.expenseRequest.create({
-      data: { memberId: m.id, amount: 25 + Math.random() * 200, currency: "USD",
-        category: ["mileage","equipment","training","meal"][i % 4],
-        notes: "Submitted via mobile app",
-        status: i < 2 ? "pending" : "approved" },
-    });
-  }
+  await db.expenseRequest.createMany({
+    data: Array.from({ length: 5 }, (_, i) => ({
+      memberId: employees[i % employees.length].member!.id,
+      amount: 25 + Math.random() * 200, currency: "USD",
+      category: ["mileage","equipment","training","meal"][i % 4],
+      notes: "Submitted via mobile app",
+      status: i < 2 ? "pending" : "approved",
+    })),
+  });
 
   // ---- Pay period + timesheets
   const payStart = new Date(today); payStart.setDate(today.getDate() - 14);
@@ -223,33 +218,30 @@ export async function runDemoSeed(db: PrismaClient): Promise<DemoSeedSummary> {
   const period = await db.payPeriod.create({
     data: { organizationId: org.id, startsOn: payStart, endsOn: payEnd, status: "open" },
   });
-  let entries = 0, flagged = 0;
+  // Build all timesheet data first, then bulk-create via createMany (10x faster)
+  const tsData: any[] = [];
+  let flagged = 0;
   for (const e of employees) {
     for (let d = 0; d < 14; d++) {
       if (Math.random() < 0.7) {
         const date = new Date(payStart); date.setDate(payStart.getDate() + d);
         const isFlagged = Math.random() < 0.12;
-        await db.timesheetEntry.create({
-          data: { payPeriodId: period.id, memberId: e.member!.id, date,
-            hours: 6 + Math.random() * 4,
-            approved: !isFlagged && Math.random() < 0.55,
-            flagged: isFlagged,
-            notes: isFlagged ? "Missed clock-out" : null },
+        if (isFlagged) flagged++;
+        tsData.push({
+          payPeriodId: period.id, memberId: e.member!.id, date,
+          hours: 6 + Math.random() * 4,
+          approved: !isFlagged && Math.random() < 0.55,
+          flagged: isFlagged,
+          notes: isFlagged ? "Missed clock-out" : null,
         });
-        entries++; if (isFlagged) flagged++;
       }
     }
   }
+  await db.timesheetEntry.createMany({ data: tsData });
+  const entries = tsData.length;
 
-  // ---- Live attendance
+  // ---- Live attendance + Kudos + Day notes + HR reminders (bulk + parallel)
   const now = new Date();
-  for (let i = 0; i < 2; i++) {
-    const m = employees[i].member!;
-    const at = new Date(now); at.setHours(now.getHours() - 1 - i);
-    await db.attendanceLog.create({ data: { memberId: m.id, type: "clock_in", at } });
-  }
-
-  // ---- Kudos
   const kudosTexts = [
     "Crushed the night shift solo when the system went down. Legend.",
     "Stayed late to train the new hire — above and beyond!",
@@ -257,36 +249,45 @@ export async function runDemoSeed(db: PrismaClient): Promise<DemoSeedSummary> {
     "Always the first to volunteer for coverage. We see you.",
     "De-escalated a tough situation with grace today.",
   ];
-  for (let i = 0; i < 5; i++) {
-    await db.kudos.create({
-      data: { fromId: managers[i % managers.length].member!.id,
-        toId: employees[i % employees.length].member!.id,
-        message: kudosTexts[i], emoji: ["🙌","⭐","🔥","💪","🎯"][i] },
-    });
-  }
-
-  // ---- Day notes
-  for (let d = 0; d < 5; d++) {
-    const date = new Date(today); date.setDate(today.getDate() + d);
-    await db.dayNote.create({
-      data: { organizationId: org.id, locationId: locations[d % locations.length].id, date,
-        body: ["VIP visit @ 14:00 — extra coverage at lobby","Loading dock closed all day","Fire drill 10:30","Inventory count overnight","Construction crew on-site"][d],
-        authorId: managers[d % managers.length].member!.id },
-    });
-  }
-
-  // ---- HR Reminders
-  const reminders = [
+  const reminderTitles = [
     "Submit Q3 performance reviews",
     "Renew first-aid certifications (3 employees)",
     "Audit overtime trends for last pay period",
     "Schedule onboarding check-ins for new hires",
     "Review proposed schedule changes for next week",
   ];
-  for (let i = 0; i < reminders.length; i++) {
-    const due = new Date(today); due.setDate(today.getDate() + i + 1);
-    await db.hRReminder.create({ data: { organizationId: org.id, title: reminders[i], dueOn: due } });
-  }
+  const dayNoteBodies = ["VIP visit @ 14:00 — extra coverage at lobby","Loading dock closed all day","Fire drill 10:30","Inventory count overnight","Construction crew on-site"];
+
+  await Promise.all([
+    db.attendanceLog.createMany({
+      data: [0, 1].map((i) => {
+        const at = new Date(now); at.setHours(now.getHours() - 1 - i);
+        return { memberId: employees[i].member!.id, type: "clock_in", at };
+      }),
+    }),
+    db.kudos.createMany({
+      data: Array.from({ length: 5 }, (_, i) => ({
+        fromId: managers[i % managers.length].member!.id,
+        toId: employees[i % employees.length].member!.id,
+        message: kudosTexts[i], emoji: ["🙌","⭐","🔥","💪","🎯"][i],
+      })),
+    }),
+    db.dayNote.createMany({
+      data: Array.from({ length: 5 }, (_, d) => {
+        const date = new Date(today); date.setDate(today.getDate() + d);
+        return {
+          organizationId: org.id, locationId: locations[d % locations.length].id, date,
+          body: dayNoteBodies[d], authorId: managers[d % managers.length].member!.id,
+        };
+      }),
+    }),
+    db.hRReminder.createMany({
+      data: reminderTitles.map((title, i) => {
+        const due = new Date(today); due.setDate(today.getDate() + i + 1);
+        return { organizationId: org.id, title, dueOn: due };
+      }),
+    }),
+  ]);
 
   // ---- Survey
   const survey = await db.survey.create({
@@ -302,39 +303,8 @@ export async function runDemoSeed(db: PrismaClient): Promise<DemoSeedSummary> {
     },
     include: { questions: true },
   });
+  // ---- Survey responses + Docs + Doc requests + Messages + Billboard (bulk + parallel)
   const respondents = [...employees, ...managers].slice(0, 16);
-  for (const r of respondents) {
-    await db.surveyResponse.create({
-      data: { surveyId: survey.id, memberId: r.member!.id,
-        answers: JSON.stringify({ q1: Math.random()<0.7 ? "yes" : "no", q2: 1 + Math.floor(Math.random()*5), q3: "" }) },
-    });
-  }
-
-  // ---- Documents + requests
-  for (let i = 0; i < 4; i++) {
-    await db.document.create({
-      data: { organizationId: org.id, memberId: employees[i].member!.id,
-        name: ["Contract.pdf","ID Verification.pdf","Training Certificate.pdf","Direct Deposit.pdf"][i],
-        url: "#", category: ["contract","identity","training","payroll"][i] },
-    });
-  }
-  for (let i = 0; i < 3; i++) {
-    await db.documentRequest.create({
-      data: { memberId: employees[i + 4].member!.id,
-        documentName: ["Updated direct-deposit form","Renewed firearm permit","2024 W-9"][i],
-        status: "pending" },
-    });
-  }
-
-  // ---- Messenger
-  for (let i = 0; i < 3; i++) {
-    await db.message.create({
-      data: { fromId: managers[0].member!.id, toId: employees[i].member!.id,
-        body: ["Hey, can you cover Saturday's shift?","Great work last night.","Don't forget the incident form."][i] },
-    });
-  }
-
-  // ---- Billboard
   const billboardPosts = [
     { title: "New uniforms arriving Monday", body: "Pickup at HQ between 8-5. Please bring your old uniform for exchange." },
     { title: "Holiday schedule released",  body: "See attached for the full December coverage plan. Trade requests due by the 15th." },
@@ -344,12 +314,41 @@ export async function runDemoSeed(db: PrismaClient): Promise<DemoSeedSummary> {
     { title: "App update rolling out",     body: "shyftforce v2.1 ships next week — push notifications enabled by default." },
     { title: "Referral bonus increased",   body: "Refer a hire and earn $500 (was $300). Promo runs through year-end." },
   ];
-  for (const p of billboardPosts) {
-    await db.billboardPost.create({
-      data: { organizationId: org.id, authorId: admin.member!.id,
-        title: p.title, body: p.body, category: "announcement" },
-    });
-  }
+
+  await Promise.all([
+    db.surveyResponse.createMany({
+      data: respondents.map((r) => ({
+        surveyId: survey.id, memberId: r.member!.id,
+        answers: JSON.stringify({ q1: Math.random()<0.7 ? "yes" : "no", q2: 1 + Math.floor(Math.random()*5), q3: "" }),
+      })),
+    }),
+    db.document.createMany({
+      data: Array.from({ length: 4 }, (_, i) => ({
+        organizationId: org.id, memberId: employees[i].member!.id,
+        name: ["Contract.pdf","ID Verification.pdf","Training Certificate.pdf","Direct Deposit.pdf"][i],
+        url: "#", category: ["contract","identity","training","payroll"][i],
+      })),
+    }),
+    db.documentRequest.createMany({
+      data: Array.from({ length: 3 }, (_, i) => ({
+        memberId: employees[i + 4].member!.id,
+        documentName: ["Updated direct-deposit form","Renewed firearm permit","2024 W-9"][i],
+        status: "pending",
+      })),
+    }),
+    db.message.createMany({
+      data: Array.from({ length: 3 }, (_, i) => ({
+        fromId: managers[0].member!.id, toId: employees[i].member!.id,
+        body: ["Hey, can you cover Saturday's shift?","Great work last night.","Don't forget the incident form."][i],
+      })),
+    }),
+    db.billboardPost.createMany({
+      data: billboardPosts.map((p) => ({
+        organizationId: org.id, authorId: admin.member!.id,
+        title: p.title, body: p.body, category: "announcement",
+      })),
+    }),
+  ]);
 
   return {
     orgId: org.id,
