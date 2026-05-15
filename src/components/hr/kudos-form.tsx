@@ -37,7 +37,7 @@ export function KudosForm({ members }: { members: { id: string; name: string }[]
         <div className="flex gap-1.5">
           {EMOJIS.map(e => (
             <button type="button" key={e} onClick={() => setEmoji(e)}
-              className={`w-9 h-9 rounded-lg border ${emoji === e ? "border-brand-500 bg-brand-50" : "border-ink-200"} text-lg`}>
+              className={`w-9 h-9 rounded-lg border transition ${emoji === e ? "border-brand-500 bg-brand-50 dark:bg-brand-500/15" : "border-ink-200 dark:border-ink-800 hover:bg-ink-50 dark:hover:bg-ink-800"} text-lg`}>
               {e}
             </button>
           ))}

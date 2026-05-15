@@ -103,7 +103,7 @@ export default async function OpenShiftsPage() {
                   </div>
                   <div className="text-right shrink-0 mr-2">
                     <div className="text-[11px] text-ink-500">Wave {o.wave}</div>
-                    <div className={`text-xs font-semibold ${minutesLeft < 15 ? "text-rose-600" : "text-ink-700"}`}>
+                    <div className={`text-xs font-semibold ${minutesLeft < 15 ? "text-rose-600" : "text-ink-700 dark:text-ink-300"}`}>
                       {minutesLeft < 60 ? `${minutesLeft}m left` : `${Math.floor(minutesLeft/60)}h ${minutesLeft%60}m left`}
                     </div>
                   </div>
@@ -128,7 +128,7 @@ export default async function OpenShiftsPage() {
           )}
           <ul className="space-y-2">
             {browsable.map(s => (
-              <li key={s.id} className="flex items-center gap-3 p-3 rounded-xl border border-ink-200 hover:border-brand-300">
+              <li key={s.id} className="flex items-center gap-3 p-3 rounded-xl border border-ink-200 dark:border-ink-800 hover:border-brand-300">
                 <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center"><ShoppingBag className="w-5 h-5" /></div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm truncate">{s.position ?? "Shift"} · {s.location.name}</div>
@@ -143,7 +143,7 @@ export default async function OpenShiftsPage() {
 
       {isManager && (
         <section className="card overflow-hidden">
-          <header className="px-5 py-3 border-b border-ink-100 flex items-center justify-between">
+          <header className="px-5 py-3 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold">All open shifts</h3>
               <p className="text-[11px] text-ink-500">Auto-offer in waves to ranked candidates.</p>

@@ -14,7 +14,7 @@ export function SurveyProgress({ responses, total, title }: { responses: number;
         </div>
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-ink-800 line-clamp-2">{title}</div>
+        <div className="text-sm font-medium text-ink-800 dark:text-ink-200 line-clamp-2">{title}</div>
         <div className="text-xs text-ink-500 mt-1">{responses} / {total} responses</div>
         <div className="badge-orange mt-2">Ready to analyze</div>
       </div>

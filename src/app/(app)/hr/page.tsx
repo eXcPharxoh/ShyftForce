@@ -41,7 +41,7 @@ export default async function HRPage() {
                 {k.from.user.avatar ? <img src={k.from.user.avatar} className="w-8 h-8 rounded-full" alt="" /> : <div className="w-8 h-8 rounded-full bg-ink-200 text-xs font-semibold flex items-center justify-center">{initials(k.from.user.name)}</div>}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm"><b>{k.from.user.name}</b> <span className="text-ink-500">→</span> <b>{k.to.user.name}</b> {k.emoji}</div>
-                  <div className="text-sm text-ink-700">"{k.message}"</div>
+                  <div className="text-sm text-ink-700 dark:text-ink-300">"{k.message}"</div>
                   <div className="text-[11px] text-ink-500">{relTime(k.createdAt)}</div>
                 </div>
               </li>

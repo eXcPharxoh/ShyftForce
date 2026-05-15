@@ -65,7 +65,7 @@ export default async function DocumentsPage() {
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Inbox className="w-4 h-4" /> Document requests</h3>
           <ul className="space-y-2">
             {requests.map(r => (
-              <li key={r.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-ink-200">
+              <li key={r.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-ink-200 dark:border-ink-800">
                 <div className={`w-9 h-9 rounded-lg ${r.status === "pending" ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"} flex items-center justify-center`}>
                   {r.status === "pending" ? <FileX className="w-5 h-5" /> : <FileCheck className="w-5 h-5" />}
                 </div>

@@ -32,7 +32,7 @@ export default async function BillingPage() {
           <div>
             <div className="text-[11px] uppercase font-semibold text-brand-700">Current plan</div>
             <h2 className="text-2xl font-bold mt-0.5">{limit.label}</h2>
-            <div className="text-sm text-ink-700 mt-1">
+            <div className="text-sm text-ink-700 dark:text-ink-300 mt-1">
               {plan === "trial" && trialDaysLeft != null && trialDaysLeft > 0 && (
                 <>Trial expires in <b>{trialDaysLeft}</b> day{trialDaysLeft === 1 ? "" : "s"}.</>
               )}
@@ -69,7 +69,7 @@ export default async function BillingPage() {
                   <div className="text-3xl font-bold">{meta.monthlyPriceUSD ? `$${meta.monthlyPriceUSD}` : "Custom"}</div>
                   {meta.monthlyPriceUSD > 0 && <div className="text-xs text-ink-500">/ mo</div>}
                 </div>
-                <ul className="text-xs space-y-1.5 mt-3 text-ink-700">
+                <ul className="text-xs space-y-1.5 mt-3 text-ink-700 dark:text-ink-300">
                   <li>✓ Up to {meta.seats === 9999 ? "unlimited" : meta.seats} seats</li>
                   <li>✓ All scheduling + payroll features</li>
                   <li>✓ AI Co-pilot & Auto-Scheduler</li>

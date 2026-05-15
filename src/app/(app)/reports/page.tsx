@@ -71,8 +71,8 @@ export default async function ReportsPage() {
             return (
               <li key={l.id}>
                 <div className="flex items-center justify-between text-sm mb-1.5">
-                  <span className="font-semibold text-ink-900">{l.name}</span>
-                  <span className="text-ink-700 tabular-nums text-xs">
+                  <span className="font-semibold text-ink-900 dark:text-ink-50">{l.name}</span>
+                  <span className="text-ink-700 dark:text-ink-300 tabular-nums text-xs">
                     <span className="font-semibold">{fmtMoney(l.cost)}</span>
                     <span className="text-ink-400 mx-1.5">·</span>
                     {fmtHours(l.hrs)}
@@ -105,7 +105,7 @@ export default async function ReportsPage() {
                     title={`${byDow[i].toFixed(1)}h`}
                   />
                 </div>
-                <div className="text-[11px] text-ink-700 mt-2 font-semibold">{d}</div>
+                <div className="text-[11px] text-ink-700 dark:text-ink-300 mt-2 font-semibold">{d}</div>
                 <div className="text-[10px] text-ink-500 tabular-nums">{byDow[i].toFixed(0)}h</div>
               </div>
             );

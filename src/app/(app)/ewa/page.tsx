@@ -98,7 +98,7 @@ function StatusDot({ status }: { status: string }) {
     failed: [XCircle, "text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/15"],
     canceled: [XCircle, "text-ink-700 dark:text-ink-300 bg-ink-100 dark:bg-ink-800"],
   };
-  const [Icon, cls] = map[status] ?? [AlertTriangle, "text-ink-700 bg-ink-100"];
+  const [Icon, cls] = map[status] ?? [AlertTriangle, "text-ink-700 dark:text-ink-300 bg-ink-100 dark:bg-ink-800"];
   return <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${cls}`}><Icon className="w-4 h-4" /></div>;
 }
 function statusBadge(s: string) {

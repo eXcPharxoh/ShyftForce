@@ -85,7 +85,7 @@ export function AddClientForm({ locations }: { locations: { id: string; name: st
         <label className="label">Assign locations</label>
         <div className="flex flex-wrap gap-1.5">
           {locations.map((l) => (
-            <button key={l.id} type="button" onClick={() => toggleLoc(l.id)} className={`text-xs px-3 py-1.5 rounded-full border transition ${locationIds.includes(l.id) ? "border-brand-500 bg-brand-50 dark:bg-brand-500/15 text-brand-700 dark:text-brand-300 font-semibold" : "border-ink-200 dark:border-ink-700 text-ink-700 dark:text-ink-300 hover:bg-ink-50"}`}>
+            <button key={l.id} type="button" onClick={() => toggleLoc(l.id)} className={`text-xs px-3 py-1.5 rounded-full border transition ${locationIds.includes(l.id) ? "border-brand-500 bg-brand-50 dark:bg-brand-500/15 text-brand-700 dark:text-brand-300 font-semibold" : "border-ink-200 dark:border-ink-700 text-ink-700 dark:text-ink-300 hover:bg-ink-50 dark:hover:bg-ink-800"}`}>
               {l.name}
             </button>
           ))}

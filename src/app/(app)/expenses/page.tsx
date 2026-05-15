@@ -64,7 +64,7 @@ export default async function ExpensesPage() {
 }
 
 function Stat({ label, value, note, tone = "ink" }: { label: string; value: string; note: string; tone?: "ink" | "amber" | "emerald" }) {
-  const map: any = { ink: "text-ink-900", amber: "text-amber-700", emerald: "text-emerald-700" };
+  const map: any = { ink: "text-ink-900 dark:text-ink-50", amber: "text-amber-700", emerald: "text-emerald-700" };
   return (
     <div className="card p-4">
       <div className="text-[11px] uppercase text-ink-500 font-medium">{label}</div>

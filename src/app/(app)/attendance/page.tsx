@@ -123,13 +123,13 @@ export default async function AttendancePage() {
             </thead>
             <tbody>
               {entries.slice(0, 60).map(e => (
-                <tr key={e.id} className="border-t border-ink-100 hover:bg-ink-50/40">
+                <tr key={e.id} className="border-t border-ink-100 dark:border-ink-800 hover:bg-ink-50/40 dark:hover:bg-ink-800/40">
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
                       {e.member.user.avatar
                         ? <img src={e.member.user.avatar} alt="" className="w-6 h-6 rounded-full" />
-                        : <div className="w-6 h-6 rounded-full bg-ink-200 text-[10px] font-semibold flex items-center justify-center">{initials(e.member.user.name)}</div>}
-                      <span className="font-medium">{e.member.user.name}</span>
+                        : <div className="w-6 h-6 rounded-full bg-ink-200 dark:bg-ink-800 text-ink-700 dark:text-ink-300 text-[10px] font-semibold flex items-center justify-center">{initials(e.member.user.name)}</div>}
+                      <span className="font-medium text-ink-900 dark:text-ink-100">{e.member.user.name}</span>
                     </div>
                   </td>
                   <td className="px-4 py-2 text-ink-600">{dateLabel(e.date)}</td>
@@ -215,7 +215,7 @@ export default async function AttendancePage() {
 }
 
 function Stat({ label, value, tone = "ink" }: { label: string; value: string | number; tone?: "ink" | "rose" | "amber" }) {
-  const map: any = { ink: "text-ink-900", rose: "text-rose-600", amber: "text-amber-600" };
+  const map: any = { ink: "text-ink-900 dark:text-ink-50", rose: "text-rose-600 dark:text-rose-400", amber: "text-amber-600 dark:text-amber-300" };
   return (
     <div className="card p-4">
       <div className="text-[11px] uppercase text-ink-500 font-medium">{label}</div>

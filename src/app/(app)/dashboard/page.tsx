@@ -317,7 +317,7 @@ export default async function Dashboard() {
             </thead>
             <tbody>
               {tsByLocation.map(l => (
-                <tr key={l.id} className="border-t border-ink-100">
+                <tr key={l.id} className="border-t border-ink-100 dark:border-ink-800">
                   <td className="py-2 font-medium">{l.name}</td>
                   <td className="py-2 text-ink-700 dark:text-ink-300">{l.manager}</td>
                   <td className="py-2"><span className={l.alerts > 0 ? "badge-rose badge bg-rose-50 text-rose-700" : "badge-green"}>{l.alerts} alerts</span></td>

@@ -132,7 +132,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                       </td>
                     );
                   })}
-                  <td className="p-3 text-right font-medium text-ink-700">{mh.toFixed(1)}</td>
+                  <td className="p-3 text-right font-medium text-ink-700 dark:text-ink-300">{mh.toFixed(1)}</td>
                 </tr>
               );
             })}
@@ -149,7 +149,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           <ul className="space-y-2">
             {openShifts.length === 0 && <li className="text-xs text-ink-500">None this week.</li>}
             {openShifts.map(s => (
-              <li key={s.id} className="flex items-center justify-between p-2.5 rounded-lg border border-ink-200 hover:border-brand-300 hover:bg-brand-50/40">
+              <li key={s.id} className="flex items-center justify-between p-2.5 rounded-lg border border-ink-200 dark:border-ink-800 hover:border-brand-300 hover:bg-brand-50/40">
                 <div className="min-w-0">
                   <div className="text-sm font-medium">{s.position ?? "Open shift"}</div>
                   <div className="text-[11px] text-ink-500">{s.location.name} · {dateLabel(s.startsAt)} {timeLabel(s.startsAt)} – {timeLabel(s.endsAt)}</div>

@@ -76,7 +76,7 @@ export function ScanForm({ initialToken }: { initialToken: string }) {
               ? <><AlertTriangle className="w-4 h-4 text-amber-700" /> <span className="text-amber-900">Scan recorded — but outside geofence</span></>
               : <><CheckCircle2 className="w-4 h-4 text-emerald-700" /> <span className="text-emerald-900">Scan recorded</span></>}
           </div>
-          <div className="text-xs text-ink-700 mt-1">{result.postName} · {result.locationName}</div>
+          <div className="text-xs text-ink-700 dark:text-ink-300 mt-1">{result.postName} · {result.locationName}</div>
         </div>
       )}
       {result && !result.ok && (

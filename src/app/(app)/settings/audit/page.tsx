@@ -80,7 +80,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           })}
         </ul>
         {total > pageSize && (
-          <div className="p-3 border-t border-ink-100 flex items-center justify-between text-xs">
+          <div className="p-3 border-t border-ink-100 dark:border-ink-800 flex items-center justify-between text-xs">
             <span>Page {page} of {Math.ceil(total / pageSize)}</span>
             <div className="flex gap-2">
               {page > 1 && <a href={`/settings/audit?p=${page - 1}`} className="btn-outline text-xs">← Newer</a>}

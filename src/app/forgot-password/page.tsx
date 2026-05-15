@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
             <button className="btn-primary w-full" disabled={loading || !email}>{loading ? "Sending…" : "Send reset link"}</button>
           </form>
         ) : (
-          <div className="text-sm text-ink-700">
+          <div className="text-sm text-ink-700 dark:text-ink-300">
             If an account exists for <b>{email}</b>, a reset email is on its way. Check your spam folder if you don't see it.
           </div>
         )}

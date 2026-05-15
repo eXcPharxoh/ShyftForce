@@ -43,7 +43,7 @@ export default async function KudosPage() {
                   <div className="text-sm">
                     <b>{k.from.user.name}</b> <span className="text-ink-500">→</span> <b>{k.to.user.name}</b> {k.emoji}
                   </div>
-                  <div className="text-sm text-ink-700">"{k.message}"</div>
+                  <div className="text-sm text-ink-700 dark:text-ink-300">"{k.message}"</div>
                   <div className="text-[11px] text-ink-500">{relTime(k.createdAt)}</div>
                 </div>
               </li>

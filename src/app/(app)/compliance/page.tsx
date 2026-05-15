@@ -171,16 +171,16 @@ export default async function CompliancePage() {
 
 function Stat({ icon, label, value, tone = "ink" }: { icon: React.ReactNode; label: string; value: string | number; tone?: "ink" | "rose" | "amber" | "emerald" }) {
   const iconCls: any = {
-    ink:     "bg-ink-50 text-ink-700",
-    rose:    "bg-rose-50 text-rose-700",
-    amber:   "bg-amber-50 text-amber-700",
-    emerald: "bg-emerald-50 text-emerald-700",
+    ink:     "bg-ink-100 text-ink-700 dark:bg-ink-800 dark:text-ink-300",
+    rose:    "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+    amber:   "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    emerald: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
   };
   const valCls: any = {
-    ink:     "text-ink-900",
-    rose:    "text-rose-700",
-    amber:   "text-amber-800",
-    emerald: "text-emerald-700",
+    ink:     "text-ink-900 dark:text-ink-50",
+    rose:    "text-rose-700 dark:text-rose-300",
+    amber:   "text-amber-800 dark:text-amber-300",
+    emerald: "text-emerald-700 dark:text-emerald-300",
   };
   return (
     <div className="card p-4 flex items-center gap-3">

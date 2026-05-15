@@ -35,7 +35,7 @@ export default async function BillboardPage() {
               </div>
             </div>
             <h2 className="font-semibold text-lg leading-snug mb-1">{p.title}</h2>
-            <p className="text-sm text-ink-700 leading-relaxed whitespace-pre-line">{p.body}</p>
+            <p className="text-sm text-ink-700 dark:text-ink-300 leading-relaxed whitespace-pre-line">{p.body}</p>
             <div className="mt-3 flex items-center gap-3 text-xs text-ink-500">
               <button className="hover:text-brand-600">👍 Like</button>
               <button className="hover:text-brand-600">💬 Comment</button>
