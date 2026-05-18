@@ -204,6 +204,21 @@ export function normalizePlanKey(plan: PlanKey | string | null | undefined): Pla
   }
 }
 
+/** Is the org currently inside its trial window? */
+export function isTrialActive(org: { trialEndsAt: Date | null } | null | undefined): boolean {
+  if (!org?.trialEndsAt) return false;
+  return org.trialEndsAt > new Date();
+}
+
+/** Plan a member effectively HAS today. During an active trial we hand out
+ *  full Business-tier access regardless of what's stored. After trial expires
+ *  (and before paid Stripe subs are wired up) we fall back to the stored plan. */
+export function effectivePlanKey(org: { plan: string; trialEndsAt: Date | null } | null | undefined): PlanKey {
+  if (!org) return "free";
+  if (isTrialActive(org)) return "business";
+  return normalizePlanKey(org.plan);
+}
+
 // ---------- Stripe price IDs ----------
 // Two prices per paid plan in Stripe:
 //   1. Base (flat monthly fee)

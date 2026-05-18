@@ -86,7 +86,7 @@ export function PricingSection() {
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight-2">Pay for what you actually use.</h2>
           <p className="text-ink-600 dark:text-ink-400 mt-4 max-w-2xl mx-auto">
             Flat monthly base, plus a small per-seat fee only above your included headcount. No surprises, no per-location nonsense.
-            14-day free trial on Pro and Business. No credit card to start.
+            Open beta: every new signup gets a 7-day full-access trial. No credit card required.
           </p>
         </div>
 

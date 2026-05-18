@@ -45,8 +45,8 @@ export default function SignupPage() {
             <Wordmark className="text-2xl text-white" />
           </div>
 
-          <div className="badge bg-brand-500/20 text-brand-200 ring-brand-300/30 mb-4">
-            <Sparkles className="w-3 h-3" /> 14-day free trial · no credit card
+          <div className="badge bg-emerald-500/20 text-emerald-200 ring-emerald-300/30 mb-4">
+            <Sparkles className="w-3 h-3" /> Open beta · 7-day full-access trial · no credit card
           </div>
 
           <h1 className="text-5xl font-bold leading-[1.05] tracking-tight-2 mb-4">
@@ -54,7 +54,7 @@ export default function SignupPage() {
             <span className="text-gradient-brand">under 5 minutes.</span>
           </h1>
           <p className="text-white/70 text-lg leading-relaxed mb-10 max-w-md">
-            Sign up, pick an industry template, invite your team. The AI Co-pilot will handle the rest.
+            Every feature unlocked for 7 days. Unlimited employees, unlimited locations. No card required.
           </p>
 
           <ul className="space-y-2.5">
@@ -85,7 +85,7 @@ export default function SignupPage() {
             <Wordmark className="text-lg" />
           </div>
           <h2 className="text-[26px] font-bold tracking-tight-2 mb-1">Create your workspace</h2>
-          <p className="text-ink-500 dark:text-ink-400 text-sm mb-5">Free 14-day trial. Cancel anytime.</p>
+          <p className="text-ink-500 dark:text-ink-400 text-sm mb-5">7-day full-access trial. No credit card. Open beta.</p>
 
           <label className="label" htmlFor="name">Your name</label>
           <input id="name" className="input mb-3" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" autoComplete="name" />

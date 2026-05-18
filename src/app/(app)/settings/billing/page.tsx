@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { PLANS, calculateMonthlyCost, normalizePlanKey } from "@/lib/stripe";
+import { PLANS, calculateMonthlyCost, effectivePlanKey, isTrialActive, normalizePlanKey } from "@/lib/stripe";
 import { BillingActions } from "@/components/billing/billing-actions";
 import { CreditCard, Sparkles, Users, Building2, Check } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -14,15 +14,20 @@ export default async function BillingPage() {
   ]);
   if (!org) return null;
 
-  const plan = normalizePlanKey(org.plan);
+  const onTrial = isTrialActive(org);
+  // What plan they're effectively running on right now (trial = business)
+  const plan = effectivePlanKey(org);
+  // What plan is stored / what they'll fall back to when the trial ends
+  const storedPlan = normalizePlanKey(org.plan);
   const def  = PLANS[plan];
   const cost = calculateMonthlyCost(plan, memberCount);
   const isManager = u.role === "ADMIN" || u.role === "MANAGER";
   const trialDaysLeft = org.trialEndsAt ? Math.max(0, Math.ceil((+org.trialEndsAt - Date.now()) / 86400000)) : null;
 
-  const seatsRemaining = def.maxMembersHard - memberCount;
-  const seatHardCapped = def.maxMembersHard < 9999;
-  const locOverLimit   = locationCount > def.maxLocations;
+  // While trial is active, caps are functionally infinite — hide cap warnings.
+  const seatsRemaining = onTrial ? 9999 : def.maxMembersHard - memberCount;
+  const seatHardCapped = !onTrial && def.maxMembersHard < 9999;
+  const locOverLimit   = !onTrial && locationCount > def.maxLocations;
 
   return (
     <div className="space-y-5 max-w-4xl">
@@ -37,18 +42,30 @@ export default async function BillingPage() {
       <section className="card p-6 bg-gradient-to-br from-brand-50 to-rose-50 dark:from-brand-500/10 dark:to-rose-500/10 border-brand-200/60 dark:border-brand-500/30">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <div className="text-[11px] uppercase font-semibold tracking-wider text-brand-700 dark:text-brand-300">Current plan</div>
-            <h2 className="text-3xl font-bold mt-0.5 tracking-tight-2">{def.label}</h2>
-            <p className="text-sm text-ink-700 dark:text-ink-300 mt-1">{def.tagline}</p>
-            {plan === "free" && (
+            <div className="text-[11px] uppercase font-semibold tracking-wider text-brand-700 dark:text-brand-300">
+              {onTrial ? "Free trial · everything unlocked" : "Current plan"}
+            </div>
+            <h2 className="text-3xl font-bold mt-0.5 tracking-tight-2">
+              {onTrial ? "Business (trial)" : def.label}
+            </h2>
+            <p className="text-sm text-ink-700 dark:text-ink-300 mt-1">
+              {onTrial
+                ? "Unlimited employees + locations, every feature on. No credit card required during open beta."
+                : def.tagline}
+            </p>
+            {plan === "free" && !onTrial && (
               <div className="text-xs text-ink-500 dark:text-ink-400 mt-2">Forever free · capped at {def.maxMembersHard} active employees + 1 location.</div>
             )}
             {trialDaysLeft != null && trialDaysLeft > 0 && (
               <div className="text-xs mt-2">
-                <span className="badge-amber">Free trial</span> <span className="text-ink-700 dark:text-ink-300 ml-1.5">Ends in <b>{trialDaysLeft}</b> day{trialDaysLeft === 1 ? "" : "s"}</span>
+                <span className="badge bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">7-day trial</span>
+                <span className="text-ink-700 dark:text-ink-300 ml-1.5">
+                  <b>{trialDaysLeft}</b> day{trialDaysLeft === 1 ? "" : "s"} left.
+                  After trial you stay on {PLANS[storedPlan].label} until you upgrade.
+                </span>
               </div>
             )}
-            {org.subscriptionStatus && (
+            {org.subscriptionStatus && org.subscriptionStatus !== "trialing" && (
               <div className="text-xs text-ink-700 dark:text-ink-300 mt-2">
                 Stripe status: <b>{org.subscriptionStatus}</b>
               </div>

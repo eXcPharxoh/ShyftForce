@@ -71,7 +71,7 @@ function Hero() {
         </p>
         <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-up">
           <Link href="/signup" className="btn-primary px-6 py-3 text-base">
-            Start 14-day free trial <ArrowRight className="w-4 h-4" />
+            Start 7-day free trial <ArrowRight className="w-4 h-4" />
           </Link>
           <Link href="/login" className="btn-outline px-6 py-3 text-base">
             View live demo
@@ -367,7 +367,7 @@ function FinalCTA() {
               Stop running your team on Excel + WhatsApp.
             </h2>
             <p className="text-white/85 text-lg mt-4 max-w-2xl mx-auto">
-              Set up your workspace in 5 minutes. 14-day trial. No credit card. Cancel anytime.
+              Set up your workspace in 5 minutes. 7-day full-access trial. No credit card. Cancel anytime.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/signup" className="bg-white text-brand-700 hover:bg-white/95 btn px-6 py-3 text-base shadow-soft">

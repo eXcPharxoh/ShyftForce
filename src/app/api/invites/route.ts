@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { Email, sendEmail } from "@/lib/email";
 import { audit } from "@/lib/audit";
-import { PLANS, normalizePlanKey } from "@/lib/stripe";
+import { PLANS, effectivePlanKey } from "@/lib/stripe";
 
 const Schema = z.object({
   invitations: z.array(z.object({
@@ -30,7 +30,8 @@ export async function POST(req: Request) {
 
   // Hard-cap enforcement: Free plan can't queue invites beyond its seat limit
   // (active members + pending non-expired invites must stay <= maxMembersHard).
-  const planKey = normalizePlanKey(org.plan);
+  // Trial orgs get Business-tier (unlimited) via effectivePlanKey.
+  const planKey = effectivePlanKey(org);
   const planDef = PLANS[planKey];
   if (planDef.maxMembersHard < 9999) {
     const [activeMembers, pendingInvites] = await Promise.all([

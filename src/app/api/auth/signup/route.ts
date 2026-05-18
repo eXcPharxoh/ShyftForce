@@ -26,13 +26,20 @@ export async function POST(req: Request) {
   const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50) + "-" + randomBytes(3).toString("hex");
   const passwordHash = await bcrypt.hash(password, 10);
 
+  // Open-beta trial: 7 days of full Business-tier access, no credit card.
+  // Caps (seats / locations) are bypassed while `trialEndsAt > now`. When
+  // Stripe + paywall ship, the org's status drops to "free" automatically
+  // unless they've subscribed — see lib/stripe.ts effectivePlanKey().
+  const TRIAL_DAYS = 7;
+  const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 3600 * 1000);
+
   const result = await prisma.$transaction(async (tx) => {
     const org = await tx.organization.create({
       data: {
         name: orgName, slug,
-        // New plan model: every signup lands on the forever-free tier
-        // (5 seats, 1 location, core scheduling). No expiry date to babysit.
-        plan: "free",
+        plan: "business",
+        trialEndsAt,
+        subscriptionStatus: "trialing",
       },
     });
     const user = await tx.user.create({
@@ -68,7 +75,7 @@ export async function POST(req: Request) {
   await audit({
     organizationId: result.org.id, actorId: result.user.id,
     action: "org.create", entityType: "Organization", entityId: result.org.id,
-    metadata: { orgName, plan: "free" },
+    metadata: { orgName, plan: "business", trialEndsAt, trialDays: TRIAL_DAYS },
   });
   await audit({
     organizationId: result.org.id, actorId: result.user.id,

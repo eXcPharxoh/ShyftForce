@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { audit } from "@/lib/audit";
-import { PLANS, normalizePlanKey } from "@/lib/stripe";
+import { PLANS, effectivePlanKey } from "@/lib/stripe";
 import { syncSeatsForOrg } from "@/lib/billing/sync-seats";
 
 const Schema = z.object({
@@ -47,7 +47,8 @@ export async function POST(req: Request) {
   if (!user.member) {
     // Enforce the hard seat cap on the Free plan before accepting a new member.
     // Pro/Business have no hard cap — they just incur per-seat overage.
-    const orgPlan = normalizePlanKey(inv.organization.plan);
+    // Trial orgs effectively count as Business (unlimited) via effectivePlanKey.
+    const orgPlan = effectivePlanKey(inv.organization);
     const def = PLANS[orgPlan];
     if (def.maxMembersHard < 9999) {
       const activeMembers = await prisma.member.count({

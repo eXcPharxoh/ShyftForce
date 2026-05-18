@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
 import { audit } from "@/lib/audit";
-import { PLANS, normalizePlanKey } from "@/lib/stripe";
+import { PLANS, effectivePlanKey } from "@/lib/stripe";
 
 const CreateSchema = z.object({
   name:                 z.string().min(2).max(80),
@@ -31,12 +31,12 @@ export async function POST(req: Request) {
   const parsed = CreateSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
 
-  // Plan-level location cap
+  // Plan-level location cap (effectivePlanKey honors active trials → unlimited)
   const [org, locationCount] = await Promise.all([
-    prisma.organization.findUnique({ where: { id: u.organizationId }, select: { plan: true } }),
+    prisma.organization.findUnique({ where: { id: u.organizationId }, select: { plan: true, trialEndsAt: true } }),
     prisma.location.count({ where: { organizationId: u.organizationId } }),
   ]);
-  const planKey = normalizePlanKey(org?.plan);
+  const planKey = effectivePlanKey(org);
   const planDef = PLANS[planKey];
   if (locationCount >= planDef.maxLocations) {
     return NextResponse.json({

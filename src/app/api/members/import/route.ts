@@ -6,7 +6,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { Email, sendEmail } from "@/lib/email";
 import { audit } from "@/lib/audit";
-import { PLANS, normalizePlanKey } from "@/lib/stripe";
+import { PLANS, effectivePlanKey } from "@/lib/stripe";
 import { syncSeatsForOrg } from "@/lib/billing/sync-seats";
 
 const RowSchema = z.object({
@@ -49,13 +49,14 @@ export async function POST(req: Request) {
 
   const [locations, org, existingActive] = await Promise.all([
     prisma.location.findMany({ where: { organizationId: u.organizationId } }),
-    prisma.organization.findUnique({ where: { id: u.organizationId }, select: { plan: true } }),
+    prisma.organization.findUnique({ where: { id: u.organizationId }, select: { plan: true, trialEndsAt: true } }),
     prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
   ]);
   const locByName = new Map(locations.map(l => [l.name.toLowerCase(), l]));
 
   // Free plan caps active members. We'll count toward the cap as we import.
-  const planKey = normalizePlanKey(org?.plan);
+  // Trial orgs effectively run as Business (unlimited) via effectivePlanKey.
+  const planKey = effectivePlanKey(org);
   const planDef = PLANS[planKey];
   const hardCap = planDef.maxMembersHard;
   let runningActive = existingActive;
