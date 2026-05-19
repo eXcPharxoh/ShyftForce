@@ -86,6 +86,16 @@ model Organization {
   onCallShifts            OnCallShift[]
   vehicles                Vehicle[]
   jobCloseouts            JobCloseout[]
+  departments             Department[]
+  posLanes                PosLane[]
+  shrinkEvents            ShrinkEvent[]
+  vmTasks                 VmTask[]
+  lossPreventionEvents    LossPreventionEvent[]
+  hotDesks                HotDesk[]
+  meetingRooms            MeetingRoom[]
+  visitors                Visitor[]
+  fitnessClasses          FitnessClass[]
+  ptSessions              PtSession[]
 }
 
 model ComplianceSettings {
@@ -485,6 +495,15 @@ model Location {
   patientRatioRules  PatientRatioRule[]
   vehicles           Vehicle[]
   onCallShifts       OnCallShift[]
+  departments        Department[]
+  posLanes           PosLane[]
+  shrinkEvents       ShrinkEvent[]
+  vmTasks            VmTask[]
+  lpEvents           LossPreventionEvent[]
+  hotDesks           HotDesk[]
+  meetingRooms       MeetingRoom[]
+  visitors           Visitor[]
+  fitnessClasses     FitnessClass[]
   KioskDevice        KioskDevice[]
 
   @@index([organizationId])
@@ -869,6 +888,17 @@ model Member {
   onCallShifts            OnCallShift[]
   vehicleAssignments      VehicleAssignment[]
   jobCloseouts            JobCloseout[]
+  departmentMemberships   DepartmentMembership[]
+  laneAssignments         LaneAssignment[]
+  shrinkEvents            ShrinkEvent[]
+  vmTaskAssignments       VmTask[]            @relation("VmTaskAssignee")
+  vmTaskSubmissions       VmTaskSubmission[]
+  lpEventsReported        LossPreventionEvent[] @relation("LpReporter")
+  hotDeskBookings         HotDeskBooking[]
+  meetingRoomBookings     MeetingRoomBooking[]
+  visitorHostings         Visitor[]           @relation("VisitorHost")
+  classOccurrencesAsInstructor ClassOccurrence[] @relation("ClassInstructor")
+  ptSessionsAsTrainer     PtSession[]         @relation("PtTrainer")
 
   @@index([organizationId, status])
   @@index([organizationId, locationId])
@@ -895,8 +925,12 @@ model Shift {
   // HEALTHCARE: unit the shift is staffing (drives patient-ratio checks)
   unit String?
 
+  // GROCERY/RETAIL: department this shift is staffing (produce, deli, cashier, etc.)
+  departmentId String?
+
   location                Location                 @relation(fields: [locationId], references: [id], onDelete: Cascade)
   member                  Member?                  @relation(fields: [memberId], references: [id])
+  department              Department?              @relation(fields: [departmentId], references: [id])
   externalWorker          WorkerProfile?           @relation("ExternalWorker", fields: [externalWorkerProfileId], references: [id])
   tasks                   ShiftTask[]
   openRequests            OpenShiftRequest[]
@@ -911,11 +945,13 @@ model Shift {
   stationAssignments      StationAssignment[]
   vehicleAssignment       VehicleAssignment?
   jobCloseout             JobCloseout?
+  laneAssignment          LaneAssignment?
 
   @@index([locationId, startsAt])
   @@index([memberId, startsAt])
   @@index([locationId, status, startsAt])
   @@index([isOpen, startsAt])
+  @@index([departmentId, startsAt])
 }
 
 model ShiftTask {
@@ -1833,4 +1869,341 @@ model JobCloseout {
   member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, closedAt])
+}
+
+// ============================================================================
+// GROCERY + RETAIL: Department zones. Stores partition staff & shifts by
+// section (Produce, Deli, Bakery, Cashier, Apparel, etc.). Min staffing by
+// hour-of-week lets the coverage center flag under-staffed zones.
+// ============================================================================
+model Department {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String? // null = applies to all locations
+  name           String
+  color          String   @default("#6366f1") // hex for schedule chips
+  // JSON: { "mon": { "0": 1, "1": 1, ... "23": 2 }, ... } — min staff per hour
+  minStaffByHour String?
+  notes          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?              @relation(fields: [locationId], references: [id])
+  memberships  DepartmentMembership[]
+  shifts       Shift[]
+
+  @@index([organizationId, active])
+  @@index([locationId])
+}
+
+model DepartmentMembership {
+  id           String  @id @default(uuid())
+  departmentId String
+  memberId     String
+  isPrimary    Boolean @default(false) // primary department for this member
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  member     Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([departmentId, memberId])
+  @@index([memberId])
+}
+
+// ============================================================================
+// GROCERY: POS lane / register assignments. Front-end managers pre-assign
+// cashiers to lanes during peak so the line never builds up.
+// ============================================================================
+model PosLane {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String
+  number         Int // lane #
+  name           String? // e.g. "Express 10-items"
+  type           String   @default("standard") // standard | express | self_checkout
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  assignments  LaneAssignment[]
+
+  @@unique([locationId, number])
+}
+
+model LaneAssignment {
+  id        String   @id @default(uuid())
+  shiftId   String   @unique
+  laneId    String
+  memberId  String
+  fromMin   Int? // minutes from shift start (null = full shift)
+  toMin     Int?
+  createdAt DateTime @default(now())
+
+  shift  Shift   @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  lane   PosLane @relation(fields: [laneId], references: [id], onDelete: Cascade)
+  member Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([laneId])
+}
+
+// ============================================================================
+// GROCERY + RETAIL: Shrink (lost merchandise) tracking. Tied to the shift
+// or department so loss-rate trends can be sliced by team.
+// ============================================================================
+model ShrinkEvent {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String?
+  departmentId   String?
+  shiftId        String?
+  reportedById   String? // member who reported
+  reason         String // damage | spoilage | theft | expired | return | other
+  productName    String
+  sku            String?
+  quantity       Float    @default(1)
+  unitValueCents Int      @default(0)
+  totalValueCents Int     @default(0)
+  notes          String?
+  occurredAt     DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id])
+  reportedBy   Member?      @relation(fields: [reportedById], references: [id])
+
+  @@index([organizationId, occurredAt])
+  @@index([locationId, occurredAt])
+  @@index([reason])
+}
+
+// ============================================================================
+// RETAIL: Visual merchandising tasks. Each task can require a photo proof
+// (endcap built? window display set? floor reset?) — the engine tracks
+// completion + before/after photos for the brand-compliance audit.
+// ============================================================================
+model VmTask {
+  id                String   @id @default(uuid())
+  organizationId    String
+  locationId        String?
+  name              String
+  description       String?
+  dueDate           DateTime?
+  requirePhoto      Boolean  @default(true)
+  assignedToMemberId String?
+  status            String   @default("open") // open | done | overdue | cancelled
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?           @relation(fields: [locationId], references: [id])
+  assignedTo   Member?             @relation("VmTaskAssignee", fields: [assignedToMemberId], references: [id])
+  submissions  VmTaskSubmission[]
+
+  @@index([organizationId, status])
+  @@index([locationId])
+}
+
+model VmTaskSubmission {
+  id          String   @id @default(uuid())
+  vmTaskId    String
+  memberId    String
+  photoData   String? // base64 JPEG
+  notes       String?
+  submittedAt DateTime @default(now())
+
+  task   VmTask @relation(fields: [vmTaskId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([vmTaskId])
+}
+
+// ============================================================================
+// RETAIL: Loss prevention events (theft, errors, breakage). Lighter than the
+// security IncidentReport (no police involvement, no full narrative). Used
+// for trend reporting + per-employee follow-up.
+// ============================================================================
+model LossPreventionEvent {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String?
+  type           String // shoplift | register_error | breakage | refund_fraud | sweethearting | other
+  valueCents     Int?
+  description    String
+  reportedById   String?
+  occurredAt     DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id])
+  reportedBy   Member?      @relation("LpReporter", fields: [reportedById], references: [id])
+
+  @@index([organizationId, occurredAt])
+  @@index([type])
+}
+
+// ============================================================================
+// OFFICE: Hot-desking / hoteling. Hybrid teams book a desk for the day.
+// Half-day bookings (AM/PM/full) supported.
+// ============================================================================
+model HotDesk {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String?
+  name           String // "Desk 14"
+  zone           String? // "Engineering", "Sales floor"
+  hasMonitor     Boolean  @default(false)
+  hasStanding    Boolean  @default(false)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?        @relation(fields: [locationId], references: [id])
+  bookings     HotDeskBooking[]
+
+  @@index([organizationId, active])
+}
+
+model HotDeskBooking {
+  id        String   @id @default(uuid())
+  hotDeskId String
+  memberId  String
+  date      DateTime // date portion only (compared as day)
+  halfDay   String   @default("full") // am | pm | full
+  createdAt DateTime @default(now())
+
+  hotDesk HotDesk @relation(fields: [hotDeskId], references: [id], onDelete: Cascade)
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([hotDeskId, date, halfDay])
+  @@index([memberId, date])
+}
+
+// ============================================================================
+// OFFICE: Meeting rooms + bookings.
+// ============================================================================
+model MeetingRoom {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String?
+  name           String
+  capacity       Int      @default(4)
+  hasVideo       Boolean  @default(true)
+  hasWhiteboard  Boolean  @default(false)
+  notes          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?            @relation(fields: [locationId], references: [id])
+  bookings     MeetingRoomBooking[]
+
+  @@index([organizationId, active])
+}
+
+model MeetingRoomBooking {
+  id            String   @id @default(uuid())
+  meetingRoomId String
+  organizerId   String
+  startsAt      DateTime
+  endsAt        DateTime
+  title         String
+  attendees     String? // JSON array of names
+  createdAt     DateTime @default(now())
+
+  room      MeetingRoom @relation(fields: [meetingRoomId], references: [id], onDelete: Cascade)
+  organizer Member      @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+
+  @@index([meetingRoomId, startsAt])
+  @@index([organizerId, startsAt])
+}
+
+// ============================================================================
+// OFFICE: Visitor log. Front-desk signs guests in, hosts get notified,
+// badge numbers tracked for evacuation lists.
+// ============================================================================
+model Visitor {
+  id             String    @id @default(uuid())
+  organizationId String
+  locationId     String?
+  name           String
+  company        String?
+  hostMemberId   String
+  badgeNumber    String?
+  purpose        String? // "Meeting", "Interview", "Delivery"
+  checkedInAt    DateTime  @default(now())
+  checkedOutAt   DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id])
+  host         Member       @relation("VisitorHost", fields: [hostMemberId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, checkedInAt])
+  @@index([hostMemberId])
+}
+
+// ============================================================================
+// FITNESS: Group fitness classes + per-occurrence instructor assignment.
+// Schedule a recurring template, expand into individual ClassOccurrences,
+// each with its own instructor and (optional) room.
+// ============================================================================
+model FitnessClass {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String?
+  name           String
+  durationMins  Int      @default(60)
+  capacity       Int      @default(20)
+  color          String   @default("#10b981")
+  description    String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?         @relation(fields: [locationId], references: [id])
+  occurrences  ClassOccurrence[]
+
+  @@index([organizationId, active])
+}
+
+model ClassOccurrence {
+  id                  String   @id @default(uuid())
+  fitnessClassId      String
+  instructorMemberId  String
+  startsAt            DateTime
+  endsAt              DateTime
+  room                String?
+  status              String   @default("scheduled") // scheduled | done | cancelled
+  attendees           Int      @default(0)
+  notes               String?
+  createdAt           DateTime @default(now())
+
+  fitnessClass FitnessClass @relation(fields: [fitnessClassId], references: [id], onDelete: Cascade)
+  instructor   Member       @relation("ClassInstructor", fields: [instructorMemberId], references: [id])
+
+  @@index([fitnessClassId, startsAt])
+  @@index([instructorMemberId, startsAt])
+}
+
+// ============================================================================
+// FITNESS: Personal-training sessions. Booking-driven, paid per session,
+// trainer keeps their own client list.
+// ============================================================================
+model PtSession {
+  id              String   @id @default(uuid())
+  organizationId  String
+  trainerMemberId String
+  clientName      String
+  clientPhone     String?
+  startsAt        DateTime
+  endsAt          DateTime
+  status          String   @default("booked") // booked | done | no_show | cancelled
+  rateCents       Int      @default(0)
+  trainerSplitPct Int      @default(70) // % of revenue paid to trainer
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  trainer      Member       @relation("PtTrainer", fields: [trainerMemberId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, startsAt])
+  @@index([trainerMemberId, startsAt])
 }
