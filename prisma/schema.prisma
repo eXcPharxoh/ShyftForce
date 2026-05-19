@@ -16,7 +16,7 @@ model Organization {
   // Branding
   logoUrl  String?
   timezone String  @default("America/New_York")
-  industry String? // restaurant | retail | healthcare | field_service | office | fitness | other
+  industry String? // grocery | security | restaurant | retail | healthcare | field_service | office | fitness | construction | hospitality | education | other
   isDemo   Boolean @default(false)
 
   // Default locale for new members (members can override on their own profile)
@@ -96,6 +96,14 @@ model Organization {
   visitors                Visitor[]
   fitnessClasses          FitnessClass[]
   ptSessions              PtSession[]
+  crews                   Crew[]
+  equipment               Equipment[]
+  safetyBriefings         SafetyBriefing[]
+  hotelRooms              HotelRoom[]
+  lostFoundItems          LostFoundItem[]
+  subPoolMembers          SubPoolMember[]
+  classPeriods            ClassPeriod[]
+  conferenceSlots         ConferenceSlot[]
 }
 
 model ComplianceSettings {
@@ -899,6 +907,15 @@ model Member {
   visitorHostings         Visitor[]           @relation("VisitorHost")
   classOccurrencesAsInstructor ClassOccurrence[] @relation("ClassInstructor")
   ptSessionsAsTrainer     PtSession[]         @relation("PtTrainer")
+  crewMemberships         CrewMembership[]
+  crewsAsForeman          Crew[]              @relation("CrewForeman")
+  equipmentAssignments    EquipmentAssignment[]
+  safetyBriefingAcks      SafetyBriefingAck[]
+  hotelRoomAssignments    HotelRoomAssignment[]
+  lostFoundLogged         LostFoundItem[]     @relation("LostFoundLogger")
+  modShifts               Shift[]             @relation("ShiftMOD")
+  subPoolMembership       SubPoolMember?
+  conferenceBookings      ConferenceBooking[]
 
   @@index([organizationId, status])
   @@index([organizationId, locationId])
@@ -928,9 +945,21 @@ model Shift {
   // GROCERY/RETAIL: department this shift is staffing (produce, deli, cashier, etc.)
   departmentId String?
 
+  // CONSTRUCTION: crew working this shift
+  crewId String?
+
+  // EDUCATION: class period this shift covers (1st, 2nd, etc.)
+  classPeriodId String?
+
+  // HOSPITALITY: Manager-on-Duty for this shift block
+  modMemberId String?
+
   location                Location                 @relation(fields: [locationId], references: [id], onDelete: Cascade)
   member                  Member?                  @relation(fields: [memberId], references: [id])
   department              Department?              @relation(fields: [departmentId], references: [id])
+  crew                    Crew?                    @relation(fields: [crewId], references: [id])
+  classPeriod             ClassPeriod?             @relation(fields: [classPeriodId], references: [id])
+  modMember               Member?                  @relation("ShiftMOD", fields: [modMemberId], references: [id])
   externalWorker          WorkerProfile?           @relation("ExternalWorker", fields: [externalWorkerProfileId], references: [id])
   tasks                   ShiftTask[]
   openRequests            OpenShiftRequest[]
@@ -946,12 +975,16 @@ model Shift {
   vehicleAssignment       VehicleAssignment?
   jobCloseout             JobCloseout?
   laneAssignment          LaneAssignment?
+  safetyBriefings         SafetyBriefing[]
+  hotelRoomAssignments    HotelRoomAssignment[]
+  equipmentAssignments    EquipmentAssignment[]
 
   @@index([locationId, startsAt])
   @@index([memberId, startsAt])
   @@index([locationId, status, startsAt])
   @@index([isOpen, startsAt])
   @@index([departmentId, startsAt])
+  @@index([crewId, startsAt])
 }
 
 model ShiftTask {
@@ -2206,4 +2239,249 @@ model PtSession {
 
   @@index([organizationId, startsAt])
   @@index([trainerMemberId, startsAt])
+}
+
+// ============================================================================
+// CONSTRUCTION: Crews. Like departments but with a designated foreman.
+// ============================================================================
+model Crew {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  color          String   @default("#f59e0b")
+  foremanId      String?
+  notes          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  foreman      Member?          @relation("CrewForeman", fields: [foremanId], references: [id])
+  memberships  CrewMembership[]
+  shifts       Shift[]
+
+  @@index([organizationId, active])
+}
+
+model CrewMembership {
+  id        String  @id @default(uuid())
+  crewId    String
+  memberId  String
+  role      String  @default("crew") // crew | lead | apprentice
+  isPrimary Boolean @default(true)
+
+  crew   Crew   @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([crewId, memberId])
+}
+
+// ============================================================================
+// CONSTRUCTION: Equipment (compressors, generators, scaffolding...) assigned
+// to shifts. Same pattern as VehicleAssignment but for non-vehicle assets.
+// ============================================================================
+model Equipment {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  category       String   @default("tool") // tool | machine | scaffolding | safety_gear | other
+  serialNumber   String?
+  status         String   @default("available") // available | in_use | maintenance | retired
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignments  EquipmentAssignment[]
+
+  @@index([organizationId, status])
+}
+
+model EquipmentAssignment {
+  id          String   @id @default(uuid())
+  shiftId     String
+  equipmentId String
+  memberId    String
+  returnedAt  DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  shift     Shift     @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, equipmentId])
+  @@index([equipmentId, createdAt])
+}
+
+// ============================================================================
+// CONSTRUCTION: Daily safety briefings. Foreman posts the topic; crew members
+// must acknowledge before clocking in.
+// ============================================================================
+model SafetyBriefing {
+  id             String   @id @default(uuid())
+  organizationId String
+  shiftId        String?
+  topic          String
+  details        String?
+  postedById     String? // member who posted
+  postedAt       DateTime @default(now())
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shift        Shift?              @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  acks         SafetyBriefingAck[]
+
+  @@index([organizationId, postedAt])
+}
+
+model SafetyBriefingAck {
+  id         String   @id @default(uuid())
+  briefingId String
+  memberId   String
+  ackedAt    DateTime @default(now())
+
+  briefing SafetyBriefing @relation(fields: [briefingId], references: [id], onDelete: Cascade)
+  member   Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([briefingId, memberId])
+}
+
+// ============================================================================
+// HOSPITALITY: Hotel rooms + housekeeping assignments. Track room status
+// (dirty / cleaning / clean / out-of-order) and assignment to housekeeper.
+// ============================================================================
+model HotelRoom {
+  id             String   @id @default(uuid())
+  organizationId String
+  number         String
+  floor          Int?
+  type           String   @default("standard") // standard | suite | accessible | family | etc.
+  status         String   @default("clean") // clean | dirty | cleaning | out_of_order
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignments  HotelRoomAssignment[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+}
+
+model HotelRoomAssignment {
+  id          String    @id @default(uuid())
+  hotelRoomId String
+  memberId    String // housekeeper
+  shiftId     String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  hotelRoom HotelRoom @relation(fields: [hotelRoomId], references: [id], onDelete: Cascade)
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  shift     Shift?    @relation(fields: [shiftId], references: [id])
+
+  @@index([memberId, createdAt])
+  @@index([hotelRoomId, createdAt])
+}
+
+// ============================================================================
+// HOSPITALITY: Lost & found log.
+// ============================================================================
+model LostFoundItem {
+  id             String    @id @default(uuid())
+  organizationId String
+  description    String
+  foundLocation  String?
+  foundAt        DateTime  @default(now())
+  loggedById     String? // member who logged it
+  status         String    @default("unclaimed") // unclaimed | claimed | discarded
+  claimedBy      String? // name of claimant
+  claimedAt      DateTime?
+  notes          String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  loggedBy     Member?      @relation("LostFoundLogger", fields: [loggedById], references: [id])
+
+  @@index([organizationId, status])
+  @@index([foundAt])
+}
+
+// ============================================================================
+// EDUCATION: Substitute teacher pool. First-respond-wins callout.
+// ============================================================================
+model SubPoolMember {
+  id             String   @id @default(uuid())
+  organizationId String
+  memberId       String   @unique
+  subjects       String? // JSON array
+  grades         String? // JSON array
+  hourlyRateCents Int     @default(0)
+  isActive       Boolean  @default(true)
+  preferredContactHour Int? // earliest hour to text (0-23)
+  latestContactHour    Int? // latest hour
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isActive])
+}
+
+// ============================================================================
+// EDUCATION: Class periods (1st, 2nd, ... bells). Shifts can be tied to a
+// period so the schedule reads like a school timetable.
+// ============================================================================
+model ClassPeriod {
+  id             String   @id @default(uuid())
+  organizationId String
+  number         Int // 1..N
+  name           String? // "1st bell", "Lunch", "Homeroom"
+  startTime      String // "HH:mm"
+  endTime        String // "HH:mm"
+  daysOfWeek     String   @default("[1,2,3,4,5]") // JSON array (0=Sun)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shifts       Shift[]
+
+  @@unique([organizationId, number])
+}
+
+// ============================================================================
+// EDUCATION: Parent-teacher conference signup slots.
+// ============================================================================
+model ConferenceSlot {
+  id             String   @id @default(uuid())
+  organizationId String
+  teacherMemberId String
+  startsAt       DateTime
+  endsAt         DateTime
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookings     ConferenceBooking[]
+
+  @@index([organizationId, startsAt])
+  @@index([teacherMemberId, startsAt])
+}
+
+model ConferenceBooking {
+  id            String   @id @default(uuid())
+  slotId        String
+  parentName    String
+  studentName   String
+  parentEmail   String?
+  parentPhone   String?
+  notes         String?
+  bookedById    String? // staff member who booked on behalf of parent
+  bookedAt      DateTime @default(now())
+
+  slot     ConferenceSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  bookedBy Member?        @relation(fields: [bookedById], references: [id])
+
+  @@unique([slotId])
+  @@index([bookedById])
 }
