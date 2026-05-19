@@ -9,7 +9,7 @@ import {
   Activity, Globe, Wallet, TrendingUp, FileWarning, QrCode, Building2, Plug,
   DollarSign, Plane, CalendarX, Repeat, FileBarChart, BookOpen, CreditCard,
   Wrench, FileText, UserCircle, MoreHorizontal, Bell, Webhook, Key, Lock, Tablet,
-  GraduationCap, ClipboardCheck, ShieldHalf,
+  GraduationCap, ClipboardCheck, ShieldHalf, Ban, ListChecks, Banknote, Target, MapPinned,
 } from "lucide-react";
 
 export type VerticalKey = "grocery" | "security" | "restaurant" | "retail" | "healthcare" | "field_service" | "office" | "fitness" | "default";
@@ -92,6 +92,12 @@ const M = {
   reviews:         { href: "/hr/reviews",               label: "Performance reviews", icon: ClipboardCheck },
   customRoles:     { href: "/settings/custom-roles",    label: "Roles & permissions", icon: ShieldHalf },
   permits:         { href: "/settings/permits",         label: "Permits & licences", icon: ShieldAlert },
+  eightySix:       { href: "/eighty-six",               label: "86 list",            icon: Ban },
+  checklists:      { href: "/settings/checklists",      label: "Shift checklists",   icon: ListChecks },
+  cashDrawer:      { href: "/cash-drawer",              label: "Cash drawer",        icon: Banknote },
+  laborTarget:     { href: "/settings/labor-target",    label: "Labor% target",      icon: Target },
+  stations:        { href: "/stations",                 label: "Section assignments", icon: MapPinned },
+  form8027:        { href: "/reports/form-8027",        label: "IRS Form 8027",       icon: FileBarChart },
 } as const;
 
 // --- Vertical configs ---
@@ -170,11 +176,12 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
 
   restaurant: {
     key: "restaurant", label: "Restaurant / Hospitality", emoji: "🍽️",
-    pitch: "Tip pools, POS-driven labor%, and demand forecasting purpose-built for service.",
+    pitch: "Tip pools (with IRS 8027), 86-list, live labor%, side-work checklists, cash drawer + section rotation — built for service.",
     modules: [
       { ...M.dashboard,   primary: true },
       { ...M.schedule,    primary: true },
       { ...M.tips,        primary: true, highlight: true },
+      { ...M.eightySix,   primary: true, highlight: true },
       { ...M.laborLive,   primary: true, highlight: true, role: "manager" },
       { ...M.forecast,    primary: true, highlight: true, role: "manager" },
       { ...M.attendance,  primary: true },
@@ -186,6 +193,11 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.clients,      hidden: true },
       { ...M.clientBilling,hidden: true },
       // Secondary
+      { ...M.checklists, role: "manager" },
+      { ...M.cashDrawer },
+      { ...M.stations },
+      { ...M.laborTarget, role: "manager" },
+      { ...M.form8027, role: "manager" },
       { ...M.coverage }, { ...M.compliance }, { ...M.pos },
       { ...M.ewa }, { ...M.ewaSettings }, { ...M.workerProfile },
       { ...M.network }, { ...M.networkAvail },

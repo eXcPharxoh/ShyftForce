@@ -42,6 +42,47 @@ export async function POST(req: Request) {
 
   const verified = (latitude != null && longitude != null) && !!photo;
 
+  // Post-shift checklist gate: if clocking out, refuse if any required
+  // post_shift template (for this org + applicable location) has no
+  // completed instance for this member today.
+  if (type === "clock_out") {
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const requiredTemplates = await prisma.checklistTemplate.findMany({
+      where: {
+        organizationId: u.organizationId,
+        active: true,
+        requireCompletion: true,
+        trigger: "post_shift",
+        OR: [{ locationId: null }, { locationId: member.locationId ?? undefined }],
+      },
+      select: { id: true, name: true, positions: true },
+    });
+    const applicable = requiredTemplates.filter(t => {
+      if (!t.positions) return true;
+      try {
+        const positions: string[] = JSON.parse(t.positions);
+        return positions.length === 0 || (member.position && positions.includes(member.position));
+      } catch { return true; }
+    });
+    if (applicable.length > 0) {
+      const completed = await prisma.checklistInstance.findMany({
+        where: {
+          memberId, templateId: { in: applicable.map(t => t.id) },
+          completedAt: { gte: todayStart, not: null },
+        },
+        select: { templateId: true },
+      });
+      const completedSet = new Set(completed.map(c => c.templateId));
+      const missing = applicable.filter(t => !completedSet.has(t.id));
+      if (missing.length > 0) {
+        return NextResponse.json({
+          error: `Finish your checklist${missing.length === 1 ? "" : "s"} before clocking out: ${missing.map(m => `"${m.name}"`).join(", ")}.`,
+          missingChecklists: missing.map(m => ({ id: m.id, name: m.name })),
+        }, { status: 409 });
+      }
+    }
+  }
+
   try {
     const log = await prisma.attendanceLog.create({
       data: {

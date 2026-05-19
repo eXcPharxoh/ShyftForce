@@ -76,6 +76,11 @@ model Organization {
   courses                 Course[]
   reviewCycles            ReviewCycle[]
   permits                 Permit[]
+  eightySixItems          EightySixItem[]
+  checklistTemplates      ChecklistTemplate[]
+  checklistInstances      ChecklistInstance[]
+  cashDrawerSessions      CashDrawerSession[]
+  laborTargets            LaborTarget[]
 }
 
 model ComplianceSettings {
@@ -455,19 +460,24 @@ model Location {
   geofenceRadiusMeters Int      @default(100)
   createdAt            DateTime @default(now())
 
-  clientId        String?
-  organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  members         Member[]
-  shifts          Shift[]
-  posConnections  PosConnection[]
-  posRevenue      PosRevenueSnapshot[]
-  demandForecasts DemandForecast[]
-  demandContexts  DemandContext[]
-  incidentReports IncidentReport[]
-  checkpointPosts CheckpointPost[]
-  tipPools        TipPool[]
-  client          ClientAccount?       @relation("LocationClient", fields: [clientId], references: [id])
-  KioskDevice     KioskDevice[]
+  clientId           String?
+  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members            Member[]
+  shifts             Shift[]
+  posConnections     PosConnection[]
+  posRevenue         PosRevenueSnapshot[]
+  demandForecasts    DemandForecast[]
+  demandContexts     DemandContext[]
+  incidentReports    IncidentReport[]
+  checkpointPosts    CheckpointPost[]
+  tipPools           TipPool[]
+  client             ClientAccount?       @relation("LocationClient", fields: [clientId], references: [id])
+  eightySixItems     EightySixItem[]
+  checklistTemplates ChecklistTemplate[]
+  checklistInstances ChecklistInstance[]
+  cashDrawerSessions CashDrawerSession[]
+  laborTarget        LaborTarget?
+  KioskDevice        KioskDevice[]
 
   @@index([organizationId])
   @@index([clientId])
@@ -840,6 +850,9 @@ model Member {
   reviewsAsSubject        PerformanceReview[]      @relation("ReviewSubject")
   reviewsAsReviewer       PerformanceReview[]      @relation("ReviewReviewer")
   permits                 Permit[]
+  checklistInstances      ChecklistInstance[]
+  cashDrawerSessions      CashDrawerSession[]
+  stationAssignments      StationAssignment[]
 
   @@index([organizationId, status])
   @@index([organizationId, locationId])
@@ -871,6 +884,8 @@ model Shift {
   incidentReports         IncidentReport[]
   checkpointScans         CheckpointScan[]
   bids                    ShiftBid[]
+  checklistInstances      ChecklistInstance[]
+  stationAssignments      StationAssignment[]
 
   @@index([locationId, startsAt])
   @@index([memberId, startsAt])
@@ -1507,4 +1522,146 @@ model Permit {
   @@index([organizationId, expiresOn])
   @@index([memberId, expiresOn])
   @@index([expiresOn, blocksScheduling])
+}
+
+// ============================================================================
+// 86-list. Items the kitchen / bar runs out of mid-shift. When a manager
+// 86's an item, every on-duty server gets a push + SMS so they stop pitching
+// it. Items can be unmarked when restocked.
+// ============================================================================
+model EightySixItem {
+  id             String    @id @default(uuid())
+  organizationId String
+  locationId     String
+  name           String
+  category       String? // "food" | "drink" | "wine" | "beer" | "cocktail" | "other"
+  notes          String?
+  // Lifecycle
+  active         Boolean   @default(true)
+  markedById     String? // member who 86'd it
+  markedAt       DateTime  @default(now())
+  unmarkedAt     DateTime?
+  unmarkedById   String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId, active, markedAt])
+}
+
+// ============================================================================
+// Shift checklists. ChecklistTemplate is reusable (org-level definition);
+// ChecklistInstance is per-shift (filled out by the employee). Photos prove
+// the work was done. Required completion can block clock-out.
+// ============================================================================
+model ChecklistTemplate {
+  id                String   @id @default(uuid())
+  organizationId    String
+  locationId        String? // null = applies to all locations in the org
+  name              String // "Opening side work", "Closing kitchen"
+  trigger           String   @default("post_shift") // "pre_shift" | "post_shift" | "manual"
+  requireCompletion Boolean  @default(true)
+  positions         String? // JSON array of position names; null = all positions
+  items             String // JSON: [{ id, text, requiresPhoto, requiresNote }]
+  active            Boolean  @default(true)
+  createdById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?           @relation(fields: [locationId], references: [id])
+  instances    ChecklistInstance[]
+
+  @@index([organizationId, active])
+  @@index([locationId, trigger])
+}
+
+model ChecklistInstance {
+  id          String    @id @default(uuid())
+  templateId  String
+  shiftId     String?
+  memberId    String
+  locationId  String
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  responses   String    @default("[]") // JSON: [{ itemId, done, completedAt, photoData?, note? }]
+
+  template       ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  shift          Shift?            @relation(fields: [shiftId], references: [id])
+  member         Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  location       Location          @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  Organization   Organization?     @relation(fields: [organizationId], references: [id])
+  organizationId String?
+
+  @@index([memberId, completedAt])
+  @@index([shiftId])
+}
+
+// ============================================================================
+// Cash drawer reconciliation. Per-shift open + close counts with variance.
+// ============================================================================
+model CashDrawerSession {
+  id              String    @id @default(uuid())
+  organizationId  String
+  locationId      String
+  shiftId         String?
+  memberId        String
+  openedAt        DateTime  @default(now())
+  openCountCents  Int
+  closedAt        DateTime?
+  closeCountCents Int?
+  expectedCents   Int? // openCount + cash sales - cash refunds (from POS)
+  varianceCents   Int? // closeCount - expectedCents
+  varianceReason  String?
+  notes           String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([locationId, openedAt])
+  @@index([memberId, openedAt])
+}
+
+// ============================================================================
+// Section / station assignment. Tracks who worked which section so the
+// rotation algorithm can stay fair (don't always put the same server on the
+// patio, don't always put the same line cook on grill).
+// ============================================================================
+model StationAssignment {
+  id        String   @id @default(uuid())
+  shiftId   String
+  memberId  String
+  station   String // free-form: "Patio", "Bar", "Tables 1-10", "Grill", "Window"
+  createdAt DateTime @default(now())
+
+  shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, memberId])
+  @@index([memberId, createdAt])
+  @@index([shiftId])
+}
+
+// ============================================================================
+// Live labor% alert config. Per-location target labor% (labor cost / revenue
+// × 100). Cron checks every 15 min during open hours and texts the manager
+// if actuals breach target by more than the threshold.
+// ============================================================================
+model LaborTarget {
+  id                     String    @id @default(uuid())
+  organizationId         String
+  locationId             String    @unique
+  targetPercent          Float     @default(28.0)
+  breachThreshold        Float     @default(3.0)
+  alertManagerId         String? // memberId to text; null = all managers at location
+  active                 Boolean   @default(true)
+  cooldownMinutes        Int       @default(60)
+  lastAlertAt            DateTime?
+  lastAlertActualPercent Float?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, active])
 }
