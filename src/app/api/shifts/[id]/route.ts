@@ -7,6 +7,7 @@ import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 import { smsScheduleChange } from "@/lib/sms";
 import { emitWebhook } from "@/lib/webhooks/emit";
 import { memberHasExpiredBlockingPermit } from "@/lib/permits/service";
+import { checkRatioForShift } from "@/lib/healthcare/ratios";
 
 function combine(date: string, time: string): Date {
   const [y, mo, d] = date.split("-").map(Number);
@@ -56,6 +57,51 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       error: "This member has an expired permit that blocks scheduling. Renew the permit in Settings → Permits, or mark it as non-blocking.",
       blockedByPermit: true,
     }, { status: 409 });
+  }
+
+  // Skill tier match: if the shift has a requiredSkillTier and the assigned
+  // member's tier is lower, refuse. Manager can either un-set the requirement
+  // or pick a higher-tier tech.
+  if (body.memberId && existing.requiredSkillTier) {
+    const m = await prisma.member.findUnique({
+      where: { id: body.memberId },
+      select: { skillTier: true, user: { select: { name: true } } },
+    });
+    if (m && (m.skillTier ?? 0) < existing.requiredSkillTier) {
+      return NextResponse.json({
+        error: `${m.user.name} is tier ${m.skillTier ?? "unranked"} — this shift requires tier ${existing.requiredSkillTier}+.`,
+        blockedBySkillTier: true,
+      }, { status: 409 });
+    }
+  }
+
+  // Healthcare patient-ratio check (warn-only by default — refuse only when
+  // EVERY rule is breached). We pass the union of existing values + the
+  // requested change so we evaluate the post-update state.
+  if (body.memberId && (existing.unit ?? null)) {
+    const m = await prisma.member.findUnique({
+      where: { id: body.memberId },
+      select: { role: true },
+    });
+    const role = (m?.role as any) ?? "RN";
+    if (["RN", "LPN", "CNA"].includes(role)) {
+      const violations = await checkRatioForShift({
+        organizationId: u.organizationId,
+        shiftId:        id,
+        locationId:     existing.locationId,
+        unit:           existing.unit,
+        startsAt:       data.startsAt ?? existing.startsAt,
+        endsAt:         data.endsAt   ?? existing.endsAt,
+        memberRole:     role,
+        adding:         true,
+      });
+      if (violations.length > 0) {
+        return NextResponse.json({
+          error: `Patient-ratio rule would be violated. ${violations[0].message}`,
+          ratioViolations: violations,
+        }, { status: 409 });
+      }
+    }
   }
 
   const updated = await prisma.shift.update({ where: { id }, data });

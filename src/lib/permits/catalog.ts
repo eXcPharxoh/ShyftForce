@@ -70,6 +70,48 @@ export const PERMIT_CATALOG: PermitCategory[] = [
     description: "Typically 2-year cycle. Required for many healthcare + childcare roles.",
     vertical: "healthcare",
   },
+  {
+    key: "nursing_ceus",
+    label: "Continuing Education hours (CEUs)",
+    level: "member",
+    description: "Most state boards require 20–30 CEUs per renewal cycle. Track expiry per cycle.",
+    vertical: "healthcare",
+  },
+  {
+    key: "immunization_flu",
+    label: "Flu vaccination",
+    level: "member",
+    description: "Annual flu shot required by many healthcare employers + insurers.",
+    vertical: "healthcare",
+  },
+  {
+    key: "immunization_tb",
+    label: "TB test",
+    level: "member",
+    description: "Annual or biennial TB clearance required for direct-patient roles.",
+    vertical: "healthcare",
+  },
+  {
+    key: "hipaa_training",
+    label: "HIPAA training",
+    level: "member",
+    description: "Annual HIPAA refresher required for anyone with PHI access.",
+    vertical: "healthcare",
+  },
+  {
+    key: "background_check",
+    label: "Background check",
+    level: "member",
+    description: "Many states require background check renewal every 2-3 years for healthcare workers.",
+    vertical: "healthcare",
+  },
+  {
+    key: "drug_test",
+    label: "Drug test clearance",
+    level: "member",
+    description: "Pre-employment + periodic random testing. Track the most recent clearance.",
+    vertical: "healthcare",
+  },
 
   // ---------------- Restaurant / hospitality ----------------
   {

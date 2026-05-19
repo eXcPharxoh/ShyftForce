@@ -81,6 +81,11 @@ model Organization {
   checklistInstances      ChecklistInstance[]
   cashDrawerSessions      CashDrawerSession[]
   laborTargets            LaborTarget[]
+  patientRatioRules       PatientRatioRule[]
+  shiftDifferentials      ShiftDifferential[]
+  onCallShifts            OnCallShift[]
+  vehicles                Vehicle[]
+  jobCloseouts            JobCloseout[]
 }
 
 model ComplianceSettings {
@@ -477,6 +482,9 @@ model Location {
   checklistInstances ChecklistInstance[]
   cashDrawerSessions CashDrawerSession[]
   laborTarget        LaborTarget?
+  patientRatioRules  PatientRatioRule[]
+  vehicles           Vehicle[]
+  onCallShifts       OnCallShift[]
   KioskDevice        KioskDevice[]
 
   @@index([organizationId])
@@ -811,6 +819,11 @@ model Member {
   // as a bcrypt hash so a DB read doesn't leak punch-in credentials.
   kioskPinHash String?
 
+  // FIELD SERVICE: skill tier (1 = apprentice, 5 = master). Used by the
+  // job-complexity matcher so a Level-1 tech doesn't get auto-offered a
+  // Level-5 job they can't do. Null = unranked / not applicable.
+  skillTier Int?
+
   certifications    MemberCertification[]
   ptoBalances       PtoBalance[]
   recurringShifts   RecurringShift[]
@@ -853,6 +866,9 @@ model Member {
   checklistInstances      ChecklistInstance[]
   cashDrawerSessions      CashDrawerSession[]
   stationAssignments      StationAssignment[]
+  onCallShifts            OnCallShift[]
+  vehicleAssignments      VehicleAssignment[]
+  jobCloseouts            JobCloseout[]
 
   @@index([organizationId, status])
   @@index([organizationId, locationId])
@@ -872,6 +888,13 @@ model Shift {
   isOpen                  Boolean  @default(false)
   createdAt               DateTime @default(now())
 
+  // FIELD SERVICE: minimum skill tier required for this shift / job. The
+  // marketplace ranker will skip members below this threshold.
+  requiredSkillTier Int?
+
+  // HEALTHCARE: unit the shift is staffing (drives patient-ratio checks)
+  unit String?
+
   location                Location                 @relation(fields: [locationId], references: [id], onDelete: Cascade)
   member                  Member?                  @relation(fields: [memberId], references: [id])
   externalWorker          WorkerProfile?           @relation("ExternalWorker", fields: [externalWorkerProfileId], references: [id])
@@ -886,6 +909,8 @@ model Shift {
   bids                    ShiftBid[]
   checklistInstances      ChecklistInstance[]
   stationAssignments      StationAssignment[]
+  vehicleAssignment       VehicleAssignment?
+  jobCloseout             JobCloseout?
 
   @@index([locationId, startsAt])
   @@index([memberId, startsAt])
@@ -1664,4 +1689,148 @@ model LaborTarget {
   location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, active])
+}
+
+// ============================================================================
+// HEALTHCARE: Patient-to-staff ratio rules. Org defines the legal ratio per
+// (unit, role). When a shift is created or updated, we count concurrent
+// staff on that unit during the shift's window and refuse if the ratio
+// would be violated.
+// ============================================================================
+model PatientRatioRule {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String?
+  unit           String // "med_surg" | "icu" | "step_down" | "ed" | "psych" | "lt_care" | custom
+  customLabel    String?
+  role           String   @default("RN") // "RN" | "LPN" | "CNA"
+  patientCount   Int // # patients covered
+  staffCount     Int // # of <role> required for that patient load (typically 1)
+  notes          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id])
+
+  @@index([organizationId, active])
+}
+
+// ============================================================================
+// Shift differential pay. Rules like "Sundays = 1.5x", "Nights 22:00-06:00 =
+// 1.15x", "Holidays = 2x". The payroll calculator splits TimesheetEntry hours
+// by hour-bucket and applies the highest matching rule per hour.
+// ============================================================================
+model ShiftDifferential {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String // "Night shift", "Weekend", "Christmas"
+  kind           String // "night" | "weekend" | "holiday" | "custom"
+  startHour      Int? // 0-23 (for night/custom)
+  endHour        Int? // 0-23 (for night/custom)
+  dayOfWeek      Int? // 0-6 (for weekend/custom; 0=Sun)
+  holidayDates   String? // JSON array of ISO dates "2026-12-25"
+  multiplier     Float    @default(1.5) // 1.5 = time-and-a-half
+  flatAddCents   Int? // optional flat $/hr on top
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, active])
+}
+
+// ============================================================================
+// On-call rotation. Separate from regular shifts because pay rules differ
+// (daily stipend + call-in premium) and fairness matters across the team.
+// ============================================================================
+model OnCallShift {
+  id                        String   @id @default(uuid())
+  organizationId            String
+  locationId                String?
+  memberId                  String
+  startsAt                  DateTime
+  endsAt                    DateTime
+  stipendCents              Int      @default(0)
+  calledInHours             Float?
+  calledInPremiumMultiplier Float? // applied to base rate (e.g. 1.5)
+  notes                     String?
+  createdAt                 DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id])
+
+  @@index([organizationId, startsAt])
+  @@index([memberId, startsAt])
+}
+
+// ============================================================================
+// FIELD SERVICE: Vehicles + fleet assets. Each shift can be assigned a
+// vehicle. Pre-trip inspection runs against the existing checklist engine.
+// ============================================================================
+model Vehicle {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String? // home base
+  name           String
+  licensePlate   String?
+  vin            String?
+  make           String?
+  model          String?
+  year           Int?
+  status         String   @default("active") // active | maintenance | retired
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?           @relation(fields: [locationId], references: [id])
+  assignments  VehicleAssignment[]
+
+  @@index([organizationId, status])
+}
+
+model VehicleAssignment {
+  id                         String   @id @default(uuid())
+  shiftId                    String   @unique
+  vehicleId                  String
+  memberId                   String
+  startMileage               Int?
+  endMileage                 Int?
+  preTripChecklistInstanceId String?
+  createdAt                  DateTime @default(now())
+
+  shift   Shift   @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, createdAt])
+  @@index([memberId, createdAt])
+}
+
+// ============================================================================
+// Job closeout. Customer signature (base64 PNG), photo evidence, completion
+// notes, optional customer rating, parts cost for profitability math.
+// ============================================================================
+model JobCloseout {
+  id             String   @id @default(uuid())
+  organizationId String
+  shiftId        String   @unique
+  memberId       String
+  customerName   String?
+  customerEmail  String?
+  signatureData  String? // base64 PNG of the scribble (~50KB)
+  rating         Int? // 1-5
+  notes          String?
+  photoData      String? // base64 ~250KB
+  partsCostCents Int?
+  closedAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shift        Shift        @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, closedAt])
 }

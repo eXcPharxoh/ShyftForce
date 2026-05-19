@@ -22,12 +22,19 @@ export async function rankForShift(shiftId: string, organizationId: string, opts
   const externalExclude = new Set(opts?.excludeMemberIds ?? []);
   for (const id of blocked) externalExclude.add(id);
 
+  // Field-service skill-tier filter: if the shift has a requiredSkillTier,
+  // exclude any member whose tier is too low.
+  const skillFilter = shift.requiredSkillTier
+    ? { skillTier: { gte: shift.requiredSkillTier } }
+    : {};
+
   const candidates = await prisma.member.findMany({
     where: {
       organizationId,
       status: "active",
       role: { not: "ADMIN" },
       id: shift.memberId ? { not: shift.memberId } : undefined,
+      ...skillFilter,
     },
     include: {
       user: true, location: true,
