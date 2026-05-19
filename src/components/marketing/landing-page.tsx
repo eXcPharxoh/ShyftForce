@@ -206,31 +206,35 @@ function Features() {
 /* ------------------- INDUSTRIES ------------------- */
 function Industries() {
   const items = [
-    { icon: Utensils,    label: "Restaurant" },
-    { icon: ShoppingBag, label: "Grocery" },
-    { icon: ShieldAlert, label: "Security" },
-    { icon: ShoppingCart, label: "Retail" },
-    { icon: Stethoscope, label: "Healthcare" },
-    { icon: HardHat,     label: "Field Service" },
-    { icon: Briefcase,   label: "Office" },
-    { icon: Dumbbell,    label: "Fitness" },
+    { icon: Utensils,    label: "Restaurant",     href: "/for/restaurant" },
+    { icon: ShoppingBag, label: "Grocery",        href: "/for/grocery" },
+    { icon: ShieldAlert, label: "Security",       href: "/for/security" },
+    { icon: ShoppingCart, label: "Retail",        href: "/for/retail" },
+    { icon: Stethoscope, label: "Healthcare",     href: "/for/healthcare" },
+    { icon: HardHat,     label: "Construction",   href: "/for/construction" },
+    { icon: Briefcase,   label: "Office",         href: "/for/office" },
+    { icon: Dumbbell,    label: "Fitness",        href: "/for/fitness" },
+    { icon: Building2,   label: "Hotel",          href: "/for/hospitality" },
+    { icon: Workflow,    label: "Field Service",  href: "/for/field_service" },
+    { icon: Sparkles,    label: "School",         href: "/for/education" },
   ];
   return (
     <section id="industries" className="bg-ink-50 dark:bg-ink-900/40 border-y border-ink-200/60 dark:border-ink-800/60 py-24">
       <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-14">
           <div className="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400 mb-2">Built for your industry</div>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight-2">Pre-configured for the way you work.</h2>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight-2">11 industries. 1 platform.</h2>
           <p className="text-ink-600 dark:text-ink-400 mt-4 max-w-2xl mx-auto">
-            Pick a template at signup. Positions, shift blocks, geofence radius, compliance rules — all set in one click.
+            Pick a template at signup. Positions, shift blocks, geofence radius, compliance rules, and industry-specific modules — all set in one click.
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {items.map(({ icon: Icon, label }) => (
-            <div key={label} className="card p-5 text-center card-hover">
+          {items.map(({ icon: Icon, label, href }) => (
+            <Link key={label} href={href} className="card p-5 text-center card-hover hover:border-brand-300 transition">
               <Icon className="w-7 h-7 mx-auto text-brand-500 dark:text-brand-400" />
               <div className="font-semibold text-sm mt-3">{label}</div>
-            </div>
+              <div className="text-[10px] text-ink-500 mt-0.5">Learn more →</div>
+            </Link>
           ))}
         </div>
       </div>

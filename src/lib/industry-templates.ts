@@ -1,7 +1,7 @@
 // Industry templates picked at signup. Pre-populates the new org with
 // sensible defaults so the user is productive in <5 minutes.
 
-export type IndustryKey = "restaurant" | "retail" | "grocery" | "security" | "healthcare" | "field_service" | "office" | "fitness" | "other";
+export type IndustryKey = "restaurant" | "retail" | "grocery" | "security" | "healthcare" | "field_service" | "office" | "fitness" | "construction" | "hospitality" | "education" | "other";
 
 export type Template = {
   key: IndustryKey;
@@ -119,6 +119,46 @@ export const INDUSTRY_TEMPLATES: Template[] = [
     ],
     dayNoteSamples: ["6am HIIT class", "Member appreciation 5-7pm", "Pool maintenance Tue 6am"],
     defaultGeofenceMeters: 75,
+  },
+  {
+    key: "construction", label: "Construction / Trades", emoji: "🏗️",
+    description: "Crews, foremen, equipment, daily safety stand-ups. Job-site scheduling with OSHA-grade documentation.",
+    positions: ["Laborer", "Carpenter", "Electrician", "Plumber", "Foreman", "Equipment Operator", "Safety Officer", "Project Manager", "Apprentice"],
+    shiftBlocks: [
+      { name: "Day Crew",   startTime: "06:00", endTime: "15:00" },
+      { name: "Swing",      startTime: "15:00", endTime: "23:00" },
+      { name: "Night",      startTime: "22:00", endTime: "06:00" },
+    ],
+    dayNoteSamples: ["Concrete pour 7am", "Inspection 2pm", "Safety stand-up", "Heavy rain — outdoor work paused"],
+    defaultGeofenceMeters: 250,
+    recommendedComplianceTweaks: { mealBreakRequiredAfterHours: 5 },
+  },
+  {
+    key: "hospitality", label: "Hotel / Resort", emoji: "🏨",
+    description: "Housekeeping, front desk, F&B, maintenance. Room-status board, lost & found, MOD tracking.",
+    positions: ["Housekeeper", "Houseman", "Front Desk Agent", "Bellhop", "Concierge", "Manager on Duty", "Maintenance Tech", "Banquet Server", "Bartender", "Spa Therapist"],
+    shiftBlocks: [
+      { name: "Morning",    startTime: "07:00", endTime: "15:00" },
+      { name: "Evening",    startTime: "15:00", endTime: "23:00" },
+      { name: "Overnight",  startTime: "23:00", endTime: "07:00" },
+      { name: "Housekeeping AM", startTime: "08:00", endTime: "16:00" },
+    ],
+    dayNoteSamples: ["Group check-in 4pm (200 rooms)", "VIP arrival 2pm", "Pool deep clean Tue 6am", "Banquet event 7pm Grand Ballroom"],
+    defaultGeofenceMeters: 200,
+    recommendedComplianceTweaks: { mealBreakRequiredAfterHours: 5 },
+  },
+  {
+    key: "education", label: "School / K-12", emoji: "🎓",
+    description: "Teachers, subs, aides, cafeteria, custodial. Bell schedule, substitute pool, parent conferences.",
+    positions: ["Teacher", "Substitute Teacher", "Teacher's Aide", "Cafeteria", "Custodial", "Bus Driver", "Counselor", "Office Staff", "Special Ed Aide", "Coach"],
+    shiftBlocks: [
+      { name: "School Day", startTime: "07:30", endTime: "15:30" },
+      { name: "Early Riser",startTime: "06:00", endTime: "14:00" },
+      { name: "After-care", startTime: "14:00", endTime: "18:00" },
+    ],
+    dayNoteSamples: ["Fire drill 10am", "Parent-teacher conferences 4-7pm", "Field trip Friday", "Standardized testing Mon-Wed"],
+    defaultGeofenceMeters: 200,
+    recommendedComplianceTweaks: { mealBreakRequiredAfterHours: 5 },
   },
 ];
 
