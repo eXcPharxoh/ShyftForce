@@ -9,7 +9,7 @@ export type PermitCategory = {
   label:            string;
   level:            "agency" | "member";
   description:      string;
-  vertical:         "security" | "healthcare" | "restaurant" | "field_service" | "any";
+  vertical:         "security" | "healthcare" | "restaurant" | "field_service" | "construction" | "hospitality" | "education" | "any";
   defaultFeeCents?: number;
   // Optional pre-filled regulator hint by region. Customer overrides on create.
   hintRegulator?:   string;
@@ -145,6 +145,130 @@ export const PERMIT_CATALOG: PermitCategory[] = [
     level: "member",
     description: "3- or 5-year cycle. Required on most commercial sites.",
     vertical: "field_service",
+  },
+
+  // ---------------- Construction ----------------
+  {
+    key: "osha_10",
+    label: "OSHA-10 construction safety",
+    level: "member",
+    description: "Entry-level construction safety training. 5-year cycle.",
+    vertical: "construction",
+    defaultFeeCents: 4_900,
+  },
+  {
+    key: "osha_30_construction",
+    label: "OSHA-30 (Construction)",
+    level: "member",
+    description: "Required for foremen and supervisors. 5-year cycle.",
+    vertical: "construction",
+    defaultFeeCents: 18_900,
+  },
+  {
+    key: "scaffolding_competent_person",
+    label: "Competent Person — Scaffolding",
+    level: "member",
+    description: "OSHA requires a qualified competent person on-site whenever scaffolding is erected/dismantled.",
+    vertical: "construction",
+  },
+  {
+    key: "fall_protection",
+    label: "Fall protection certification",
+    level: "member",
+    description: "Required for any work at heights >6ft on construction sites.",
+    vertical: "construction",
+  },
+  {
+    key: "first_aid_cpr_construction",
+    label: "First Aid / CPR (job-site)",
+    level: "member",
+    description: "OSHA-compliant first-aid + CPR. Required for any crew without nearby medical access (<4 min).",
+    vertical: "construction",
+  },
+  {
+    key: "forklift_operator",
+    label: "Forklift operator certification",
+    level: "member",
+    description: "OSHA 1910.178 — required for anyone operating a powered industrial truck. 3-year cycle.",
+    vertical: "construction",
+  },
+
+  // ---------------- Hospitality / Hotel ----------------
+  {
+    key: "servsafe_manager",
+    label: "ServSafe Manager certification",
+    level: "member",
+    description: "Required certification for the person-in-charge in most US states. 5-year cycle.",
+    vertical: "hospitality",
+    defaultFeeCents: 17_900,
+  },
+  {
+    key: "tips_certification",
+    label: "TIPS alcohol certification",
+    level: "member",
+    description: "Required for bartenders + servers in many jurisdictions. 3-year cycle.",
+    vertical: "hospitality",
+    defaultFeeCents: 4_000,
+  },
+  {
+    key: "pool_operator",
+    label: "Certified Pool/Spa Operator (CPO)",
+    level: "member",
+    description: "Required for resort pool maintenance staff. 5-year cycle.",
+    vertical: "hospitality",
+    defaultFeeCents: 35_000,
+  },
+  {
+    key: "hotel_business_license",
+    label: "Hotel/lodging business licence",
+    level: "agency",
+    description: "City/county lodging licence — annual renewal.",
+    vertical: "hospitality",
+    defaultFeeCents: 50_000,
+  },
+
+  // ---------------- Education ----------------
+  {
+    key: "teaching_license",
+    label: "Teaching certification",
+    level: "member",
+    description: "State teaching licence. Typically 5-year renewal cycle with CEU requirements.",
+    vertical: "education",
+  },
+  {
+    key: "substitute_certification",
+    label: "Substitute teacher certification",
+    level: "member",
+    description: "State or district sub permit. 1-3 year cycle depending on state.",
+    vertical: "education",
+  },
+  {
+    key: "fbi_background_check",
+    label: "FBI/state background check",
+    level: "member",
+    description: "Required for all school employees. Most states require 5-year renewal.",
+    vertical: "education",
+  },
+  {
+    key: "mandated_reporter_training",
+    label: "Mandated reporter training",
+    level: "member",
+    description: "Annual child-abuse reporting training. Required by most state ed boards.",
+    vertical: "education",
+  },
+  {
+    key: "cpr_school",
+    label: "CPR / First Aid (school)",
+    level: "member",
+    description: "Required for nurses, coaches, PE teachers. 2-year cycle.",
+    vertical: "education",
+  },
+  {
+    key: "bus_driver_cdl",
+    label: "School bus CDL (Class B + S endorsement)",
+    level: "member",
+    description: "Required for school bus drivers. Annual physical + 5-year licence renewal.",
+    vertical: "education",
   },
 
   // ---------------- Cross-vertical escape hatch ----------------
