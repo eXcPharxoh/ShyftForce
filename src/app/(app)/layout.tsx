@@ -6,6 +6,7 @@ import { ImpersonationBanner } from "@/components/platform/impersonation-banner"
 import { TrialBanner } from "@/components/trial-banner";
 import { isPlatformAdminEmail } from "@/lib/platform/admin";
 import { isTrialActive } from "@/lib/stripe";
+import { initials } from "@/lib/utils";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const u = await requireUser();
@@ -35,6 +36,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         industry={u.organizationIndustry}
         role={u.role}
         pendingOffers={pendingOffers}
+        userName={u.name}
+        userInitials={initials(u.name)}
+        userRole={u.role}
       />
       <div className="flex-1 min-w-0">
         {u.impersonatedByEmail && (
