@@ -17,7 +17,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const weekStart = addDays(startOfWeek(new Date()), weekOffset * 7);
   const weekEnd = addDays(weekStart, 7);
 
-  const [members, shifts, locations] = await Promise.all([
+  const [members, shifts, locations, departments, crews, periods] = await Promise.all([
     prisma.member.findMany({
       where: { organizationId: u.organizationId, status: "active" },
       include: { user: true, location: true },
@@ -28,7 +28,28 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
       include: { member: { include: { user: true } }, location: true },
     }),
     prisma.location.findMany({ where: { organizationId: u.organizationId } }),
+    prisma.department.findMany({
+      where: { organizationId: u.organizationId, active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true },
+    }),
+    prisma.crew.findMany({
+      where: { organizationId: u.organizationId, active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true },
+    }),
+    prisma.classPeriod.findMany({
+      where: { organizationId: u.organizationId, active: true },
+      orderBy: { number: "asc" },
+      select: { id: true, number: true, name: true, startTime: true, endTime: true },
+    }),
   ]);
+  const verticalOptions = {
+    industry: u.organizationIndustry,
+    departments,
+    crews,
+    periods,
+  };
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const totalHours = shifts.reduce((acc, s) => acc + (+s.endsAt - +s.startsAt) / 3600000, 0);
@@ -114,6 +135,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                               key={s.id}
                               canEdit={u.role === "ADMIN" || u.role === "MANAGER"}
                               members={members.map(mm => ({ id: mm.id, name: mm.user.name }))}
+                              verticals={verticalOptions}
                               shift={{
                                 id: s.id,
                                 memberId: s.memberId,
@@ -125,8 +147,14 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                                 endTime:   new Date(s.endsAt).toTimeString().slice(0,5),
                                 position: s.position ?? "",
                                 notes: s.notes,
-                                status: s.status,
+                                status: s.status as "draft" | "published",
                                 isOpen: s.isOpen,
+                                departmentId:      (s as any).departmentId,
+                                crewId:            (s as any).crewId,
+                                classPeriodId:     (s as any).classPeriodId,
+                                modMemberId:       (s as any).modMemberId,
+                                unit:              (s as any).unit,
+                                requiredSkillTier: (s as any).requiredSkillTier,
                               }}
                             />
                           ))}

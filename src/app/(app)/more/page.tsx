@@ -26,7 +26,7 @@ export default async function MorePage() {
         "/settings/fitness-classes", "/classes", "/pt-sessions",
         "/settings/crews", "/settings/equipment", "/safety",
         "/rooms", "/lost-found",
-        "/settings/sub-pool", "/settings/class-periods", "/conferences",
+        "/settings/sub-pool", "/sub-callout", "/settings/class-periods", "/conferences",
         "/settings/patient-ratios", "/settings/shift-differentials", "/on-call",
         "/settings/vehicles", "/job-closeout",
       ].includes(m.href)),
@@ -41,7 +41,11 @@ export default async function MorePage() {
     },
     {
       label: "Reporting",
-      items: items.filter((m) => ["/reports", "/expenses"].includes(m.href)),
+      items: items.filter((m) => [
+        "/reports", "/expenses",
+        "/reports/shrink", "/reports/room-turn-time", "/reports/safety-acks",
+        "/reports/class-attendance", "/reports/pt-payout", "/reports/vm-completion",
+      ].includes(m.href)),
     },
     {
       label: "Workspace",

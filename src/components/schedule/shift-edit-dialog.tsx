@@ -4,6 +4,13 @@ import { useRouter } from "next/navigation";
 import { X, Trash2, Save, Loader2, Send, Users, AlertOctagon, AlertTriangle, ShieldCheck, DollarSign } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
+export type VerticalOptions = {
+  industry: string | null;
+  departments: { id: string; name: string; color: string }[];
+  crews:       { id: string; name: string; color: string }[];
+  periods:     { id: string; number: number; name: string | null; startTime: string; endTime: string }[];
+};
+
 export type ShiftEditPayload = {
   id: string;
   memberId: string | null;
@@ -17,16 +24,36 @@ export type ShiftEditPayload = {
   notes: string | null;
   status: "draft" | "published";
   isOpen: boolean;
+  // Vertical-specific (all optional)
+  departmentId?:      string | null;
+  crewId?:            string | null;
+  classPeriodId?:     string | null;
+  modMemberId?:       string | null;
+  unit?:              string | null;
+  requiredSkillTier?: number | null;
 };
+
+// Healthcare unit options
+const UNITS = [
+  { v: "med_surg",   l: "Med-surg" },
+  { v: "icu",        l: "ICU / Critical care" },
+  { v: "step_down",  l: "Step-down / Telemetry" },
+  { v: "ed",         l: "Emergency department" },
+  { v: "psych",      l: "Psychiatric" },
+  { v: "labor",      l: "Labor & delivery" },
+  { v: "pacu",       l: "Post-anesthesia (PACU)" },
+  { v: "lt_care",    l: "Long-term care" },
+];
 
 type Violation = { rule: string; ruleLabel: string; severity: "error" | "warning"; message: string; recommendation?: string };
 type Predictability = { triggered: boolean; bracketLabel?: string; noticeHours: number; hoursOwed: number; hourlyRate: number; amountOwedCents: number };
 
 export function ShiftEditDialog({
-  shift, members, onClose,
+  shift, members, verticals, onClose,
 }: {
   shift: ShiftEditPayload;
   members: { id: string; name: string }[];
+  verticals?: VerticalOptions;
   onClose: () => void;
 }) {
   const r = useRouter();
@@ -38,6 +65,13 @@ export function ShiftEditDialog({
   const [notes, setNotes] = useState(shift.notes ?? "");
   const [memberId, setMemberId] = useState<string | "open">(shift.isOpen ? "open" : (shift.memberId ?? ""));
   const [status, setStatus] = useState<"draft" | "published">(shift.status);
+  // Vertical-specific
+  const [departmentId, setDepartmentId]     = useState<string>(shift.departmentId  ?? "");
+  const [crewId, setCrewId]                 = useState<string>(shift.crewId        ?? "");
+  const [classPeriodId, setClassPeriodId]   = useState<string>(shift.classPeriodId ?? "");
+  const [modMemberId, setModMemberId]       = useState<string>(shift.modMemberId   ?? "");
+  const [unit, setUnit]                     = useState<string>(shift.unit          ?? "");
+  const [requiredSkillTier, setRequiredSkillTier] = useState<number | "">(shift.requiredSkillTier ?? "");
   const [saving, setSaving] = useState<"save" | "delete" | "publish" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,6 +130,16 @@ export function ShiftEditDialog({
       status: opts?.publishToo ? "published" : status,
       memberId: memberId === "open" ? null : (memberId || null),
       isOpen: memberId === "open",
+      // Vertical-specific (only included when verticals prop is provided so
+      // we don't accidentally clear them via stale state)
+      ...(verticals ? {
+        departmentId:      departmentId  || null,
+        crewId:            crewId        || null,
+        classPeriodId:     classPeriodId || null,
+        modMemberId:       modMemberId   || null,
+        unit:              unit          || null,
+        requiredSkillTier: requiredSkillTier === "" ? null : Number(requiredSkillTier),
+      } : {}),
     };
     const res = await fetch(`/api/shifts/${shift.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -160,6 +204,73 @@ export function ShiftEditDialog({
             <label className="label">Position</label>
             <input className="input" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="e.g. Server, Security Officer…" />
           </div>
+
+          {/* Vertical-specific fields — only render the ones relevant to the industry */}
+          {verticals && (
+            <div className="border-t border-ink-100 dark:border-ink-800 pt-3 space-y-3">
+              {(verticals.industry === "grocery" || verticals.industry === "retail") && verticals.departments.length > 0 && (
+                <div>
+                  <label className="label">Department</label>
+                  <select className="input" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+                    <option value="">— No department —</option>
+                    {verticals.departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
+              )}
+              {verticals.industry === "construction" && verticals.crews.length > 0 && (
+                <div>
+                  <label className="label">Crew</label>
+                  <select className="input" value={crewId} onChange={(e) => setCrewId(e.target.value)}>
+                    <option value="">— No crew —</option>
+                    {verticals.crews.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
+              {verticals.industry === "education" && verticals.periods.length > 0 && (
+                <div>
+                  <label className="label">Class period (bell)</label>
+                  <select className="input" value={classPeriodId} onChange={(e) => setClassPeriodId(e.target.value)}>
+                    <option value="">— Not tied to a period —</option>
+                    {verticals.periods.map(p => (
+                      <option key={p.id} value={p.id}>
+                        #{p.number} {p.name ?? ""} ({p.startTime}–{p.endTime})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {verticals.industry === "hospitality" && (
+                <div>
+                  <label className="label">Manager on Duty for this block</label>
+                  <select className="input" value={modMemberId} onChange={(e) => setModMemberId(e.target.value)}>
+                    <option value="">— No MOD assigned —</option>
+                    {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                </div>
+              )}
+              {verticals.industry === "healthcare" && (
+                <div>
+                  <label className="label">Unit (patient-ratio enforcement)</label>
+                  <select className="input" value={unit} onChange={(e) => setUnit(e.target.value)}>
+                    <option value="">— Not a clinical unit —</option>
+                    {UNITS.map(u => <option key={u.v} value={u.v}>{u.l}</option>)}
+                  </select>
+                </div>
+              )}
+              {verticals.industry === "field_service" && (
+                <div>
+                  <label className="label">Required skill tier (1–5; blank = any)</label>
+                  <input
+                    className="input" type="number" min={1} max={5}
+                    value={requiredSkillTier}
+                    onChange={(e) => setRequiredSkillTier(e.target.value === "" ? "" : parseInt(e.target.value))}
+                    placeholder="Leave blank to allow any tech"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="label">Notes (optional)</label>
             <textarea className="input min-h-[68px]" value={notes} onChange={(e) => setNotes(e.target.value)} />

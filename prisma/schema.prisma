@@ -102,6 +102,7 @@ model Organization {
   hotelRooms              HotelRoom[]
   lostFoundItems          LostFoundItem[]
   subPoolMembers          SubPoolMember[]
+  subCallouts             SubCallout[]
   classPeriods            ClassPeriod[]
   conferenceSlots         ConferenceSlot[]
 }
@@ -978,6 +979,7 @@ model Shift {
   safetyBriefings         SafetyBriefing[]
   hotelRoomAssignments    HotelRoomAssignment[]
   equipmentAssignments    EquipmentAssignment[]
+  subCallout              SubCallout?
 
   @@index([locationId, startsAt])
   @@index([memberId, startsAt])
@@ -2424,8 +2426,52 @@ model SubPoolMember {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  callouts     SubCalloutOffer[]
 
   @@index([organizationId, isActive])
+}
+
+// ============================================================================
+// EDUCATION: Substitute callout. When a teacher calls out, this represents
+// the broadcast to matched subs. First sub to claim wins; the rest are
+// auto-superseded.
+// ============================================================================
+model SubCallout {
+  id              String   @id @default(uuid())
+  organizationId  String
+  shiftId         String   @unique // the shift to be covered
+  triggeredById   String? // member who started the callout
+  subjects        String? // JSON array — what the missing teacher teaches
+  grades          String? // JSON array
+  notes           String?
+  status          String   @default("open") // open | filled | canceled | expired
+  filledById      String? // sub who claimed
+  filledAt        DateTime?
+  expiresAt       DateTime // 4 hours by default
+  createdAt       DateTime @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shift        Shift             @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  offers       SubCalloutOffer[]
+
+  @@index([organizationId, status])
+  @@index([shiftId])
+}
+
+model SubCalloutOffer {
+  id          String    @id @default(uuid())
+  calloutId   String
+  subPoolId   String // SubPoolMember.id
+  status      String    @default("pending") // pending | accepted | declined | superseded | expired
+  claimToken  String    @unique @default(cuid()) // unique link for one-tap claim
+  sentAt      DateTime  @default(now())
+  respondedAt DateTime?
+
+  callout SubCallout    @relation(fields: [calloutId], references: [id], onDelete: Cascade)
+  sub     SubPoolMember @relation(fields: [subPoolId], references: [id], onDelete: Cascade)
+
+  @@unique([calloutId, subPoolId])
+  @@index([claimToken])
 }
 
 // ============================================================================

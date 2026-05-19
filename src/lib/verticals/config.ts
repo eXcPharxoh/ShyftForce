@@ -133,8 +133,16 @@ const M = {
   lostFound:       { href: "/lost-found",               label: "Lost & found",        icon: Package },
   // Education
   subPool:         { href: "/settings/sub-pool",        label: "Substitute pool",     icon: GraduationCap },
+  subCallout:      { href: "/sub-callout",              label: "Sub callouts",        icon: Megaphone },
   periods:         { href: "/settings/class-periods",   label: "Bell schedule",       icon: Clock },
   conferences:     { href: "/conferences",              label: "Parent conferences",  icon: Users },
+  // Reports (vertical-specific)
+  reportShrink:        { href: "/reports/shrink",            label: "Shrink trends",       icon: Trash },
+  reportRoomTurn:      { href: "/reports/room-turn-time",    label: "Room turn time",      icon: Bed },
+  reportSafetyAcks:    { href: "/reports/safety-acks",       label: "Safety compliance",   icon: HardHat },
+  reportClassAtt:      { href: "/reports/class-attendance",  label: "Class attendance",    icon: Dumbbell },
+  reportPtPayout:      { href: "/reports/pt-payout",         label: "PT payout",           icon: DollarSign },
+  reportVmCompletion:  { href: "/reports/vm-completion",     label: "VM completion",       icon: ImageIcon },
 } as const;
 
 // --- Vertical configs ---
@@ -148,6 +156,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.departments,  primary: true, highlight: true, role: "manager" },
       { ...M.posLanes,     primary: true, highlight: true, role: "manager" },
       { ...M.shrink,       primary: true, highlight: true, role: "manager" },
+      { ...M.reportShrink, role: "manager" },
       { ...M.forecast,     primary: true, highlight: true, role: "manager" },
       { ...M.laborLive,    primary: true, role: "manager" },
       { ...M.attendance,   primary: true },
@@ -266,6 +275,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.vmTasks,         primary: true, highlight: true },
       { ...M.lossPrevention,  primary: true, highlight: true },
       { ...M.departments,     primary: true, highlight: true, role: "manager" },
+      { ...M.reportVmCompletion, role: "manager" },
       { ...M.laborLive,       primary: true, role: "manager" },
       { ...M.forecast,        primary: true, role: "manager" },
       { ...M.attendance,      primary: true },
@@ -416,6 +426,8 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.dashboard,    primary: true },
       { ...M.classes,      primary: true, highlight: true },
       { ...M.ptSessions,   primary: true, highlight: true },
+      { ...M.reportClassAtt, role: "manager" },
+      { ...M.reportPtPayout, role: "manager" },
       { ...M.schedule,     primary: true },
       { ...M.permits,      primary: true, highlight: true, role: "manager" },
       { ...M.attendance,   primary: true },
@@ -456,6 +468,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.crewsSetup,   primary: true, highlight: true, role: "manager" },
       { ...M.safety,       primary: true, highlight: true },
       { ...M.equipment,    primary: true, highlight: true, role: "manager" },
+      { ...M.reportSafetyAcks, role: "manager" },
       { ...M.permits,      primary: true, role: "manager" },
       { ...M.attendance,   primary: true },
       { ...M.openShifts,   primary: true },
@@ -492,6 +505,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.rooms,        primary: true, highlight: true },
       { ...M.schedule,     primary: true },
       { ...M.lostFound,    primary: true, highlight: true },
+      { ...M.reportRoomTurn, role: "manager" },
       { ...M.attendance,   primary: true },
       { ...M.openShifts,   primary: true },
       { ...M.timeOff,      primary: true },
@@ -526,6 +540,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
     modules: [
       { ...M.dashboard,    primary: true },
       { ...M.schedule,     primary: true },
+      { ...M.subCallout,   primary: true, highlight: true, role: "manager" },
       { ...M.subPool,      primary: true, highlight: true, role: "manager" },
       { ...M.periods,      primary: true, highlight: true, role: "manager" },
       { ...M.conferences,  primary: true, highlight: true },

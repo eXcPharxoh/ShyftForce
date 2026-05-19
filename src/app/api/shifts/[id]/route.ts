@@ -22,6 +22,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     date?: string; startTime?: string; endTime?: string;
     position?: string; notes?: string; status?: string;
     memberId?: string | null; isOpen?: boolean;
+    // Vertical-specific fields
+    departmentId?:      string | null; // grocery/retail
+    crewId?:            string | null; // construction
+    classPeriodId?:     string | null; // education
+    modMemberId?:       string | null; // hospitality
+    unit?:              string | null; // healthcare
+    requiredSkillTier?: number | null; // field service
   };
 
   // Org check
@@ -47,6 +54,32 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     data.isOpen = !body.memberId;
   }
   if (body.isOpen !== undefined) data.isOpen = body.isOpen;
+
+  // Vertical-specific field updates. We accept null to clear.
+  if (body.departmentId !== undefined)      data.departmentId      = body.departmentId  || null;
+  if (body.crewId !== undefined)            data.crewId            = body.crewId        || null;
+  if (body.classPeriodId !== undefined)     data.classPeriodId     = body.classPeriodId || null;
+  if (body.modMemberId !== undefined)       data.modMemberId       = body.modMemberId   || null;
+  if (body.unit !== undefined)              data.unit              = body.unit          || null;
+  if (body.requiredSkillTier !== undefined) data.requiredSkillTier = body.requiredSkillTier ?? null;
+
+  // Cross-tenant guards: any referenced ID must belong to this org.
+  if (data.departmentId) {
+    const d = await prisma.department.findFirst({ where: { id: data.departmentId, organizationId: u.organizationId }, select: { id: true } });
+    if (!d) return NextResponse.json({ error: "Department not in org" }, { status: 404 });
+  }
+  if (data.crewId) {
+    const c = await prisma.crew.findFirst({ where: { id: data.crewId, organizationId: u.organizationId }, select: { id: true } });
+    if (!c) return NextResponse.json({ error: "Crew not in org" }, { status: 404 });
+  }
+  if (data.classPeriodId) {
+    const p = await prisma.classPeriod.findFirst({ where: { id: data.classPeriodId, organizationId: u.organizationId }, select: { id: true } });
+    if (!p) return NextResponse.json({ error: "Class period not in org" }, { status: 404 });
+  }
+  if (data.modMemberId) {
+    const m = await prisma.member.findFirst({ where: { id: data.modMemberId, organizationId: u.organizationId }, select: { id: true } });
+    if (!m) return NextResponse.json({ error: "MOD member not in org" }, { status: 404 });
+  }
 
   // Compliance block: refuse to assign a member whose mandatory permit is
   // currently expired. Manager can either renew the permit or toggle

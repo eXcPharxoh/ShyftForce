@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ShiftEditDialog, type ShiftEditPayload } from "./shift-edit-dialog";
+import { ShiftEditDialog, type ShiftEditPayload, type VerticalOptions } from "./shift-edit-dialog";
 
 // Stable per-position color (8 swatches that look good light + dark)
 const PALETTE = [
@@ -23,11 +23,12 @@ export function colorForPosition(p: string | null | undefined) {
 }
 
 export function ShiftCell({
-  shift, members, canEdit,
+  shift, members, canEdit, verticals,
 }: {
   shift: ShiftEditPayload;
   members: { id: string; name: string }[];
   canEdit: boolean;
+  verticals?: VerticalOptions;
 }) {
   const [open, setOpen] = useState(false);
   const isDraft = shift.status === "draft";
@@ -48,7 +49,7 @@ export function ShiftCell({
         <div className="opacity-80 truncate">{shift.position || shift.locationName}</div>
       </button>
       {open && (
-        <ShiftEditDialog shift={shift} members={members} onClose={() => setOpen(false)} />
+        <ShiftEditDialog shift={shift} members={members} verticals={verticals} onClose={() => setOpen(false)} />
       )}
     </>
   );
