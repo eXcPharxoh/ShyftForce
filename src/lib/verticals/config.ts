@@ -173,7 +173,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
       { ...M.customRoles, role: "manager" },
     ],
-    dashboardWidgets: ["demandPeak", "laborLive", "coverageOpen", "upcomingShifts"],
+    dashboardWidgets: ["shrinkWeek", "laborLive", "coverageOpen", "upcomingShifts"],
     promoCard: { title: "Shrink tracking", subtitle: "Spot loss patterns by department — damage, spoilage, theft", href: "/shrink", emoji: "📊" },
   },
 
@@ -292,7 +292,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
       { ...M.customRoles, role: "manager" },
     ],
-    dashboardWidgets: ["laborLive", "demandPeak", "coverageOpen", "upcomingShifts"],
+    dashboardWidgets: ["vmTasksOpen", "laborLive", "coverageOpen", "upcomingShifts"],
     promoCard: { title: "Visual merchandising", subtitle: "Photo-proof endcap & display tasks for brand audits", href: "/vm-tasks", emoji: "📸" },
   },
   healthcare: {
@@ -329,7 +329,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
       { ...M.customRoles, role: "manager" },
     ],
-    dashboardWidgets: ["coverageOpen", "upcomingShifts", "ewaPending", "networkOffers"],
+    dashboardWidgets: ["onCallToday", "coverageOpen", "upcomingShifts", "ewaPending"],
     promoCard: { title: "Patient ratio guard", subtitle: "Scheduler refuses any assignment that breaches CA Title 22", href: "/settings/patient-ratios", emoji: "🩺" },
   },
   field_service: {
@@ -365,7 +365,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
       { ...M.customRoles, role: "manager" },
     ],
-    dashboardWidgets: ["coverageOpen", "upcomingShifts", "clientHours", "networkOffers"],
+    dashboardWidgets: ["vehiclesActive", "coverageOpen", "upcomingShifts", "clientHours"],
     promoCard: { title: "Job closeout", subtitle: "Signature + photo + parts cost → CRM webhook in one tap", href: "/job-closeout", emoji: "📋" },
   },
   office: {
@@ -444,7 +444,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
       { ...M.customRoles, role: "manager" },
     ],
-    dashboardWidgets: ["upcomingShifts", "coverageOpen", "demandPeak", "ewaPending"],
+    dashboardWidgets: ["classesToday", "upcomingShifts", "coverageOpen", "ewaPending"],
     promoCard: { title: "Class schedule", subtitle: "Assign instructors + track attendance + auto-rotate", href: "/classes", emoji: "🧘" },
   },
   construction: {
@@ -481,7 +481,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
       { ...M.customRoles, role: "manager" },
     ],
-    dashboardWidgets: ["coverageOpen", "upcomingShifts", "ewaPending", "networkOffers"],
+    dashboardWidgets: ["safetyAcks", "coverageOpen", "upcomingShifts", "ewaPending"],
     promoCard: { title: "Daily safety briefings", subtitle: "Crew acks tracked + 7-day compliance % at a glance", href: "/safety", emoji: "🏗️" },
   },
   hospitality: {
@@ -517,7 +517,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
       { ...M.customRoles, role: "manager" },
     ],
-    dashboardWidgets: ["coverageOpen", "upcomingShifts", "laborLive", "networkOffers"],
+    dashboardWidgets: ["roomStatus", "lostFound", "coverageOpen", "upcomingShifts"],
     promoCard: { title: "Live room board", subtitle: "Dirty → cleaning → clean in one tap, with housekeeper trail", href: "/rooms", emoji: "🛏️" },
   },
   education: {

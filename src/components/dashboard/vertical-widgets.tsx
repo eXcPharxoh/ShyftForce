@@ -3,7 +3,7 @@ import { liveLabor } from "@/lib/pos/labor";
 import { addDays, fmtMoney, startOfWeek } from "@/lib/utils";
 import { verticalFor } from "@/lib/verticals/config";
 import Link from "next/link";
-import { Activity, AlertOctagon, CalendarClock, DollarSign, FileWarning, Globe, QrCode, ShieldAlert, TrendingUp, Wallet, Building2, Receipt } from "lucide-react";
+import { Activity, AlertOctagon, CalendarClock, DollarSign, FileWarning, Globe, QrCode, ShieldAlert, TrendingUp, Wallet, Building2, Receipt, Bed, HardHat, Package, Dumbbell, Trash, Image as ImageIcon, Phone, Truck } from "lucide-react";
 
 /** Server component: renders the top-of-dashboard vertical-specific widget row.
  *  Picks 4 widgets from the vertical config and queries only the data they need. */
@@ -202,6 +202,138 @@ async function buildTile(key: string, organizationId: string, memberId: string):
         href: "/schedule",
         icon: <CalendarClock className="w-5 h-5" />,
         toneCls: toneClass("brand"),
+      };
+    }
+    case "roomStatus": {
+      const rooms = await prisma.hotelRoom.groupBy({
+        by: ["status"],
+        where: { organizationId },
+        _count: { _all: true },
+      }).catch(() => [] as any[]);
+      const byStatus: Record<string, number> = { clean: 0, dirty: 0, cleaning: 0, out_of_order: 0 };
+      for (const r of rooms) byStatus[r.status] = r._count._all;
+      const total = byStatus.clean + byStatus.dirty + byStatus.cleaning + byStatus.out_of_order;
+      const dirty = byStatus.dirty + byStatus.cleaning;
+      return {
+        label: "Rooms to turn",
+        value: `${dirty}/${total}`,
+        sub: `${byStatus.clean} clean · ${byStatus.out_of_order} OoO`,
+        href: "/rooms",
+        icon: <Bed className="w-5 h-5" />,
+        toneCls: toneClass(dirty > total / 3 ? "amber" : "emerald"),
+      };
+    }
+    case "lostFound": {
+      const unclaimed = await prisma.lostFoundItem.count({
+        where: { organizationId, status: "unclaimed" },
+      }).catch(() => 0);
+      return {
+        label: "Unclaimed L&F",
+        value: String(unclaimed),
+        sub: unclaimed === 0 ? "all caught up" : "review for return / discard",
+        href: "/lost-found",
+        icon: <Package className="w-5 h-5" />,
+        toneCls: toneClass(unclaimed > 0 ? "amber" : "emerald"),
+      };
+    }
+    case "safetyAcks": {
+      const today = new Date(now); today.setHours(0, 0, 0, 0);
+      const briefings = await prisma.safetyBriefing.findMany({
+        where: { organizationId, postedAt: { gte: today } },
+        include: { acks: true },
+      }).catch(() => [] as any[]);
+      const memberCount = await prisma.member.count({ where: { organizationId, status: "active" } });
+      const totalAcks = briefings.reduce((a: number, b: any) => a + b.acks.length, 0);
+      const required = briefings.length * memberCount;
+      const pct = required > 0 ? Math.round((totalAcks / required) * 100) : 100;
+      return {
+        label: "Safety acks today",
+        value: `${pct}%`,
+        sub: `${briefings.length} briefing${briefings.length === 1 ? "" : "s"} · ${totalAcks}/${required} acked`,
+        href: "/safety",
+        icon: <HardHat className="w-5 h-5" />,
+        toneCls: toneClass(pct < 80 ? "rose" : pct < 100 ? "amber" : "emerald"),
+      };
+    }
+    case "classesToday": {
+      const today = new Date(now); today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today.getTime() + 86400_000);
+      const occurrences = await prisma.classOccurrence.findMany({
+        where: { fitnessClass: { organizationId }, startsAt: { gte: today, lt: tomorrow } },
+      }).catch(() => [] as any[]);
+      const done = occurrences.filter((o: any) => o.status === "done").length;
+      const totalAtt = occurrences.reduce((a: number, o: any) => a + (o.attendees ?? 0), 0);
+      return {
+        label: "Classes today",
+        value: `${done}/${occurrences.length}`,
+        sub: `${totalAtt} attendees so far`,
+        href: "/classes",
+        icon: <Dumbbell className="w-5 h-5" />,
+        toneCls: toneClass("brand"),
+      };
+    }
+    case "shrinkWeek": {
+      const ws = startOfWeek(now);
+      const sum = await prisma.shrinkEvent.aggregate({
+        where: { organizationId, occurredAt: { gte: ws } },
+        _sum: { totalValueCents: true },
+      }).catch(() => ({ _sum: { totalValueCents: 0 } } as any));
+      const total = sum._sum?.totalValueCents ?? 0;
+      return {
+        label: "Shrink this week",
+        value: fmtMoney(total / 100),
+        sub: total > 50000 ? "above weekly target" : "within target",
+        href: "/shrink",
+        icon: <Trash className="w-5 h-5" />,
+        toneCls: toneClass(total > 100000 ? "rose" : total > 50000 ? "amber" : "emerald"),
+      };
+    }
+    case "vmTasksOpen": {
+      const open = await prisma.vmTask.count({
+        where: { organizationId, status: "open" },
+      }).catch(() => 0);
+      const overdue = await prisma.vmTask.count({
+        where: { organizationId, status: "open", dueDate: { lt: now } },
+      }).catch(() => 0);
+      return {
+        label: "VM tasks open",
+        value: String(open),
+        sub: overdue > 0 ? `${overdue} overdue` : "all on schedule",
+        href: "/vm-tasks",
+        icon: <ImageIcon className="w-5 h-5" />,
+        toneCls: toneClass(overdue > 0 ? "rose" : open > 5 ? "amber" : "emerald"),
+      };
+    }
+    case "onCallToday": {
+      const today = new Date(now); today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today.getTime() + 86400_000);
+      const onCall = await prisma.onCallShift.findMany({
+        where: {
+          organizationId,
+          startsAt: { lt: tomorrow },
+          endsAt: { gte: today },
+        },
+        include: { member: { include: { user: { select: { name: true } } } } },
+      }).catch(() => [] as any[]);
+      return {
+        label: "On-call today",
+        value: String(onCall.length),
+        sub: onCall[0] ? onCall[0].member.user.name : "no coverage scheduled",
+        href: "/on-call",
+        icon: <Phone className="w-5 h-5" />,
+        toneCls: toneClass(onCall.length === 0 ? "rose" : "brand"),
+      };
+    }
+    case "vehiclesActive": {
+      const active = await prisma.vehicle.count({ where: { organizationId, status: "active" } }).catch(() => 0);
+      const maint = await prisma.vehicle.count({ where: { organizationId, status: "maintenance" } }).catch(() => 0);
+      return {
+        label: "Fleet status",
+        value: String(active),
+        sub: maint > 0 ? `${maint} in maintenance` : "all active",
+        href: "/settings/vehicles",
+        icon: <Truck className="w-5 h-5" />,
+        toneCls: toneClass(maint > 0 ? "amber" : "emerald"),
       };
     }
     default:
