@@ -3,6 +3,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Wrench, Loader2, Plus, X, Trash2 } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { CsvImportButton } from "@/components/ui/csv-import-button";
+
+const SAMPLE_CSV = `name,category,serialNumber,notes
+Generator 7500W,machine,SN-12345,Backup power
+Air compressor,machine,SN-22281,
+Scaffolding kit,scaffolding,,Kit A — 8 sections
+Hard hats (case of 12),safety_gear,,`;
 
 type Equipment = { id: string; name: string; category: string; serialNumber: string | null; status: string; notes: string | null; currentHolder: string | null };
 
@@ -55,7 +62,13 @@ export function EquipmentClient({ initial }: { initial: Equipment[] }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <CsvImportButton
+          endpoint="/api/import/equipment"
+          label="Import CSV"
+          title="Bulk-import equipment"
+          sampleCsv={SAMPLE_CSV}
+        />
         <button onClick={() => setOpen(true)} className="btn-primary text-sm"><Plus className="w-4 h-4" /> Add equipment</button>
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Loader2, Plus, X, Check } from "lucide-react";
+import { Users, Loader2, Plus, X, Check, Link as LinkIcon, Copy } from "lucide-react";
 
 type Slot = {
   id: string; teacherId: string; teacherName: string;
@@ -23,6 +23,22 @@ export function ConferencesClient({
   teachers: { id: string; name: string }[];
 }) {
   const r = useRouter();
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function openShareLink() {
+    const teacherId = isManager ? (teachers[0]?.id ?? myMemberId) : myMemberId;
+    if (!teacherId) return;
+    const base = typeof window !== "undefined" ? window.location.origin : "";
+    setShareLink(`${base}/book/conference/${teacherId}`);
+  }
+
+  async function copyLink() {
+    if (!shareLink) return;
+    await navigator.clipboard.writeText(shareLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
   const [items, setItems] = useState(initial);
   const [open, setOpen] = useState(false);
   const [teacherId, setTeacherId] = useState(myMemberId ?? "");
@@ -99,7 +115,8 @@ export function ConferencesClient({
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <button onClick={openShareLink} className="btn-outline text-sm"><LinkIcon className="w-4 h-4" /> Public booking link</button>
         <button onClick={() => setOpen(true)} className="btn-primary text-sm"><Plus className="w-4 h-4" /> Open slot</button>
       </div>
 
@@ -226,6 +243,36 @@ export function ConferencesClient({
               </button>
             </footer>
           </form>
+        </div>
+      )}
+
+      {/* Share-link modal */}
+      {shareLink && (
+        <div className="fixed inset-0 z-50 bg-ink-950/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShareLink(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-ink-900 rounded-2xl shadow-2xl w-full max-w-md">
+            <header className="px-5 h-14 border-b border-ink-200 dark:border-ink-800 flex items-center justify-between">
+              <div className="flex items-center gap-2"><LinkIcon className="w-4 h-4 text-brand-500" /><span className="font-semibold text-sm">Public booking link</span></div>
+              <button onClick={() => setShareLink(null)} className="p-2 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800"><X className="w-4 h-4" /></button>
+            </header>
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-ink-700 dark:text-ink-300">
+                Share this link with parents. They can book any open slot without logging in.
+              </p>
+              <div className="flex items-center gap-2 p-3 bg-ink-50 dark:bg-ink-800 rounded-lg">
+                <code className="text-xs font-mono flex-1 truncate">{shareLink}</code>
+                <button onClick={copyLink} className="btn-outline text-xs shrink-0">
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+              <p className="text-[11px] text-ink-500">
+                The link shows only your open future slots and only allows new bookings on this teacher's slots. Each slot is single-booking — once filled, it disappears.
+              </p>
+            </div>
+            <footer className="px-5 py-3 border-t border-ink-200 dark:border-ink-800 flex justify-end gap-2 bg-ink-50/50 dark:bg-ink-900">
+              <button onClick={() => setShareLink(null)} className="btn-primary">Done</button>
+            </footer>
+          </div>
         </div>
       )}
     </div>

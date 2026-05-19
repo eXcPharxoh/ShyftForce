@@ -2,6 +2,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bed, Loader2, Plus, X, Check, Users } from "lucide-react";
+import { CsvImportButton } from "@/components/ui/csv-import-button";
+
+const SAMPLE_CSV = `number,floor,type,notes
+101,1,standard,
+102,1,standard,Near elevator
+201,2,suite,Corner suite with view`;
 
 type Room = {
   id: string; number: string; floor: number | null; type: string; status: string; notes: string | null;
@@ -107,7 +113,17 @@ export function RoomsClient({
             <button key={f.v} onClick={() => setFilter(f.v)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${filter === f.v ? "bg-white dark:bg-ink-900 shadow" : ""}`}>{f.l}</button>
           ))}
         </div>
-        {isManager && <button onClick={() => setOpen(true)} className="btn-primary text-sm"><Plus className="w-4 h-4" /> Add room</button>}
+        {isManager && (
+          <div className="flex items-center gap-2">
+            <CsvImportButton
+              endpoint="/api/import/hotel-rooms"
+              label="Import CSV"
+              title="Bulk-import hotel rooms"
+              sampleCsv={SAMPLE_CSV}
+            />
+            <button onClick={() => setOpen(true)} className="btn-primary text-sm"><Plus className="w-4 h-4" /> Add room</button>
+          </div>
+        )}
       </div>
 
       {items.length === 0 ? (

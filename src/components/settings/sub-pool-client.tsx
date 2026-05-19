@@ -2,6 +2,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { GraduationCap, Loader2, Plus, X } from "lucide-react";
+import { CsvImportButton } from "@/components/ui/csv-import-button";
+
+const SAMPLE_CSV = `email,subjects,grades,hourlyRate
+alex@school.edu,Math|Science,6|7|8,35
+jordan@school.edu,English,9|10|11|12,38
+casey@school.edu,Art|Music,K|1|2|3|4|5,32`;
 
 type Sub = {
   id: string; memberId: string; name: string; email: string;
@@ -52,7 +58,13 @@ export function SubPoolClient({ initial, availableMembers }: { initial: Sub[]; a
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <CsvImportButton
+          endpoint="/api/import/sub-pool"
+          label="Import CSV"
+          title="Bulk-import substitute teachers"
+          sampleCsv={SAMPLE_CSV}
+        />
         <button onClick={() => setOpen(true)} className="btn-primary text-sm" disabled={availableMembers.length === 0}>
           <Plus className="w-4 h-4" /> Add to pool
         </button>

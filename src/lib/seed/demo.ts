@@ -21,6 +21,45 @@ export type DemoSeedSummary = {
 
 export async function runDemoSeed(db: PrismaClient): Promise<DemoSeedSummary> {
   // Wipe in dependency order
+  // Vertical-specific tables added in 2026 — wipe first since they reference shifts/members.
+  await db.subCalloutOffer.deleteMany().catch(() => {});
+  await db.subCallout.deleteMany().catch(() => {});
+  await db.conferenceBooking.deleteMany().catch(() => {});
+  await db.conferenceSlot.deleteMany().catch(() => {});
+  await db.subPoolMember.deleteMany().catch(() => {});
+  await db.classPeriod.deleteMany().catch(() => {});
+  await db.lostFoundItem.deleteMany().catch(() => {});
+  await db.hotelRoomAssignment.deleteMany().catch(() => {});
+  await db.hotelRoom.deleteMany().catch(() => {});
+  await db.safetyBriefingAck.deleteMany().catch(() => {});
+  await db.safetyBriefing.deleteMany().catch(() => {});
+  await db.equipmentAssignment.deleteMany().catch(() => {});
+  await db.equipment.deleteMany().catch(() => {});
+  await db.crewMembership.deleteMany().catch(() => {});
+  await db.crew.deleteMany().catch(() => {});
+  await db.ptSession.deleteMany().catch(() => {});
+  await db.classOccurrence.deleteMany().catch(() => {});
+  await db.fitnessClass.deleteMany().catch(() => {});
+  await db.visitor.deleteMany().catch(() => {});
+  await db.meetingRoomBooking.deleteMany().catch(() => {});
+  await db.meetingRoom.deleteMany().catch(() => {});
+  await db.hotDeskBooking.deleteMany().catch(() => {});
+  await db.hotDesk.deleteMany().catch(() => {});
+  await db.vmTaskSubmission.deleteMany().catch(() => {});
+  await db.vmTask.deleteMany().catch(() => {});
+  await db.lossPreventionEvent.deleteMany().catch(() => {});
+  await db.shrinkEvent.deleteMany().catch(() => {});
+  await db.laneAssignment.deleteMany().catch(() => {});
+  await db.posLane.deleteMany().catch(() => {});
+  await db.departmentMembership.deleteMany().catch(() => {});
+  await db.department.deleteMany().catch(() => {});
+  await db.jobCloseout.deleteMany().catch(() => {});
+  await db.vehicleAssignment.deleteMany().catch(() => {});
+  await db.vehicle.deleteMany().catch(() => {});
+  await db.onCallShift.deleteMany().catch(() => {});
+  await db.shiftDifferential.deleteMany().catch(() => {});
+  await db.patientRatioRule.deleteMany().catch(() => {});
+
   await db.billboardRead.deleteMany();
   await db.billboardPost.deleteMany();
   await db.message.deleteMany();
@@ -347,6 +386,190 @@ export async function runDemoSeed(db: PrismaClient): Promise<DemoSeedSummary> {
         organizationId: org.id, authorId: admin.member!.id,
         title: p.title, body: p.body, category: "announcement",
       })),
+    }),
+  ]);
+
+  // ---------- Vertical-feature samples ----------
+  // The demo org is "security" by industry, but to make the cross-vertical
+  // features non-empty when a demo viewer clicks around, we sprinkle a small
+  // amount of representative data into each new table. This is what someone
+  // exploring /rooms, /classes, /shrink, /vm-tasks, etc. will see.
+  const firstLoc = locations[0];
+  const firstMgr = managers[0].member!;
+  const firstEmp = employees[0].member!;
+  const secondEmp = employees[1]?.member ?? firstEmp;
+  await Promise.all([
+    // Departments (for grocery/retail demo)
+    db.department.createMany({
+      data: [
+        { organizationId: org.id, name: "Patrol", color: "#6366f1" },
+        { organizationId: org.id, name: "Dispatch", color: "#10b981" },
+        { organizationId: org.id, name: "Console", color: "#f59e0b" },
+      ],
+    }),
+    // Shrink events
+    db.shrinkEvent.createMany({
+      data: [
+        { organizationId: org.id, reason: "theft",    productName: "Tablet (display)", quantity: 1, unitValueCents: 19999, totalValueCents: 19999, reportedById: firstEmp.id },
+        { organizationId: org.id, reason: "damage",   productName: "Radio handset",    quantity: 2, unitValueCents: 14500, totalValueCents: 29000, reportedById: firstEmp.id },
+        { organizationId: org.id, reason: "spoilage", productName: "Sample produce",   quantity: 5, unitValueCents: 350,   totalValueCents: 1750,  reportedById: secondEmp.id },
+      ],
+    }),
+    // Loss prevention
+    db.lossPreventionEvent.createMany({
+      data: [
+        { organizationId: org.id, type: "shoplift",       description: "Suspect concealed merchandise in jacket; recovered at exit.", valueCents: 4500, reportedById: firstEmp.id },
+        { organizationId: org.id, type: "register_error", description: "Cashier short $20 at end of shift.", valueCents: 2000, reportedById: firstMgr.id },
+      ],
+    }),
+    // VM tasks
+    db.vmTask.createMany({
+      data: [
+        { organizationId: org.id, name: "Window display refresh",  assignedToMemberId: firstEmp.id,  requirePhoto: true, status: "open", dueDate: new Date(Date.now() + 2 * 86400_000) },
+        { organizationId: org.id, name: "Endcap set — summer",     assignedToMemberId: secondEmp.id, requirePhoto: true, status: "done" },
+        { organizationId: org.id, name: "Mannequin re-style",      assignedToMemberId: firstEmp.id,  requirePhoto: false, status: "open" },
+      ],
+    }),
+    // POS lanes
+    db.posLane.createMany({
+      data: [
+        { organizationId: org.id, locationId: firstLoc.id, number: 1, name: "Main",    type: "standard" },
+        { organizationId: org.id, locationId: firstLoc.id, number: 2, name: "Express", type: "express" },
+        { organizationId: org.id, locationId: firstLoc.id, number: 3, name: "Self-checkout 1", type: "self_checkout" },
+      ],
+    }),
+    // Hot desks
+    db.hotDesk.createMany({
+      data: [
+        { organizationId: org.id, name: "Desk 1",  zone: "Open floor", hasMonitor: true },
+        { organizationId: org.id, name: "Desk 2",  zone: "Open floor", hasMonitor: true, hasStanding: true },
+        { organizationId: org.id, name: "Desk 3",  zone: "Engineering", hasMonitor: true },
+      ],
+    }),
+    // Meeting rooms
+    db.meetingRoom.createMany({
+      data: [
+        { organizationId: org.id, name: "Olympus", capacity: 8,  hasVideo: true, hasWhiteboard: true },
+        { organizationId: org.id, name: "Phone Booth A", capacity: 1, hasVideo: false },
+      ],
+    }),
+    // Visitor (on-site now)
+    db.visitor.create({
+      data: {
+        organizationId: org.id, name: "Maria Johnson", company: "Acme Corp",
+        hostMemberId: firstMgr.id, badgeNumber: "V-001", purpose: "Quarterly business review",
+      },
+    }),
+    // Fitness classes
+    (async () => {
+      const c1 = await db.fitnessClass.create({ data: { organizationId: org.id, name: "Bootcamp", durationMins: 45, capacity: 16, color: "#ef4444" } });
+      const c2 = await db.fitnessClass.create({ data: { organizationId: org.id, name: "Yoga",     durationMins: 60, capacity: 20, color: "#10b981" } });
+      await db.classOccurrence.createMany({
+        data: [
+          { fitnessClassId: c1.id, instructorMemberId: firstEmp.id,  startsAt: new Date(Date.now() + 86400_000),       endsAt: new Date(Date.now() + 86400_000 + 45*60_000) },
+          { fitnessClassId: c2.id, instructorMemberId: secondEmp.id, startsAt: new Date(Date.now() + 2*86400_000),     endsAt: new Date(Date.now() + 2*86400_000 + 60*60_000) },
+        ],
+      });
+    })(),
+    // PT sessions
+    db.ptSession.create({
+      data: {
+        organizationId: org.id, trainerMemberId: firstEmp.id,
+        clientName: "Alex Chen", clientPhone: "+15555550101",
+        startsAt: new Date(Date.now() + 3 * 86400_000),
+        endsAt:   new Date(Date.now() + 3 * 86400_000 + 3600_000),
+        rateCents: 8000, trainerSplitPct: 70, status: "booked",
+      },
+    }),
+    // Construction crew + equipment + safety briefing
+    (async () => {
+      const crew = await db.crew.create({ data: { organizationId: org.id, name: "Alpha Crew", color: "#f59e0b", foremanId: firstMgr.id } });
+      await db.crewMembership.createMany({
+        data: [
+          { crewId: crew.id, memberId: firstEmp.id,  role: "crew", isPrimary: true },
+          { crewId: crew.id, memberId: secondEmp.id, role: "lead", isPrimary: true },
+        ],
+      });
+      await db.equipment.createMany({
+        data: [
+          { organizationId: org.id, name: "Generator 7500W", category: "machine",     status: "available" },
+          { organizationId: org.id, name: "Scaffolding kit", category: "scaffolding", status: "in_use" },
+          { organizationId: org.id, name: "Hard hats (×12)", category: "safety_gear", status: "available" },
+        ],
+      });
+      const briefing = await db.safetyBriefing.create({
+        data: { organizationId: org.id, postedById: firstMgr.id, topic: "Trench safety", details: "Working in 6'+ trenches today. Shoring required on all trenches deeper than 5'." },
+      });
+      await db.safetyBriefingAck.create({ data: { briefingId: briefing.id, memberId: firstEmp.id } });
+    })(),
+    // Hotel rooms
+    (async () => {
+      const rooms = await Promise.all([
+        db.hotelRoom.create({ data: { organizationId: org.id, number: "101", floor: 1, type: "standard", status: "clean" } }),
+        db.hotelRoom.create({ data: { organizationId: org.id, number: "102", floor: 1, type: "standard", status: "dirty" } }),
+        db.hotelRoom.create({ data: { organizationId: org.id, number: "201", floor: 2, type: "suite",    status: "cleaning" } }),
+        db.hotelRoom.create({ data: { organizationId: org.id, number: "202", floor: 2, type: "standard", status: "clean" } }),
+      ]);
+      await db.hotelRoomAssignment.create({
+        data: { hotelRoomId: rooms[2].id, memberId: firstEmp.id, startedAt: new Date(Date.now() - 25*60_000) },
+      });
+    })(),
+    // Lost & found
+    db.lostFoundItem.createMany({
+      data: [
+        { organizationId: org.id, description: "Silver iPhone with rose-gold case", foundLocation: "Pool deck",  loggedById: firstEmp.id,  status: "unclaimed" },
+        { organizationId: org.id, description: "Black leather wallet (no ID inside)", foundLocation: "Room 312", loggedById: secondEmp.id, status: "unclaimed" },
+        { organizationId: org.id, description: "Kids' jacket — red, size 6",        foundLocation: "Lobby couch", loggedById: firstEmp.id,  status: "claimed", claimedBy: "Sarah Park", claimedAt: new Date(Date.now() - 2*86400_000) },
+      ],
+    }),
+    // Education samples
+    (async () => {
+      // Bell schedule
+      await db.classPeriod.createMany({
+        data: [
+          { organizationId: org.id, number: 1, name: "1st",   startTime: "08:00", endTime: "08:50", daysOfWeek: "[1,2,3,4,5]" },
+          { organizationId: org.id, number: 2, name: "2nd",   startTime: "08:55", endTime: "09:45", daysOfWeek: "[1,2,3,4,5]" },
+          { organizationId: org.id, number: 3, name: "3rd",   startTime: "09:50", endTime: "10:40", daysOfWeek: "[1,2,3,4,5]" },
+          { organizationId: org.id, number: 4, name: "Lunch", startTime: "11:35", endTime: "12:15", daysOfWeek: "[1,2,3,4,5]" },
+        ],
+      });
+      // Sub pool (2 members)
+      await db.subPoolMember.createMany({
+        data: [
+          { organizationId: org.id, memberId: firstEmp.id,  subjects: JSON.stringify(["Math", "Science"]), grades: JSON.stringify(["6","7","8"]), hourlyRateCents: 3500, preferredContactHour: 6, latestContactHour: 20 },
+          { organizationId: org.id, memberId: secondEmp.id, subjects: JSON.stringify(["English"]),         grades: JSON.stringify(["9","10","11","12"]), hourlyRateCents: 3500, preferredContactHour: 7, latestContactHour: 19 },
+        ],
+      });
+      // Conference slots
+      const slotStart = new Date(); slotStart.setDate(slotStart.getDate() + 5); slotStart.setHours(15, 0, 0, 0);
+      for (let i = 0; i < 4; i++) {
+        const s = new Date(slotStart.getTime() + i * 15 * 60_000);
+        const e = new Date(s.getTime() + 15 * 60_000);
+        await db.conferenceSlot.create({
+          data: { organizationId: org.id, teacherMemberId: firstMgr.id, startsAt: s, endsAt: e },
+        });
+      }
+    })(),
+    // Patient ratio rule (healthcare)
+    db.patientRatioRule.create({
+      data: { organizationId: org.id, unit: "med_surg", role: "RN", patientCount: 5, staffCount: 1 },
+    }),
+    // Shift differential
+    db.shiftDifferential.create({
+      data: { organizationId: org.id, name: "Night shift (+15%)", kind: "night", startHour: 22, endHour: 6, multiplier: 1.15 },
+    }),
+    // On-call shift
+    db.onCallShift.create({
+      data: {
+        organizationId: org.id, memberId: firstEmp.id,
+        startsAt: new Date(Date.now() + 7 * 86400_000),
+        endsAt:   new Date(Date.now() + 8 * 86400_000),
+        stipendCents: 5000, calledInPremiumMultiplier: 1.5,
+      },
+    }),
+    // Vehicle
+    db.vehicle.create({
+      data: { organizationId: org.id, name: "Van 1", licensePlate: "ABC-123", make: "Ford", model: "Transit", year: 2024, status: "active" },
     }),
   ]);
 

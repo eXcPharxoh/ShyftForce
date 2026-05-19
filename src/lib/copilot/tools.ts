@@ -150,6 +150,109 @@ export const TOOLS: Tool[] = [
       required: ["shiftId"],
     },
   },
+
+  // -------- Vertical-specific tools --------
+
+  // Hospitality
+  {
+    name: "get_room_status",
+    description: "Hospitality: get hotel room status board. Returns summary (clean/dirty/cleaning/out_of_order counts) and per-room details with the current housekeeper. Optionally filter by status.",
+    input_schema: {
+      type: "object",
+      properties: {
+        status: { type: "string", enum: ["clean", "dirty", "cleaning", "out_of_order"], description: "Filter to only this status" },
+      },
+    },
+  },
+  {
+    name: "assign_room",
+    description: "Hospitality: assign a housekeeper to a room (creates HotelRoomAssignment + flips room to cleaning). Manager+ only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        roomNumber:      { type: "string", description: "Hotel room number, e.g. '301'" },
+        housekeeperName: { type: "string", description: "Housekeeper's name" },
+      },
+      required: ["roomNumber", "housekeeperName"],
+    },
+  },
+  {
+    name: "list_lost_found",
+    description: "Hospitality: list lost & found items. Filter by status (unclaimed | claimed | discarded) and look-back days (default 30).",
+    input_schema: {
+      type: "object",
+      properties: {
+        status: { type: "string", enum: ["unclaimed", "claimed", "discarded"] },
+        days:   { type: "number", description: "Look-back window in days (default 30)" },
+      },
+    },
+  },
+
+  // Education
+  {
+    name: "list_open_callouts",
+    description: "Education: list active substitute-teacher callouts (status=open). Returns teacher name, location, scheduled shift time, how many subs were paged, and when it expires.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "trigger_sub_callout",
+    description: "Education: page substitute teachers for a specific teacher's next upcoming shift. Manager+ only. The system finds matched subs by subjects/grades and SMS-pages them with first-respond-wins claim links.",
+    input_schema: {
+      type: "object",
+      properties: {
+        teacherName: { type: "string", description: "Name of the teacher who called out (matched by substring)" },
+        subjects:    { type: "array", items: { type: "string" }, description: "Subjects to filter the pool by, e.g. ['Math', 'Science']" },
+        grades:      { type: "array", items: { type: "string" } },
+        notes:       { type: "string", description: "Free-text included in the SMS to subs" },
+      },
+      required: ["teacherName"],
+    },
+  },
+
+  // Retail
+  {
+    name: "list_open_vm_tasks",
+    description: "Retail: list open visual-merchandising tasks. Returns name, assignee, due date, and overdue flag.",
+    input_schema: { type: "object", properties: {} },
+  },
+
+  // Grocery
+  {
+    name: "log_shrink",
+    description: "Grocery: log a shrink event (lost merchandise). Manager+ only. Useful when the user says 'log $40 of strawberries spoiled in Produce'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        reason:           { type: "string", enum: ["damage", "spoilage", "theft", "expired", "return", "other"] },
+        productName:      { type: "string" },
+        quantity:         { type: "number" },
+        unitValueDollars: { type: "number", description: "Per-unit value in dollars" },
+        notes:            { type: "string" },
+      },
+      required: ["reason", "productName"],
+    },
+  },
+
+  // Construction
+  {
+    name: "post_safety_briefing",
+    description: "Construction: post a daily safety briefing. All crew must acknowledge before clocking in. Manager+ only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        topic:   { type: "string", description: "Brief title, e.g. 'Trench safety'" },
+        details: { type: "string", description: "Optional longer description" },
+      },
+      required: ["topic"],
+    },
+  },
+
+  // Fitness
+  {
+    name: "today_classes",
+    description: "Fitness: list today's group fitness classes with instructor, time, room, and attendees.",
+    input_schema: { type: "object", properties: {} },
+  },
 ];
 
 // ---------- Helpers ----------
@@ -412,6 +515,179 @@ export async function runTool(name: string, input: any, user: SessionUser) {
       } catch (e: any) {
         return { error: e.message ?? "auto-offer failed" };
       }
+    }
+
+    case "get_room_status": {
+      const rooms = await prisma.hotelRoom.findMany({
+        where: { organizationId: orgId },
+        include: {
+          assignments: {
+            where: { completedAt: null },
+            include: { member: { include: { user: { select: { name: true } } } } },
+            orderBy: { createdAt: "desc" }, take: 1,
+          },
+        },
+        orderBy: [{ floor: "asc" }, { number: "asc" }],
+      });
+      const summary: Record<string, number> = { clean: 0, dirty: 0, cleaning: 0, out_of_order: 0 };
+      for (const r of rooms) summary[r.status] = (summary[r.status] ?? 0) + 1;
+      const filter = input.status as string | undefined;
+      const filtered = filter ? rooms.filter(r => r.status === filter) : rooms;
+      return {
+        summary,
+        rooms: filtered.slice(0, 50).map(r => ({
+          number: r.number, floor: r.floor, type: r.type, status: r.status,
+          housekeeper: r.assignments[0]?.member.user.name ?? null,
+        })),
+      };
+    }
+
+    case "assign_room": {
+      if (!isManager(user)) return forbid();
+      const room = await prisma.hotelRoom.findFirst({
+        where: { number: input.roomNumber, organizationId: orgId },
+      });
+      if (!room) return { error: `Room ${input.roomNumber} not found` };
+      const housekeeper = await findMemberByName(orgId, input.housekeeperName);
+      if (!housekeeper) return { error: `Member not found: ${input.housekeeperName}` };
+      await prisma.hotelRoomAssignment.create({
+        data: { hotelRoomId: room.id, memberId: housekeeper.id, startedAt: new Date() },
+      });
+      await prisma.hotelRoom.update({ where: { id: room.id }, data: { status: "cleaning" } });
+      return { ok: true, room: room.number, housekeeper: input.housekeeperName };
+    }
+
+    case "list_lost_found": {
+      const items = await prisma.lostFoundItem.findMany({
+        where: {
+          organizationId: orgId,
+          ...(input.status ? { status: input.status } : {}),
+          foundAt: { gte: addDays(new Date(), -(input.days ?? 30)) },
+        },
+        orderBy: { foundAt: "desc" }, take: 25,
+      });
+      return {
+        items: items.map(i => ({
+          description: i.description, location: i.foundLocation,
+          status: i.status, foundAt: dateLabel(i.foundAt),
+          claimedBy: i.claimedBy,
+        })),
+      };
+    }
+
+    case "list_open_callouts": {
+      const callouts = await prisma.subCallout.findMany({
+        where: { organizationId: orgId, status: "open" },
+        include: {
+          shift: { include: { member: { include: { user: true } }, location: true } },
+          offers: true,
+        },
+        orderBy: { createdAt: "desc" }, take: 20,
+      });
+      return {
+        callouts: callouts.map(c => ({
+          id: c.id,
+          teacher: c.shift.member?.user.name ?? "(unassigned)",
+          location: c.shift.location.name,
+          startsAt: dateLabel(c.shift.startsAt),
+          subsPaged: c.offers.length,
+          expiresAt: c.expiresAt.toISOString(),
+        })),
+      };
+    }
+
+    case "trigger_sub_callout": {
+      if (!isManager(user)) return forbid();
+      const shift = await prisma.shift.findFirst({
+        where: { location: { organizationId: orgId }, member: { user: { name: { contains: input.teacherName } } }, startsAt: { gte: new Date() } },
+        orderBy: { startsAt: "asc" },
+        include: { member: { include: { user: true } }, location: true },
+      });
+      if (!shift) return { error: `No upcoming shift found for "${input.teacherName}"` };
+      const { startCallout } = await import("@/lib/education/sub-callout");
+      try {
+        const callout = await startCallout({
+          organizationId: orgId, shiftId: shift.id,
+          triggeredById:  user.memberId,
+          subjects: input.subjects ?? [],
+          grades:   input.grades ?? [],
+          notes:    input.notes ?? null,
+          baseUrl:  process.env.NEXT_PUBLIC_APP_URL ?? "https://app.shyftforce.com",
+        });
+        return {
+          ok: true, teacher: shift.member?.user.name,
+          shiftAt: dateLabel(shift.startsAt),
+          subsPaged: callout.offers.length,
+          expiresAt: callout.expiresAt.toISOString(),
+        };
+      } catch (e: any) { return { error: e.message }; }
+    }
+
+    case "list_open_vm_tasks": {
+      const tasks = await prisma.vmTask.findMany({
+        where: { organizationId: orgId, status: "open" },
+        include: { assignedTo: { include: { user: true } } },
+        orderBy: { dueDate: "asc" }, take: 30,
+      });
+      const now = new Date();
+      return {
+        tasks: tasks.map(t => ({
+          name: t.name,
+          assignedTo: t.assignedTo?.user.name ?? "(unassigned)",
+          dueDate: t.dueDate ? dateLabel(t.dueDate) : null,
+          overdue: t.dueDate ? t.dueDate < now : false,
+          requirePhoto: t.requirePhoto,
+        })),
+      };
+    }
+
+    case "log_shrink": {
+      if (!isManager(user)) return forbid();
+      const total = Math.round((input.unitValueDollars ?? 0) * 100 * (input.quantity ?? 1));
+      const e = await prisma.shrinkEvent.create({
+        data: {
+          organizationId: orgId,
+          reportedById:   user.memberId ?? null,
+          reason:         input.reason,
+          productName:    input.productName,
+          quantity:       input.quantity ?? 1,
+          unitValueCents: Math.round((input.unitValueDollars ?? 0) * 100),
+          totalValueCents: total,
+          notes:          input.notes ?? null,
+        },
+      });
+      return { ok: true, id: e.id, valueDollars: total / 100 };
+    }
+
+    case "post_safety_briefing": {
+      if (!isManager(user)) return forbid();
+      const b = await prisma.safetyBriefing.create({
+        data: {
+          organizationId: orgId, postedById: user.memberId ?? null,
+          topic: input.topic, details: input.details ?? null,
+        },
+      });
+      return { ok: true, id: b.id, topic: b.topic };
+    }
+
+    case "today_classes": {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today.getTime() + 86400_000);
+      const items = await prisma.classOccurrence.findMany({
+        where: { fitnessClass: { organizationId: orgId }, startsAt: { gte: today, lt: tomorrow } },
+        include: { fitnessClass: true, instructor: { include: { user: true } } },
+        orderBy: { startsAt: "asc" },
+      });
+      return {
+        classes: items.map(o => ({
+          name: o.fitnessClass.name,
+          instructor: o.instructor.user.name,
+          startsAt: timeLabel(o.startsAt),
+          room: o.room,
+          status: o.status,
+          attendees: `${o.attendees}/${o.fitnessClass.capacity}`,
+        })),
+      };
     }
 
     case "check_compliance": {

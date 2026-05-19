@@ -30,6 +30,14 @@ export async function buildUserExport(userId: string): Promise<{ payload: any; s
   const [
     attendanceLogs, shifts, timeOff, expenses, kudos, messages, swaps,
     enrollments, reviews, bids, certifications, auditLogs,
+    // Vertical-specific records
+    departmentMemberships, laneAssignments, shrinkEvents, vmTaskAssignments,
+    vmTaskSubmissions, lpEventsReported, hotDeskBookings, meetingRoomBookings,
+    visitorHostings, classOccurrencesAsInstructor, ptSessionsAsTrainer,
+    crewMemberships, crewsAsForeman, equipmentAssignments, safetyBriefingsPosted,
+    safetyBriefingAcks, hotelRoomAssignments, lostFoundLogged,
+    subPoolMembership, conferenceSlots, conferenceBookings,
+    onCallShifts, vehicleAssignments, jobCloseouts,
   ] = memberId ? await Promise.all([
     prisma.attendanceLog.findMany({ where: { memberId } }),
     prisma.shift.findMany({ where: { memberId } }),
@@ -43,7 +51,36 @@ export async function buildUserExport(userId: string): Promise<{ payload: any; s
     prisma.shiftBid.findMany({ where: { memberId } }),
     prisma.memberCertification.findMany({ where: { memberId } }),
     prisma.auditLog.findMany({ where: { actorId: userId }, take: 1000, orderBy: { createdAt: "desc" } }),
-  ]) : [[], [], [], [], [], [], [], [], [], [], [], []];
+    // Vertical-specific
+    prisma.departmentMembership.findMany({ where: { memberId } }),
+    prisma.laneAssignment.findMany({ where: { memberId } }),
+    prisma.shrinkEvent.findMany({ where: { reportedById: memberId } }),
+    prisma.vmTask.findMany({ where: { assignedToMemberId: memberId } }),
+    prisma.vmTaskSubmission.findMany({ where: { memberId } }),
+    prisma.lossPreventionEvent.findMany({ where: { reportedById: memberId } }),
+    prisma.hotDeskBooking.findMany({ where: { memberId } }),
+    prisma.meetingRoomBooking.findMany({ where: { organizerId: memberId } }),
+    prisma.visitor.findMany({ where: { hostMemberId: memberId } }),
+    prisma.classOccurrence.findMany({ where: { instructorMemberId: memberId } }),
+    prisma.ptSession.findMany({ where: { trainerMemberId: memberId } }),
+    prisma.crewMembership.findMany({ where: { memberId } }),
+    prisma.crew.findMany({ where: { foremanId: memberId } }),
+    prisma.equipmentAssignment.findMany({ where: { memberId } }),
+    prisma.safetyBriefing.findMany({ where: { postedById: memberId } }),
+    prisma.safetyBriefingAck.findMany({ where: { memberId } }),
+    prisma.hotelRoomAssignment.findMany({ where: { memberId } }),
+    prisma.lostFoundItem.findMany({ where: { loggedById: memberId } }),
+    prisma.subPoolMember.findUnique({ where: { memberId } }),
+    prisma.conferenceSlot.findMany({ where: { teacherMemberId: memberId } }),
+    prisma.conferenceBooking.findMany({ where: { bookedById: memberId } }),
+    prisma.onCallShift.findMany({ where: { memberId } }),
+    prisma.vehicleAssignment.findMany({ where: { memberId } }),
+    prisma.jobCloseout.findMany({ where: { memberId } }),
+  ]) : [
+    [], [], [], [], [], [], [], [], [], [], [], [],
+    [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
+    [], [], null, [], [], [], [], [],
+  ];
 
   const exported = {
     exportFormat: "ShyftForce.DataExport.v1",
@@ -81,6 +118,20 @@ export async function buildUserExport(userId: string): Promise<{ payload: any; s
     attendanceLogs, shifts, timeOff, expenses, kudos, messages, swaps,
     courseEnrollments: enrollments, performanceReviews: reviews, shiftBids: bids,
     certifications, auditLogs,
+    // Vertical-specific tables (per RFC: surface every personal-data table)
+    verticalData: {
+      departmentMemberships, laneAssignments, shrinkEvents,
+      vmTasksAssignedToYou: vmTaskAssignments, vmTaskSubmissions,
+      lossPreventionEventsReported: lpEventsReported,
+      hotDeskBookings, meetingRoomBookings,
+      visitorsYouHosted: visitorHostings,
+      classOccurrencesAsInstructor, ptSessionsAsTrainer,
+      crewMemberships, crewsAsForeman,
+      equipmentAssignments, safetyBriefingsYouPosted: safetyBriefingsPosted, safetyBriefingAcks,
+      hotelRoomAssignments, lostFoundItemsLogged: lostFoundLogged,
+      subPoolMembership, conferenceSlots, conferenceBookings,
+      onCallShifts, vehicleAssignments, jobCloseouts,
+    },
   };
 
   const json = JSON.stringify(exported);
