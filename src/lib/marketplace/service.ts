@@ -3,6 +3,7 @@ import { addDays, startOfWeek } from "@/lib/utils";
 import { rankCandidates, WAVES, type RankedCandidate, type WavePlan } from "./ranker";
 import { smsShiftOffer } from "@/lib/sms";
 import { emitWebhook } from "@/lib/webhooks/emit";
+import { blockedMemberIds } from "@/lib/permits/service";
 
 export async function rankForShift(shiftId: string, organizationId: string, opts?: { excludeMemberIds?: string[] }) {
   const shift = await prisma.shift.findUnique({
@@ -14,6 +15,12 @@ export async function rankForShift(shiftId: string, organizationId: string, opts
 
   const weekStart = startOfWeek(shift.startsAt);
   const weekEnd   = addDays(weekStart, 7);
+
+  // Any member whose mandatory permit is expired gets filtered out before
+  // they can be offered/auto-assigned. Compliance enforcement at the source.
+  const blocked = await blockedMemberIds(organizationId);
+  const externalExclude = new Set(opts?.excludeMemberIds ?? []);
+  for (const id of blocked) externalExclude.add(id);
 
   const candidates = await prisma.member.findMany({
     where: {
@@ -37,7 +44,7 @@ export async function rankForShift(shiftId: string, organizationId: string, opts
       shiftsThisWeek: c.shifts.map(s => ({ id: s.id, startsAt: s.startsAt, endsAt: s.endsAt })),
       approvedTimeOff: c.timeOffRequests.map(t => ({ startsOn: t.startsOn, endsOn: t.endsOn })),
     })),
-    excludeMemberIds: opts?.excludeMemberIds,
+    excludeMemberIds: Array.from(externalExclude),
   });
 
   return { shift, ranked };

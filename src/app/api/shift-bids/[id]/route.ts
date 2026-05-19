@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/session";
 import { audit } from "@/lib/audit";
 import { smsScheduleChange } from "@/lib/sms";
 import { sendPush } from "@/lib/push";
+import { memberHasExpiredBlockingPermit } from "@/lib/permits/service";
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
@@ -45,6 +46,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!bid) return NextResponse.json({ error: "Bid not found" }, { status: 404 });
   if (!bid.shift.isOpen || bid.shift.memberId) {
     return NextResponse.json({ error: "Shift already filled" }, { status: 409 });
+  }
+  // Compliance block — refuse to award to an expired-permit guard
+  if (await memberHasExpiredBlockingPermit(bid.memberId)) {
+    return NextResponse.json({
+      error: `${bid.member.user.name}'s permit is expired. Renew before awarding.`,
+      blockedByPermit: true,
+    }, { status: 409 });
   }
 
   await prisma.$transaction(async (tx) => {

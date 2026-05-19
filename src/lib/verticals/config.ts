@@ -91,6 +91,7 @@ const M = {
   training:        { href: "/training",                 label: "Training",          icon: GraduationCap },
   reviews:         { href: "/hr/reviews",               label: "Performance reviews", icon: ClipboardCheck },
   customRoles:     { href: "/settings/custom-roles",    label: "Roles & permissions", icon: ShieldHalf },
+  permits:         { href: "/settings/permits",         label: "Permits & licences", icon: ShieldAlert },
 } as const;
 
 // --- Vertical configs ---
@@ -121,6 +122,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.locations }, { ...M.integrations }, { ...M.audit }, { ...M.surveys },
       { ...M.notifications }, { ...M.security },
       { ...M.training }, { ...M.reviews },
+      { ...M.permits, role: "manager" },
       { ...M.webhooks, role: "manager" },
       { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
       { ...M.customRoles, role: "manager" },
@@ -131,10 +133,11 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
 
   security: {
     key: "security", label: "Security Services", emoji: "🛡️",
-    pitch: "Incident reports, checkpoint tours, and per-client billing — built for guard companies.",
+    pitch: "Incident reports, checkpoint tours, permit tracking, and per-client billing — built for guard companies.",
     modules: [
       { ...M.dashboard,    primary: true },
       { ...M.schedule,     primary: true },
+      { ...M.permits,      primary: true, highlight: true, role: "manager" },
       { ...M.incidents,    primary: true, highlight: true },
       { ...M.checkpoints,  primary: true, highlight: true, role: "manager" },
       { ...M.clients,      primary: true, highlight: true, role: "manager" },
@@ -156,6 +159,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.locations }, { ...M.integrations }, { ...M.audit }, { ...M.surveys },
       { ...M.notifications }, { ...M.security },
       { ...M.training }, { ...M.reviews },
+      { ...M.permits, role: "manager" },
       { ...M.webhooks, role: "manager" },
       { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
       { ...M.customRoles, role: "manager" },
@@ -191,6 +195,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.locations }, { ...M.integrations }, { ...M.audit }, { ...M.surveys },
       { ...M.notifications }, { ...M.security },
       { ...M.training }, { ...M.reviews },
+      { ...M.permits, role: "manager" },
       { ...M.webhooks, role: "manager" },
       { ...M.apiKeys, role: "manager" }, { ...M.kiosks, role: "manager" },
       { ...M.customRoles, role: "manager" },
@@ -251,6 +256,7 @@ function defaultModules(opts: { hideTips?: boolean; hideIncidents?: boolean; hid
     { ...M.security },
     { ...M.training },
     { ...M.reviews },
+    { ...M.permits, role: "manager" },
     { ...M.webhooks, role: "manager" },
     { ...M.apiKeys, role: "manager" },
     { ...M.kiosks, role: "manager" },

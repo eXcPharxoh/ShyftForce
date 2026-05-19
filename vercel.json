@@ -1,8 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/coverage/tick",      "schedule": "0 9 * * *"  },
-    { "path": "/api/pos/sync",           "schedule": "0 10 * * *" },
-    { "path": "/api/network/reputation", "schedule": "0 11 * * *" }
+    { "path": "/api/coverage/tick",       "schedule": "0 9 * * *"  },
+    { "path": "/api/pos/sync",            "schedule": "0 10 * * *" },
+    { "path": "/api/network/reputation",  "schedule": "0 11 * * *" },
+    { "path": "/api/cron/permit-reminders","schedule": "0 13 * * *" }
   ]
 }

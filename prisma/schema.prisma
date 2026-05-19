@@ -75,6 +75,7 @@ model Organization {
   customRoles             CustomRole[]
   courses                 Course[]
   reviewCycles            ReviewCycle[]
+  permits                 Permit[]
 }
 
 model ComplianceSettings {
@@ -838,6 +839,7 @@ model Member {
   shiftBids               ShiftBid[]
   reviewsAsSubject        PerformanceReview[]      @relation("ReviewSubject")
   reviewsAsReviewer       PerformanceReview[]      @relation("ReviewReviewer")
+  permits                 Permit[]
 
   @@index([organizationId, status])
   @@index([organizationId, locationId])
@@ -1444,4 +1446,65 @@ model PerformanceReview {
   @@unique([cycleId, subjectMemberId, reviewerMemberId])
   @@index([subjectMemberId, submittedAt])
   @@index([reviewerMemberId, submittedAt])
+}
+
+// ============================================================================
+// Permits & licences. Distinct from MemberCertification because:
+//   - permits are MANDATORY for legal operation (block scheduling on expiry)
+//   - they have escalating reminder cadences (60/30/14/7/0/expired)
+//   - they track the actual renewal fee for budgeting
+//   - they can be org-level (agency licence) OR member-level (per-guard licence)
+//
+// Pre-configured categories cover security, healthcare, food service, and
+// transport — the most common regulated verticals. "custom" is the escape hatch.
+// ============================================================================
+model Permit {
+  id             String  @id @default(uuid())
+  organizationId String
+  memberId       String? // null = agency-level (e.g. company licence, insurance bond)
+
+  // Classification
+  category    String // "agency_license" | "guard_license" | "firearm" | "food_handler" | "rn_license" | "lpn_license" | "cpr" | "osha_30" | "cdl" | "alcohol_service" | "custom"
+  customLabel String? // when category="custom"
+
+  // Issuer details
+  regulator    String? // "Bureau de la sécurité privée (QC)", "California BSIS", etc.
+  permitNumber String?
+
+  // Dates
+  issuedOn  DateTime?
+  expiresOn DateTime
+
+  // Money — annual fee for budgeting + reminders
+  feeAmountCents Int?
+
+  // Renewal helpers — direct link to the regulator's portal
+  renewalUrl String?
+
+  // Reminder bookkeeping — which reminders we've already fired, so the daily
+  // cron doesn't spam the team.
+  reminder60dSentAt     DateTime?
+  reminder30dSentAt     DateTime?
+  reminder14dSentAt     DateTime?
+  reminder7dSentAt      DateTime?
+  reminderDaySentAt     DateTime?
+  reminderExpiredSentAt DateTime?
+
+  // Auto-enforcement. When true and expiresOn < now, the member with this
+  // permit is blocked from being scheduled to new shifts.
+  blocksScheduling Boolean @default(true)
+
+  // Attachments + notes
+  fileUrl String?
+  notes   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       Member?      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, expiresOn])
+  @@index([memberId, expiresOn])
+  @@index([expiresOn, blocksScheduling])
 }

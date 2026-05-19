@@ -12,6 +12,7 @@ import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 import { DashboardHero } from "@/components/dashboard/hero";
 import { VerticalWidgets } from "@/components/dashboard/vertical-widgets";
 import { TurnoverWidget } from "@/components/dashboard/turnover-widget";
+import { PermitExpiryWidget } from "@/components/dashboard/permit-expiry-widget";
 import { verticalFor } from "@/lib/verticals/config";
 
 export default async function Dashboard() {
@@ -120,6 +121,13 @@ export default async function Dashboard() {
 
       {(u.role === "ADMIN" || u.role === "MANAGER") && (
         <TurnoverWidget organizationId={u.organizationId} />
+      )}
+
+      {/* Permit widget is most valuable for regulated verticals.
+          Show it for security/healthcare/field-service; other verticals
+          can opt in by adding a permit (widget shows the empty-state CTA). */}
+      {(u.role === "ADMIN" || u.role === "MANAGER") && ["security", "healthcare", "field_service"].includes(u.organizationIndustry ?? "") && (
+        <PermitExpiryWidget organizationId={u.organizationId} />
       )}
 
       <div className="flex items-center justify-between gap-2">

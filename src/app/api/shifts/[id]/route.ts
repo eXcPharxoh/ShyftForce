@@ -6,6 +6,7 @@ import { recordPredictabilityIfOwed } from "@/lib/compliance/predictability";
 import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 import { smsScheduleChange } from "@/lib/sms";
 import { emitWebhook } from "@/lib/webhooks/emit";
+import { memberHasExpiredBlockingPermit } from "@/lib/permits/service";
 
 function combine(date: string, time: string): Date {
   const [y, mo, d] = date.split("-").map(Number);
@@ -45,6 +46,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     data.isOpen = !body.memberId;
   }
   if (body.isOpen !== undefined) data.isOpen = body.isOpen;
+
+  // Compliance block: refuse to assign a member whose mandatory permit is
+  // currently expired. Manager can either renew the permit or toggle
+  // blocksScheduling=false on that permit if they're knowingly making an
+  // exception (e.g. permit physically renewed, paperwork pending).
+  if (body.memberId && await memberHasExpiredBlockingPermit(body.memberId)) {
+    return NextResponse.json({
+      error: "This member has an expired permit that blocks scheduling. Renew the permit in Settings → Permits, or mark it as non-blocking.",
+      blockedByPermit: true,
+    }, { status: 409 });
+  }
 
   const updated = await prisma.shift.update({ where: { id }, data });
 
