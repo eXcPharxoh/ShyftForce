@@ -11,11 +11,25 @@ export default async function MorePage() {
   const groups: { label: string; items: typeof items }[] = [
     {
       label: "Money & retention",
-      items: items.filter((m) => ["/ewa", "/settings/ewa", "/reports/labor-live", "/settings/pos", "/reports/client-billing"].includes(m.href)),
+      items: items.filter((m) => ["/ewa", "/settings/ewa", "/reports/labor-live", "/settings/pos", "/reports/client-billing", "/tips", "/cash-drawer", "/settings/labor-target", "/reports/form-8027"].includes(m.href)),
     },
     {
       label: "Schedule & coverage",
       items: items.filter((m) => ["/schedule/coverage", "/schedule/forecast", "/settings/recurring-shifts", "/settings/availability"].includes(m.href)),
+    },
+    {
+      label: "Vertical-specific",
+      items: items.filter((m) => [
+        "/settings/departments", "/settings/pos-lanes", "/shrink",
+        "/vm-tasks", "/loss-prevention",
+        "/settings/hot-desks", "/settings/meeting-rooms", "/workspace", "/visitors",
+        "/settings/fitness-classes", "/classes", "/pt-sessions",
+        "/settings/crews", "/settings/equipment", "/safety",
+        "/rooms", "/lost-found",
+        "/settings/sub-pool", "/settings/class-periods", "/conferences",
+        "/settings/patient-ratios", "/settings/shift-differentials", "/on-call",
+        "/settings/vehicles", "/job-closeout",
+      ].includes(m.href)),
     },
     {
       label: "Network",
@@ -23,7 +37,7 @@ export default async function MorePage() {
     },
     {
       label: "People & policy",
-      items: items.filter((m) => ["/hr", "/documents", "/messenger", "/billboard", "/settings/pto", "/compliance", "/hr/surveys"].includes(m.href)),
+      items: items.filter((m) => ["/hr", "/documents", "/messenger", "/billboard", "/settings/pto", "/compliance", "/hr/surveys", "/training", "/hr/reviews", "/settings/checklists", "/stations", "/eighty-six"].includes(m.href)),
     },
     {
       label: "Reporting",
@@ -31,7 +45,7 @@ export default async function MorePage() {
     },
     {
       label: "Workspace",
-      items: items.filter((m) => ["/settings/billing", "/settings/locations", "/settings/integrations", "/settings/audit"].includes(m.href)),
+      items: items.filter((m) => ["/settings/billing", "/settings/locations", "/settings/integrations", "/settings/audit", "/settings/notifications", "/settings/security", "/settings/permits", "/settings/webhooks", "/settings/api-keys", "/settings/kiosks", "/settings/custom-roles", "/settings/checkpoints"].includes(m.href)),
     },
   ];
   const placed = new Set(groups.flatMap((g) => g.items.map((i) => i.href)));
