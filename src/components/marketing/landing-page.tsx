@@ -147,7 +147,7 @@ function Hero() {
             <span className="grad-text">The workforce platform</span>
             <br />
             <span className="grad-text">that </span>
-            <span className="grad-text-accent italic font-normal">runs itself.</span>
+            <span className="grad-text-accent font-normal">runs itself.</span>
           </h1>
         </Reveal>
 
@@ -444,7 +444,7 @@ function FeaturesBento() {
             <div className="eyebrow mb-4"><Bolt size={14} /> A workforce OS, not a spreadsheet</div>
             <h2 className="h-section-display max-w-[900px] mx-auto">
               <span className="grad-text">Everything you need.</span><br />
-              <span className="grad-text-accent italic font-normal">Nothing you don&apos;t.</span>
+              <span className="grad-text-accent font-normal">Nothing you don&apos;t.</span>
             </h2>
           </div>
         </Reveal>
@@ -662,7 +662,7 @@ function IndustriesSwitcher() {
             <div className="eyebrow mb-4"><Bolt size={14} /> One platform · 11 industries</div>
             <h2 className="h-section-display max-w-[800px] mx-auto">
               <span className="grad-text">Tuned for the way </span>
-              <span className="grad-text-accent italic font-normal">you work.</span>
+              <span className="grad-text-accent font-normal">you work.</span>
             </h2>
           </div>
         </Reveal>
@@ -807,7 +807,7 @@ function DeepDives() {
         <DeepDive
           number="01"
           eyebrow="AI Co-pilot"
-          title={<><span className="grad-text">Cmd+K, </span><span className="grad-text-accent italic font-normal">ask anything.</span></>}
+          title={<><span className="grad-text">Cmd+K, </span><span className="grad-text-accent font-normal">ask anything.</span></>}
           body="Schedule shifts, find replacements, pull reports, send kudos — all from a single text box. Powered by Claude. The Co-pilot has access to your full org context and respects role-based permissions."
           bullets={[
             "\"Who's worked the most overtime this period?\"",
@@ -819,7 +819,7 @@ function DeepDives() {
         <DeepDive
           number="02"
           eyebrow="Compliance Autopilot"
-          title={<><span className="grad-text">Stop violations </span><span className="grad-text-accent italic font-normal">before they happen.</span></>}
+          title={<><span className="grad-text">Stop violations </span><span className="grad-text-accent font-normal">before they happen.</span></>}
           body="Six rule families enforced live before publish: weekly OT, daily OT, rest gaps, meal breaks, consecutive days, Fair Workweek. Configurable thresholds per org + per jurisdiction."
           bullets={[
             "NYC / Seattle / Oregon predictive scheduling presets",
@@ -832,7 +832,7 @@ function DeepDives() {
         <DeepDive
           number="03"
           eyebrow="Open-Shift Marketplace"
-          title={<><span className="grad-text">Fill gaps without firing off </span><span className="grad-text-accent italic font-normal">12 texts.</span></>}
+          title={<><span className="grad-text">Fill gaps without firing off </span><span className="grad-text-accent font-normal">12 texts.</span></>}
           body={`Click "Auto-offer" → top 3 candidates get DMs → first to claim wins. Race-safe transactional claiming. Broaden in waves if no one bites.`}
           bullets={[
             "Ranked by location · position · hours · availability",
@@ -1072,7 +1072,7 @@ function Pricing() {
             <div className="eyebrow mb-4"><Bolt size={14} /> Pricing</div>
             <h2 className="h-section-display max-w-[800px] mx-auto">
               <span className="grad-text">Pay for what you </span>
-              <span className="grad-text-accent italic font-normal">actually use.</span>
+              <span className="grad-text-accent font-normal">actually use.</span>
             </h2>
             <p className="mt-5 text-[16px] text-ink-300 max-w-[560px] mx-auto">
               Base subscription + per-seat. Slide to your team size and we&apos;ll show you the bill.
@@ -1162,7 +1162,7 @@ function Customers() {
             <div className="eyebrow mb-4"><Bolt size={14} /> Customers</div>
             <h2 className="h-section-display max-w-[800px] mx-auto">
               <span className="grad-text">Built with operators </span>
-              <span className="grad-text-accent italic font-normal">who hated their schedule.</span>
+              <span className="grad-text-accent font-normal">who hated their schedule.</span>
             </h2>
           </div>
         </Reveal>
@@ -1209,7 +1209,7 @@ function FinalCTA() {
             <Bolt size={56} className="mx-auto" />
             <h2 className="h-section-display mt-6">
               <span className="grad-text">Stop running your team on </span>
-              <span className="grad-text-accent italic font-normal">Excel + WhatsApp.</span>
+              <span className="grad-text-accent font-normal">Excel + WhatsApp.</span>
             </h2>
             <p className="mt-6 text-[18px] text-ink-300 max-w-[560px] mx-auto">
               Set up in 5 minutes. Schedule your first week with one click. Cancel anytime.

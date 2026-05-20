@@ -74,33 +74,27 @@
 
 @layer components {
   /* =========================================================================
-     CARDS
+     CARDS — boosted contrast vs page bg so they actually read
      ========================================================================= */
   .card {
-    @apply rounded-md border border-white/[0.06] shadow-card;
-    background: linear-gradient(180deg, rgb(var(--surface)) 0%, rgb(var(--ink-2)) 100%);
+    @apply rounded-md border shadow-card;
+    border-color: rgba(255,255,255,0.10);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.04), transparent 30%),
+      linear-gradient(180deg, rgb(var(--surface-2)) 0%, rgb(var(--surface)) 100%);
     position: relative;
   }
-  .card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent 30%);
-  }
-  .card > * { position: relative; }
   .card-hover {
     @apply transition-all duration-300 hover:-translate-y-px hover:shadow-card-hover;
   }
   .card-glow {
     @apply card shadow-glow;
-    border-color: rgba(106,162,255,0.2);
+    border-color: rgba(106,162,255,0.25);
   }
   .card-pop { @apply card shadow-pop; }
   .card-glass {
     @apply rounded-lg border border-white/[0.12] backdrop-blur-xl shadow-soft;
-    background: rgba(13,20,34,0.6);
+    background: rgba(19,27,46,0.7);
   }
 
   /* =========================================================================
@@ -355,3 +349,73 @@
     box-shadow: 0 0 0 1px rgba(106,162,255,0.4), 0 8px 30px -10px rgba(106,162,255,0.4);
   }
 }
+
+/* ============================================================================
+   LEGACY COMPAT OVERRIDES — pages built for the old light-mode theme used
+   `bg-white`, `bg-ink-50`, etc. Since the new design is dark-only, remap
+   these to navy surfaces at runtime so 123+ legacy pages re-skin for free.
+   Add new overrides as we discover light-only patterns in legacy components.
+   ============================================================================ */
+.bg-white                                       { background-color: rgb(13,20,34) !important; }
+.bg-ink-50                                      { background-color: rgb(13,20,34) !important; }
+.bg-ink-100                                     { background-color: rgb(19,27,46) !important; }
+.bg-ink-200,
+.bg-ink-200\/70,
+.bg-ink-200\/60                                 { background-color: rgb(26,36,64) !important; }
+
+/* Pressed / hover states using light-ink hover bgs */
+.hover\:bg-ink-50:hover                         { background-color: rgba(255,255,255,0.03) !important; }
+.hover\:bg-ink-100:hover                        { background-color: rgba(255,255,255,0.06) !important; }
+.hover\:bg-ink-100\/70:hover                    { background-color: rgba(255,255,255,0.04) !important; }
+.hover\:bg-brand-50\/40:hover,
+.hover\:bg-brand-50\/60:hover                   { background-color: rgba(106,162,255,0.06) !important; }
+.active\:bg-ink-100:active                      { background-color: rgba(255,255,255,0.08) !important; }
+.active\:bg-ink-200\/60:active                  { background-color: rgba(255,255,255,0.10) !important; }
+
+/* Soft brand backgrounds used for badges/chips/icons */
+.bg-brand-50                                    { background-color: rgba(106,162,255,0.08) !important; }
+.bg-brand-50\/40                                { background-color: rgba(106,162,255,0.04) !important; }
+.bg-brand-50\/60                                { background-color: rgba(106,162,255,0.06) !important; }
+.bg-brand-100                                   { background-color: rgba(106,162,255,0.12) !important; }
+.bg-emerald-50                                  { background-color: rgba(78,224,197,0.10) !important; }
+.bg-emerald-100                                 { background-color: rgba(78,224,197,0.15) !important; }
+.bg-rose-50                                     { background-color: rgba(241,122,142,0.10) !important; }
+.bg-rose-100                                    { background-color: rgba(241,122,142,0.15) !important; }
+.bg-amber-50                                    { background-color: rgba(245,181,68,0.10) !important; }
+.bg-amber-100                                   { background-color: rgba(245,181,68,0.15) !important; }
+.bg-sky-50                                      { background-color: rgba(106,162,255,0.10) !important; }
+.bg-violet-50                                   { background-color: rgba(167,139,255,0.10) !important; }
+.bg-violet-100                                  { background-color: rgba(167,139,255,0.15) !important; }
+
+/* Light-only text colors that would be invisible on dark bg.
+   Pages frequently use text-ink-900 (dark) without a dark variant. */
+.text-ink-900                                   { color: rgb(236,241,251) !important; }
+.text-ink-800                                   { color: rgb(221,229,243) !important; }
+.text-ink-700                                   { color: rgb(176,187,209) !important; }
+.text-brand-700,
+.text-brand-800,
+.text-brand-900                                 { color: rgb(141,185,255) !important; }
+.text-emerald-700,
+.text-emerald-800                               { color: rgb(78,224,197) !important; }
+.text-rose-700,
+.text-rose-800                                  { color: rgb(241,122,142) !important; }
+.text-amber-700,
+.text-amber-800                                 { color: rgb(245,181,68) !important; }
+
+/* Light-mode borders */
+.border-ink-200,
+.border-ink-200\/80,
+.border-ink-200\/70,
+.border-ink-200\/60                             { border-color: rgba(255,255,255,0.08) !important; }
+.border-ink-100                                 { border-color: rgba(255,255,255,0.06) !important; }
+.border-ink-300                                 { border-color: rgba(255,255,255,0.12) !important; }
+.divide-ink-100 > * + *,
+.divide-ink-200 > * + *                         { border-color: rgba(255,255,255,0.06) !important; }
+.ring-ink-200\/60,
+.ring-ink-200\/80                               { --tw-ring-color: rgba(255,255,255,0.08) !important; }
+.ring-brand-200\/60                             { --tw-ring-color: rgba(106,162,255,0.30) !important; }
+.ring-emerald-200\/60                           { --tw-ring-color: rgba(78,224,197,0.30) !important; }
+.ring-rose-200\/60                              { --tw-ring-color: rgba(241,122,142,0.30) !important; }
+.ring-amber-200\/60                             { --tw-ring-color: rgba(245,181,68,0.30) !important; }
+.ring-sky-200\/60                               { --tw-ring-color: rgba(106,162,255,0.30) !important; }
+.ring-violet-200\/60                            { --tw-ring-color: rgba(167,139,255,0.30) !important; }

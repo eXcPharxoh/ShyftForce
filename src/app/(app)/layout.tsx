@@ -30,7 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     : 0;
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-ink-950 text-ink-50">
       <Sidebar
         orgName={u.organizationName}
         industry={u.organizationIndustry}
@@ -40,13 +40,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         userInitials={initials(u.name)}
         userRole={u.role}
       />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex flex-col">
         {u.impersonatedByEmail && (
           <ImpersonationBanner adminEmail={u.impersonatedByEmail} targetName={u.name} targetEmail={u.email} />
         )}
         {onTrial && <TrialBanner daysLeft={daysLeft} />}
         <Topbar name={u.name} role={u.role} image={u.image} showPlatformAdmin={showPlatformAdmin} />
-        <main className="p-6">{children}</main>
+        <main className="flex-1 px-8 py-7 max-w-[1480px] w-full mx-auto">
+          {children}
+        </main>
       </div>
     </div>
   );
