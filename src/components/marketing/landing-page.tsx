@@ -15,7 +15,11 @@ import { Bolt, Wordmark } from "@/components/ui/logo";
  */
 export function LandingPage() {
   return (
-    <main className="bg-ink-950 text-ink-50 min-h-screen overflow-x-hidden">
+    <main className="bg-ink-950 text-ink-50 min-h-screen overflow-x-hidden relative">
+      {/* Top fade — content scrolling under the floating nav pill fades out
+          so it doesn't visually conflict with the pill nav's empty sides */}
+      <div className="fixed top-0 inset-x-0 h-24 z-40 pointer-events-none"
+        style={{ background: "linear-gradient(180deg, rgba(5,8,16,0.85) 0%, rgba(5,8,16,0.5) 60%, transparent 100%)" }} />
       <Nav />
       <Hero />
       <TrustMarquee />
@@ -343,8 +347,8 @@ function CopilotBubble() {
     return () => clearInterval(t);
   }, []);
   return (
-    <div className="absolute -bottom-12 right-[8%] w-[380px] z-20 animate-float rounded-md border border-white/20 backdrop-blur-xl p-4 shadow-glow"
-      style={{ background: "rgba(13,20,34,0.88)" }}>
+    <div className="hidden md:block absolute bottom-6 right-6 w-[340px] z-20 animate-float rounded-md border border-white/20 backdrop-blur-xl p-4 shadow-glow"
+      style={{ background: "rgba(13,20,34,0.92)" }}>
       <div className="flex items-center gap-2 mb-2.5">
         <Bolt size={14} />
         <span className="text-xs font-semibold">Co-pilot</span>

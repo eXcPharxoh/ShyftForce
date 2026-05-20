@@ -5,6 +5,13 @@ import type { Config } from "tailwindcss";
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   darkMode: "class",
+  // Disable Tailwind's built-in container plugin so our custom `.container`
+  // and `.container-wide` rules in globals.css win the cascade (Tailwind's
+  // container is also in the components layer and outputs `width: 100%` with
+  // no padding, which was overriding our 32px padding).
+  corePlugins: {
+    container: false,
+  },
   theme: {
     extend: {
       colors: {
