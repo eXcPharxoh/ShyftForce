@@ -5,9 +5,19 @@ import { fmtDistance } from "@/lib/geo";
 import { ClockButton } from "@/components/attendance/clock-button";
 import { TimesheetActions } from "@/components/attendance/timesheet-actions";
 import { RunPayrollButton } from "@/components/attendance/run-payroll-button";
+import { GeofenceMap } from "@/components/ui/geofence-map";
 import Link from "next/link";
 import { MapPin, ShieldCheck, AlertTriangle, Camera, Clock as ClockIcon } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+
+// Bearing from (lat1,lng1) → (lat2,lng2) in degrees (0=N, 90=E)
+function bearingDeg(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const φ1 = (lat1 * Math.PI) / 180, φ2 = (lat2 * Math.PI) / 180;
+  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
 
 export default async function AttendancePage() {
   const u = await requireUser();
@@ -74,6 +84,74 @@ export default async function AttendancePage() {
         <Stat label="Flagged entries" value={flagged} tone="rose" />
         <Stat label="Unapproved" value={unapproved} tone="amber" />
       </div>
+
+      {/* Live geofence — shows currently-clocked-in employees plotted around
+          the location centre based on their most recent clock-in coords. */}
+      {(() => {
+        // Pick the first active location with coordinates
+        const firstLoc = members.find(m => m.location?.latitude != null && m.location?.longitude != null)?.location;
+        if (!firstLoc || firstLoc.latitude == null || firstLoc.longitude == null) return null;
+        const centerLat = firstLoc.latitude;
+        const centerLng = firstLoc.longitude;
+        const radius   = firstLoc.geofenceRadiusMeters ?? 100;
+
+        // For each member currently clocked in, find their last clock_in log
+        const lastClockIn = new Map<string, { lat: number; lng: number; withinGeofence: boolean | null }>();
+        for (const log of allLogs) {
+          if (log.type === "clock_in" && log.latitude != null && log.longitude != null) {
+            lastClockIn.set(log.memberId, { lat: log.latitude, lng: log.longitude, withinGeofence: log.withinGeofence });
+          }
+        }
+        const people = members
+          .filter(m => (status.get(m.id)?.state === "in" || status.get(m.id)?.state === "break") && lastClockIn.has(m.id))
+          .slice(0, 12)
+          .map(m => {
+            const c = lastClockIn.get(m.id)!;
+            const R = 6371000;
+            const φ1 = (centerLat * Math.PI) / 180, φ2 = (c.lat * Math.PI) / 180;
+            const Δφ = ((c.lat - centerLat) * Math.PI) / 180;
+            const Δλ = ((c.lng - centerLng) * Math.PI) / 180;
+            const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+            const distance = 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return {
+              id: m.id,
+              name: m.user.name,
+              initials: initials(m.user.name),
+              distanceMeters: distance,
+              bearingDeg: bearingDeg(centerLat, centerLng, c.lat, c.lng),
+              withinGeofence: c.withinGeofence ?? distance <= radius,
+            };
+          });
+
+        return (
+          <section className="card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider font-medium text-brand-500 font-mono">Live geofence</div>
+                <h3 className="text-lg font-semibold mt-0.5">{firstLoc.name}</h3>
+                <div className="text-[12px] text-ink-500 mt-0.5">
+                  {people.length} clocked in · {centerLat.toFixed(4)}°, {centerLng.toFixed(4)}°
+                </div>
+              </div>
+              <Link href="/settings/locations" className="btn-ghost btn-sm">
+                <MapPin className="w-3.5 h-3.5" /> Manage geofences
+              </Link>
+            </div>
+            <GeofenceMap
+              centerName={firstLoc.name}
+              centerLat={centerLat}
+              centerLng={centerLng}
+              radiusMeters={radius}
+              people={people}
+            />
+            {people.length === 0 && (
+              <p className="text-[12px] text-ink-500 mt-2 text-center">
+                No-one's clocked in here yet. Employees see this map on their device when they tap Clock In.
+              </p>
+            )}
+          </section>
+        );
+      })()}
 
       {me && (
         <section className="card p-5">
