@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/sidebar";
 import { Topbar } from "@/components/topbar";
 import { ImpersonationBanner } from "@/components/platform/impersonation-banner";
 import { TrialBanner } from "@/components/trial-banner";
+import { TrialExpiredGate } from "@/components/trial-expired-gate";
 import { isPlatformAdminEmail } from "@/lib/platform/admin";
 import { isTrialActive } from "@/lib/stripe";
 import { initials } from "@/lib/utils";
@@ -12,22 +13,38 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const u = await requireUser();
   const real = await getRealSessionUser();
   const showPlatformAdmin = isPlatformAdminEmail(real?.email);
-  const [pendingOffers, org] = await Promise.all([
+
+  const [pendingOffers, org, activeMembers] = await Promise.all([
     prisma.openShiftOffer.count({
       where: { memberId: u.memberId, status: "pending", expiresAt: { gt: new Date() } },
     }),
     prisma.organization.findUnique({
       where: { id: u.organizationId },
-      select: { trialEndsAt: true },
+      select: {
+        trialEndsAt: true,
+        plan: true,
+        subscriptionStatus: true,
+        stripeSubscriptionId: true,
+      },
     }),
+    prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
   ]);
 
-  // Trial banner shows for everyone (it's the customer-facing flag that the
-  // org's on the open-beta trial). Hide it once the trial expires.
+  // Trial state
   const onTrial = isTrialActive(org);
   const daysLeft = onTrial && org?.trialEndsAt
     ? Math.max(0, Math.ceil((+org.trialEndsAt - Date.now()) / 86400000))
     : 0;
+
+  // Trial-expired gate logic:
+  //   - Trial has ended (trialEndsAt is in the past)
+  //   - AND no active Stripe subscription
+  //   - AND user is a manager/admin (employees see a softer "ask your manager" view)
+  //   - Platform admins are exempt (they can still access the workspace)
+  const trialExpired = !!org?.trialEndsAt && org.trialEndsAt < new Date();
+  const noActiveSub  = !org?.stripeSubscriptionId || !["active", "trialing"].includes(org?.subscriptionStatus ?? "");
+  const showGate     = trialExpired && noActiveSub && (u.role === "ADMIN" || u.role === "MANAGER") && !showPlatformAdmin;
+  const daysExpired  = org?.trialEndsAt ? Math.max(0, Math.floor((Date.now() - +org.trialEndsAt) / 86400000)) : 0;
 
   return (
     <div className="min-h-screen flex bg-ink-950 text-ink-50">
@@ -50,6 +67,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+
+      {/* Trial-expired hard gate (managers only) — full-screen modal blocks
+          the workspace until they subscribe or contact sales. */}
+      {showGate && (
+        <TrialExpiredGate daysExpired={daysExpired} activeMembers={activeMembers} />
+      )}
     </div>
   );
 }

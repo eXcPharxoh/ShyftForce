@@ -253,6 +253,61 @@ export const JURISDICTIONS: Record<string, JurisdictionRules> = {
     minorLatestEndHour: 22,
     notes: "Retail + food: 10+ employees. 14d notice + good-faith hours estimate at hire.",
   },
+  // ─── Quebec / CNESST ─────────────────────────────────────────────────────
+  // Major win against Agendrix in their home market. Encodes the Loi sur les
+  // normes du travail (LNT, RLRQ c N-1.1) + CNESST guidance.
+  quebec: {
+    id: "quebec",
+    label: "Québec — CNESST / LNT",
+    region: "QC, Canada",
+    predictiveSchedulingDays: 0,            // QC has no statutory predictive scheduling (yet — Bill C-3 watch)
+    predictabilityPay: null,
+    mealBreakAfterHours: 5,                 // LNT art. 79: 30-min unpaid meal after 5h of consecutive work
+    restBreakAfterHours: 0,                 // No statutory paid rest break in QC (collective-agreement only)
+    minRestGapHours: 8,                     // LNT art. 78: at least 8h between shifts (or written consent + extra pay)
+    minorAgeThreshold: 16,                  // Loi visant à encadrer le travail des enfants (Bill 19, in force 2023)
+    minorMaxDailyHours: 10,                 // Under-16 cap on school nights
+    minorMaxWeeklyHours: 17,                // Under-16 cap during school weeks (Sept-June)
+    minorEarliestStartHour: 6,
+    minorLatestEndHour: 23,                 // No work between 11pm-6am for under-16
+    notes:
+      "Loi sur les normes du travail (LNT) + Bill 19 (child labour). Stat holidays: Jan 1, Good Friday OR Easter Monday, Patriots' Day (Mon before May 25), Saint-Jean-Baptiste (Jun 24), Canada Day (Jul 1), Labour Day, Thanksgiving, Christmas. Indemnity = 1/20 of 4 wks prior wages. RVER opt-in required for 5+ employees w/o group plan.",
+  },
+  ontario: {
+    id: "ontario",
+    label: "Ontario — ESA",
+    region: "ON, Canada",
+    predictiveSchedulingDays: 0,
+    predictabilityPay: null,
+    mealBreakAfterHours: 5,                 // ESA s.20: 30-min eating period within first 5h
+    restBreakAfterHours: 0,
+    minRestGapHours: 11,                    // ESA s.18(4): 11h between shifts
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 28,
+    minorEarliestStartHour: 6,
+    minorLatestEndHour: 22,
+    notes:
+      "Ontario Employment Standards Act. 3-hour minimum reporting pay for shifts <3h. 11h between shifts mandatory.",
+  },
+  british_columbia: {
+    id: "british_columbia",
+    label: "British Columbia — ESA",
+    region: "BC, Canada",
+    predictiveSchedulingDays: 0,
+    predictabilityPay: null,
+    mealBreakAfterHours: 5,
+    restBreakAfterHours: 0,
+    minRestGapHours: 8,
+    minorAgeThreshold: 16,
+    minorMaxDailyHours: 4,
+    minorMaxWeeklyHours: 20,
+    minorEarliestStartHour: 7,
+    minorLatestEndHour: 22,
+    notes:
+      "BC ESA. Minimum 2-hour shift pay. Daily OT after 8h, weekly OT after 40h. Stat holidays = avg day's pay.",
+  },
+
   new_york_state_retail: {
     id: "new_york_state_retail",
     label: "New York State — Retail (proposed 2026)",

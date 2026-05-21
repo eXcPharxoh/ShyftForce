@@ -7,7 +7,7 @@ import { ScheduleActions } from "@/components/schedule/schedule-actions";
 import { PublishWeekButton } from "@/components/schedule/publish-week-button";
 import { TemplatesButton } from "@/components/schedule/templates-button";
 import { ShiftCell } from "@/components/schedule/shift-cell";
-import { ChevronLeft, ChevronRight, Flame } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flame, Printer } from "lucide-react";
 import Link from "next/link";
 
 const PALETTE = ["#6aa2ff", "#4ee0c5", "#f5b544", "#f17a8e", "#a78bff", "#8db9ff"];
@@ -115,6 +115,14 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           <Link href={`/schedule?w=${weekOffset + 1}&v=${view}`} className="btn-ghost btn-sm"><ChevronRight className="w-3.5 h-3.5" /></Link>
           {isManager && (
             <>
+              <Link
+                href={`/schedule/print?w=${weekStart.toISOString().slice(0,10)}&view=position`}
+                target="_blank"
+                className="btn-ghost btn-sm"
+                title="Print or save as PDF"
+              >
+                <Printer className="w-3.5 h-3.5" /> Print / PDF
+              </Link>
               <TemplatesButton weekStart={weekStart.toISOString().slice(0,10)} />
               <ScheduleActions weekStart={weekStart.toISOString().slice(0,10)} />
               <AutoScheduleButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />
