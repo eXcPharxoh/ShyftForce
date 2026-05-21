@@ -105,6 +105,9 @@ model Organization {
   subCallouts             SubCallout[]
   classPeriods            ClassPeriod[]
   conferenceSlots         ConferenceSlot[]
+  jobPostings             JobPosting[]
+  shiftLogEntries         ShiftLogEntry[]
+  timeOffBlackouts        TimeOffBlackout[]
 }
 
 model ComplianceSettings {
@@ -513,6 +516,9 @@ model Location {
   meetingRooms       MeetingRoom[]
   visitors           Visitor[]
   fitnessClasses     FitnessClass[]
+  jobPostings        JobPosting[]
+  shiftLogEntries    ShiftLogEntry[]
+  timeOffBlackouts   TimeOffBlackout[]
   KioskDevice        KioskDevice[]
 
   @@index([organizationId])
@@ -917,6 +923,10 @@ model Member {
   modShifts               Shift[]             @relation("ShiftMOD")
   subPoolMembership       SubPoolMember?
   conferenceBookings      ConferenceBooking[]
+  jobPostingsOwned        JobPosting[]        @relation("JobPostingOwner")
+  applicationsReviewed    JobApplication[]    @relation("ApplicationReviewer")
+  logBookEntries          ShiftLogEntry[]     @relation("LogBookAuthor")
+  blackoutsCreated        TimeOffBlackout[]   @relation("BlackoutCreator")
 
   @@index([organizationId, status])
   @@index([organizationId, locationId])
@@ -2530,4 +2540,129 @@ model ConferenceBooking {
 
   @@unique([slotId])
   @@index([bookedById])
+}
+
+// ============================================================================
+// HIRING / ATS — Sprint 2
+// JobPosting → public application form (auth-free) → JobApplication →
+// applicant pipeline → "Hire" creates an Invitation in the existing flow.
+// ============================================================================
+model JobPosting {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String?
+  ownerId        String? // member who posted
+  title          String
+  description    String? // markdown OK
+  position       String? // "Server", "Line Cook", etc — pre-fills Member.position on hire
+  // Compensation
+  payMin         Int?    // cents/hr
+  payMax         Int?    // cents/hr
+  payPeriod      String  @default("hourly") // hourly | salary | per_shift
+  // Logistics
+  employmentType String  @default("part_time") // part_time | full_time | seasonal | contractor
+  startDate      DateTime?
+  // State
+  status         String  @default("draft") // draft | open | closed
+  publicToken    String  @unique @default(uuid()) // share-link slug for public apply page
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  closedAt       DateTime?
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?        @relation(fields: [locationId], references: [id])
+  owner        Member?          @relation("JobPostingOwner", fields: [ownerId], references: [id])
+  applications JobApplication[]
+
+  @@index([organizationId, status])
+  @@index([publicToken])
+}
+
+model JobApplication {
+  id            String   @id @default(uuid())
+  jobPostingId  String
+  // Applicant info — no auth required
+  name          String
+  email         String
+  phone         String?
+  resumeText    String?  // pasted text or extracted from upload
+  resumeUrl     String?  // optional uploaded file URL
+  coverLetter   String?
+  source        String?  // "share_link" | "referral" | etc.
+  // Pipeline state
+  status        String   @default("new") // new | screen | interview | offer | hired | rejected
+  reviewerId    String?  // member assigned to handle this application
+  notes         String?  // internal manager notes (private)
+  appliedAt     DateTime @default(now())
+  reviewedAt    DateTime?
+  hiredAt       DateTime?
+  rejectedAt    DateTime?
+  rejectionReason String?
+  // Cross-link to invitation when "Hire" is clicked
+  invitationId  String?
+
+  jobPosting    JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  reviewer      Member?    @relation("ApplicationReviewer", fields: [reviewerId], references: [id])
+
+  @@index([jobPostingId, status])
+  @@index([email])
+}
+
+// ============================================================================
+// MANAGER LOG BOOK — Sprint 2
+// Daily shift recap visible to managers + admins only. Different from
+// DayNote (which is a staff-facing day announcement). Categorized so
+// incidents / VIPs / equipment issues can be surfaced separately.
+// ============================================================================
+model ShiftLogEntry {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String?
+  authorId       String
+  // When this log entry is about
+  occurredOn     DateTime // date the event happened (truncated to day)
+  // Categorization
+  category       String   @default("recap") // recap | incident | vip | maintenance | inventory | safety | other
+  title          String?
+  body           String   // markdown OK
+  // Optional impact / followup tracking
+  followUpRequired Boolean @default(false)
+  resolvedAt     DateTime?
+  resolvedById   String?
+  // Audit
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id])
+  author       Member       @relation("LogBookAuthor", fields: [authorId], references: [id])
+
+  @@index([organizationId, occurredOn])
+  @@index([locationId, occurredOn])
+  @@index([category])
+}
+
+// ============================================================================
+// TIME-OFF BLACKOUTS — Sprint 2
+// Manager-defined windows where PTO requests are blocked or require an
+// extra confirmation step. Pre-populated from stat holidays + custom adds.
+// ============================================================================
+model TimeOffBlackout {
+  id             String   @id @default(uuid())
+  organizationId String
+  locationId     String? // null = applies to all locations
+  name           String   // "Black Friday weekend", "Christmas Eve dinner service"
+  startsOn       DateTime // date-only
+  endsOn         DateTime
+  // Block mode: hard refuses requests; soft requires manager override; warn just shows a notice
+  mode           String   @default("soft") // hard | soft | warn
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id])
+  createdBy    Member?      @relation("BlackoutCreator", fields: [createdById], references: [id])
+
+  @@index([organizationId, startsOn])
+  @@index([locationId, startsOn])
 }

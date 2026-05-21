@@ -37,7 +37,7 @@ export default async function MorePage() {
     },
     {
       label: "People & policy",
-      items: items.filter((m) => ["/hr", "/documents", "/messenger", "/billboard", "/settings/pto", "/compliance", "/hr/surveys", "/training", "/hr/reviews", "/settings/checklists", "/stations", "/eighty-six"].includes(m.href)),
+      items: items.filter((m) => ["/hr", "/hr/jobs", "/log-book", "/documents", "/messenger", "/billboard", "/settings/pto", "/settings/time-off-blackouts", "/compliance", "/hr/surveys", "/training", "/hr/reviews", "/settings/checklists", "/stations", "/eighty-six"].includes(m.href)),
     },
     {
       label: "Reporting",

@@ -4,6 +4,7 @@ import { addDays, dateLabel, fmtMoney, initials, startOfWeek, timeLabel } from "
 import { ScheduleControls } from "@/components/schedule/schedule-controls";
 import { AutoScheduleButton } from "@/components/schedule/auto-schedule-button";
 import { ScheduleActions } from "@/components/schedule/schedule-actions";
+import { LiveLaborChip } from "@/components/schedule/live-labor-chip";
 import { PublishWeekButton } from "@/components/schedule/publish-week-button";
 import { TemplatesButton } from "@/components/schedule/templates-button";
 import { ShiftCell } from "@/components/schedule/shift-cell";
@@ -115,6 +116,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           <Link href={`/schedule?w=${weekOffset + 1}&v=${view}`} className="btn-ghost btn-sm"><ChevronRight className="w-3.5 h-3.5" /></Link>
           {isManager && (
             <>
+              <LiveLaborChip window="this_week" />
               <Link
                 href={`/schedule/print?w=${weekStart.toISOString().slice(0,10)}&view=position`}
                 target="_blank"
