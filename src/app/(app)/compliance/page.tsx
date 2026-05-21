@@ -151,21 +151,81 @@ export default async function CompliancePage() {
       <section className="card p-4">
         <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><SettingsIcon className="w-4 h-4" /> Active rules</h3>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-          <RuleSetting label="Jurisdiction"                value={currentJurisdiction.label} />
-          <RuleSetting label="Max weekly hours"            value={`${settings.maxWeeklyHours}h`} />
-          <RuleSetting label="Max daily hours"             value={`${settings.maxDailyHours}h`} />
-          <RuleSetting label="Min rest gap"                value={`${settings.minRestGapHours}h`} />
-          <RuleSetting label="Meal break required after"   value={`${settings.mealBreakRequiredAfterHours}h`} />
-          <RuleSetting label="Rest break required every"   value={settings.restBreakRequiredAfterHours > 0 ? `${settings.restBreakRequiredAfterHours}h` : "off"} />
-          <RuleSetting label="Max consecutive days"        value={settings.maxConsecutiveDays} />
-          <RuleSetting label="Predictive scheduling"       value={settings.predictiveSchedulingDays > 0 ? `≥${settings.predictiveSchedulingDays}d ahead` : "off"} />
-          <RuleSetting label="Predictability pay"          value={settings.predictabilityPayEnabled ? "on" : "off"} />
-          <RuleSetting label="Minor age threshold"         value={`under ${settings.minorAgeThreshold}`} />
-          <RuleSetting label="Minor max daily / weekly"    value={`${settings.minorMaxDailyHours}h / ${settings.minorMaxWeeklyHours}h`} />
-          <RuleSetting label="Minor work hours window"     value={`${settings.minorEarliestStartHour}:00–${settings.minorLatestEndHour}:00`} />
+          <RuleSetting label="Jurisdiction"                value={currentJurisdiction.label} severity="block" />
+          <RuleSetting label="Max weekly hours"            value={`${settings.maxWeeklyHours}h`} severity="block" />
+          <RuleSetting label="Max daily hours"             value={`${settings.maxDailyHours}h`} severity="block" />
+          <RuleSetting label="Min rest gap"                value={`${settings.minRestGapHours}h`} severity="warn" />
+          <RuleSetting label="Meal break required after"   value={`${settings.mealBreakRequiredAfterHours}h`} severity="block" />
+          <RuleSetting label="Rest break required every"   value={settings.restBreakRequiredAfterHours > 0 ? `${settings.restBreakRequiredAfterHours}h` : "off"} severity="warn" />
+          <RuleSetting label="Max consecutive days"        value={settings.maxConsecutiveDays} severity="warn" />
+          <RuleSetting label="Predictive scheduling"       value={settings.predictiveSchedulingDays > 0 ? `≥${settings.predictiveSchedulingDays}d ahead` : "off"} severity={settings.predictiveSchedulingDays > 0 ? "block" : "off"} />
+          <RuleSetting label="Predictability pay"          value={settings.predictabilityPayEnabled ? "on" : "off"} severity={settings.predictabilityPayEnabled ? "warn" : "off"} />
+          <RuleSetting label="Minor age threshold"         value={`under ${settings.minorAgeThreshold}`} severity="block" />
+          <RuleSetting label="Minor max daily / weekly"    value={`${settings.minorMaxDailyHours}h / ${settings.minorMaxWeeklyHours}h`} severity="block" />
+          <RuleSetting label="Minor work hours window"     value={`${settings.minorEarliestStartHour}:00–${settings.minorLatestEndHour}:00`} severity="block" />
         </div>
       </section>
+
+      <IntegrationsGrid orgId={orgId} />
     </div>
+  );
+}
+
+/* Connected services grid — design spec calls for 8 cards showing integration
+   status. Some are ON if the org has wired credentials, others are AVAILABLE. */
+async function IntegrationsGrid({ orgId }: { orgId: string }) {
+  const [org, posCount, slackCount] = await Promise.all([
+    prisma.organization.findUnique({
+      where: { id: orgId },
+      select: {
+        finchAccessToken: true, finchProviderId: true,
+        stripeCustomerId: true, stripeSubscriptionId: true,
+        twilioAccountSid: true,
+      },
+    }),
+    prisma.posConnection.count({ where: { organizationId: orgId } }),
+    prisma.slackConnection.count({ where: { organizationId: orgId } }),
+  ]);
+
+  const integrations = [
+    { key: "toast",   name: "Toast POS",          status: posCount > 0 ? "on" : "available", desc: "Restaurant POS sales import" },
+    { key: "square",  name: "Square",             status: posCount > 0 ? "on" : "available", desc: "Retail POS + payments" },
+    { key: "clover",  name: "Clover",             status: "available", desc: "POS + payment processing" },
+    { key: "finch",   name: "Finch · Payroll",    status: org?.finchAccessToken ? "on" : "available", desc: org?.finchProviderId ?? "ADP / Gusto / Paychex" },
+    { key: "stripe",  name: "Stripe",             status: org?.stripeCustomerId ? "on" : "available", desc: "Billing + invoicing" },
+    { key: "twilio",  name: "Twilio SMS",         status: org?.twilioAccountSid ? "on" : "available", desc: "Send shift offer texts" },
+    { key: "slack",   name: "Slack",              status: slackCount > 0 ? "on" : "available", desc: "Channel + DM notifications" },
+    { key: "google",  name: "Google Workspace",   status: "available", desc: "SSO + calendar feed" },
+    { key: "webhook", name: "Webhooks",           status: "on", desc: "HMAC-signed event delivery" },
+  ];
+
+  return (
+    <section className="card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="text-[15px] font-semibold flex items-center gap-1.5"><Globe className="w-4 h-4" /> Connected services</h3>
+          <p className="text-[11px] text-ink-500 mt-0.5 font-mono uppercase tracking-[0.12em]">Compliance-relevant integrations</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        {integrations.map(i => (
+          <div key={i.key} className="card p-3 flex items-start gap-3">
+            <div className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${
+              i.status === "on" ? "bg-success/15 text-success" : "bg-white/[0.04] text-ink-300"
+            }`}>
+              {i.status === "on" ? "✓" : "·"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-medium text-ink-50 truncate">{i.name}</div>
+              <div className="text-[10.5px] text-ink-500 truncate">{i.desc}</div>
+              <span className={`status status-${i.status === "on" ? "success" : "mute"} mt-2`}>
+                {i.status === "on" ? "Connected" : "Available"}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -193,11 +253,18 @@ function Stat({ icon, label, value, tone = "ink" }: { icon: React.ReactNode; lab
   );
 }
 
-function RuleSetting({ label, value }: { label: string; value: string | number }) {
+function RuleSetting({ label, value, severity = "block" }: { label: string; value: string | number; severity?: "block" | "warn" | "off" }) {
+  const pillCls = severity === "block" ? "status status-danger"
+                : severity === "warn"  ? "status status-warn"
+                :                         "status status-mute";
+  const pillLabel = severity === "block" ? "Block" : severity === "warn" ? "Warn" : "Off";
   return (
-    <div className="rounded-xl border border-ink-200 px-3 py-2">
-      <div className="text-ink-500">{label}</div>
-      <div className="font-semibold text-sm">{value}</div>
+    <div className="rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-2 flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="text-ink-500 text-[11px]">{label}</div>
+        <div className="font-medium text-[13px] text-ink-50 mt-0.5 truncate">{value}</div>
+      </div>
+      <span className={pillCls} title={`Severity: ${pillLabel}`}>{pillLabel}</span>
     </div>
   );
 }
