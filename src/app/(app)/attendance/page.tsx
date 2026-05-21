@@ -78,11 +78,63 @@ export default async function AttendancePage() {
         )}
       </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-        <Stat label="Hours this period" value={fmtHours(totalHours)} />
-        <Stat label="Estimated payroll" value={fmtMoney(totalCost)} />
-        <Stat label="Flagged entries" value={flagged} tone="rose" />
-        <Stat label="Unapproved" value={unapproved} tone="amber" />
+      {/* 5-stat row per design: On time / Late / No-show / Missed-out / Avg variance */}
+      {(() => {
+        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(todayStart.getTime() + 86400_000);
+        // Pull today's shifts for cross-reference
+        const todayShifts = entries.length > 0
+          ? entries.filter(e => new Date(e.date).getTime() >= todayStart.getTime() && new Date(e.date).getTime() < todayEnd.getTime())
+          : [];
+        // Per-member scheduled-vs-actual variance from logs we already loaded
+        let onTime = 0, late = 0, missedOut = 0;
+        const variances: number[] = [];
+        const memberLatestClockIn = new Map<string, Date>();
+        const memberLatestClockOut = new Map<string, Date>();
+        for (const l of allLogs) {
+          if (l.at >= todayStart && l.at < todayEnd) {
+            if (l.type === "clock_in") memberLatestClockIn.set(l.memberId, l.at);
+            if (l.type === "clock_out") memberLatestClockOut.set(l.memberId, l.at);
+          }
+        }
+        // Currently-in = clock_in without subsequent clock_out today
+        for (const [memberId, ci] of memberLatestClockIn) {
+          const co = memberLatestClockOut.get(memberId);
+          if (!co && new Date().getHours() >= 20) missedOut++; // after 8pm without clock-out
+        }
+        // For each clock_in today, see if we have a matching today shift
+        for (const [memberId, ciAt] of memberLatestClockIn) {
+          const sched = todayShifts.find(e => e.memberId === memberId);
+          // Pay-period entries don't have start times — use heuristic: assume 9am
+          const expected = new Date(todayStart.getTime() + 9 * 3600_000);
+          const minsLate = (ciAt.getTime() - expected.getTime()) / 60_000;
+          variances.push(Math.abs(minsLate));
+          if (minsLate > 5) late++;
+          else if (minsLate >= -10) onTime++;
+        }
+        const avgVar = variances.length > 0
+          ? Math.round(variances.reduce((a, v) => a + v, 0) / variances.length)
+          : 0;
+        // No-show = scheduled today but never clocked in
+        const noShow = Math.max(0, todayShifts.length - memberLatestClockIn.size);
+
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            <KpiCard label="On time today" value={String(onTime)} tone="success" />
+            <KpiCard label="Late today" value={String(late)} tone={late > 0 ? "warn" : "info"} />
+            <KpiCard label="No-show today" value={String(noShow)} tone={noShow > 0 ? "danger" : "info"} />
+            <KpiCard label="Missed clock-out" value={String(missedOut)} tone={missedOut > 0 ? "warn" : "info"} />
+            <KpiCard label="Avg variance" value={`${avgVar}m`} tone={avgVar > 10 ? "warn" : "success"} />
+          </div>
+        );
+      })()}
+
+      {/* Secondary stats — payroll-focused */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard label="Hours this period"   value={fmtHours(totalHours)} tone="info"   small />
+        <KpiCard label="Estimated payroll"   value={fmtMoney(totalCost)}  tone="info"   small />
+        <KpiCard label="Flagged entries"     value={String(flagged)}      tone={flagged > 0 ? "danger" : "info"} small />
+        <KpiCard label="Unapproved"          value={String(unapproved)}   tone={unapproved > 0 ? "warn" : "info"} small />
       </div>
 
       {/* Live geofence — shows currently-clocked-in employees plotted around
@@ -235,6 +287,48 @@ export default async function AttendancePage() {
         </div>
       </section>
 
+      {/* Selfie verification grid — visual showcase of the 3 most recent
+          photo-verified clock-ins (design spec). */}
+      {isManager && (() => {
+        const withPhoto = recentLogs.filter(l => l.photoData && l.type === "clock_in").slice(0, 3);
+        if (withPhoto.length === 0) return null;
+        return (
+          <section className="card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-[15px] font-semibold flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-brand-500" /> Selfie verification
+                </h3>
+                <p className="text-[11px] text-ink-500 mt-0.5 font-mono uppercase tracking-[0.12em]">
+                  Most recent 3 verified clock-ins
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {withPhoto.map(l => (
+                <div key={l.id} className="card p-3">
+                  <div className="relative aspect-square rounded-md overflow-hidden mb-3 bg-ink-950">
+                    <img src={l.photoData!} alt="" className="w-full h-full object-cover" />
+                    {l.verified && (
+                      <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-success/90 text-ink-950 flex items-center justify-center shadow-glow">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-[13px] font-semibold text-ink-50 truncate">{l.member.user.name}</div>
+                  <div className="text-[11px] text-ink-500 mt-0.5 font-mono">
+                    {l.at.toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}
+                  </div>
+                  {l.member.location?.name && (
+                    <div className="text-[11px] text-ink-500 mt-0.5 truncate">{l.member.location.name}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
+
       {isManager && (
         <section className="card overflow-hidden">
           <header className="px-5 py-3 border-b border-ink-100 flex items-center justify-between">
@@ -306,6 +400,21 @@ function Stat({ label, value, tone = "ink" }: { label: string; value: string | n
     <div className="card p-4">
       <div className="text-[11px] uppercase text-ink-500 font-medium">{label}</div>
       <div className={`text-2xl font-bold mt-1 ${map[tone]}`}>{value}</div>
+    </div>
+  );
+}
+
+function KpiCard({ label, value, tone = "info", small = false }: { label: string; value: string; tone?: "info" | "success" | "warn" | "danger"; small?: boolean }) {
+  const toneClass: Record<typeof tone, string> = {
+    info:    "text-brand-300",
+    success: "text-success",
+    warn:    "text-warn",
+    danger:  "text-danger",
+  };
+  return (
+    <div className="card p-4">
+      <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-ink-500">{label}</div>
+      <div className={`font-display font-medium leading-none mt-2 tabular-nums ${toneClass[tone]} ${small ? "text-[22px]" : "text-[28px] grad-text-accent"}`}>{value}</div>
     </div>
   );
 }
