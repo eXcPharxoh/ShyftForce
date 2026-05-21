@@ -8,13 +8,15 @@ import { TrialExpiredGate } from "@/components/trial-expired-gate";
 import { isPlatformAdminEmail } from "@/lib/platform/admin";
 import { isTrialActive } from "@/lib/stripe";
 import { initials } from "@/lib/utils";
+import { LocaleProvider } from "@/lib/i18n/provider";
+import { resolveLocale } from "@/lib/i18n/dictionaries";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const u = await requireUser();
   const real = await getRealSessionUser();
   const showPlatformAdmin = isPlatformAdminEmail(real?.email);
 
-  const [pendingOffers, org, activeMembers] = await Promise.all([
+  const [pendingOffers, org, activeMembers, member] = await Promise.all([
     prisma.openShiftOffer.count({
       where: { memberId: u.memberId, status: "pending", expiresAt: { gt: new Date() } },
     }),
@@ -25,10 +27,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         plan: true,
         subscriptionStatus: true,
         stripeSubscriptionId: true,
+        defaultLocale: true,
       },
     }),
     prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
+    u.memberId
+      ? prisma.member.findUnique({ where: { id: u.memberId }, select: { locale: true } })
+      : Promise.resolve(null),
   ]);
+
+  // Resolve effective locale: member preference → org default → "en"
+  const locale = resolveLocale(member?.locale, org?.defaultLocale);
 
   // Trial state
   const onTrial = isTrialActive(org);
@@ -47,6 +56,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const daysExpired  = org?.trialEndsAt ? Math.max(0, Math.floor((Date.now() - +org.trialEndsAt) / 86400000)) : 0;
 
   return (
+    <LocaleProvider locale={locale}>
     <div className="min-h-screen flex bg-ink-950 text-ink-50">
       <Sidebar
         orgName={u.organizationName}
@@ -74,5 +84,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <TrialExpiredGate daysExpired={daysExpired} activeMembers={activeMembers} />
       )}
     </div>
+    </LocaleProvider>
   );
 }

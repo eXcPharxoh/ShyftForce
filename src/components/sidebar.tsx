@@ -8,6 +8,7 @@ import {
   MoreHorizontal, BarChart3, ShieldCheck, Settings, ChevronDown, Sparkles,
 } from "lucide-react";
 import { primaryNavFor, verticalFor } from "@/lib/verticals/config";
+import { useT } from "@/lib/i18n/provider";
 
 /**
  * Dashboard sidebar — 240px wide, dark navy with electric-blue accents.
@@ -24,33 +25,48 @@ export function Sidebar({ orgName, industry, role, pendingOffers = 0, userName, 
   userRole?: string;
 }) {
   const pathname = usePathname();
+  const t = useT();
   const vertical = verticalFor(industry);
   const primary = primaryNavFor(industry, role);
 
+  // Map module hrefs to i18n keys where we have translations; fall back to
+  // the config's own label otherwise.
+  const NAV_KEY_BY_HREF: Record<string, string> = {
+    "/dashboard":   "nav.dashboard",
+    "/schedule":    "nav.schedule",
+    "/attendance":  "nav.attendance",
+    "/open-shifts": "nav.open_shifts",
+    "/time-off":    "nav.time_off",
+  };
+  const tnav = (href: string, fallback: string) => {
+    const k = NAV_KEY_BY_HREF[href];
+    return k ? t(k) : fallback;
+  };
+
   const sections: { label?: string; items: { href: string; label: string; icon: any; badge: number | null; highlight?: boolean; mute?: boolean }[] }[] = [
     {
-      label: "Workspace",
+      label: t("nav.workspace"),
       items: primary.map(m => ({
-        href: m.href, label: m.label, icon: m.icon,
+        href: m.href, label: tnav(m.href, m.label), icon: m.icon,
         badge: m.href === "/open-shifts" && pendingOffers > 0 ? pendingOffers : null,
         highlight: m.highlight,
       })),
     },
     {
-      label: "People",
+      label: t("nav.people"),
       items: [
-        { href: "/hr",         label: "Team",       icon: Users,         badge: null },
-        { href: "/messenger",  label: "Messenger",  icon: MessageSquare, badge: null, mute: true },
-        { href: "/documents",  label: "Documents",  icon: FolderClosed,  badge: null },
-        { href: "/billboard",  label: "News Feed",  icon: Megaphone,     badge: null },
+        { href: "/hr",         label: t("nav.hr"),         icon: Users,         badge: null },
+        { href: "/messenger",  label: t("nav.messenger"),  icon: MessageSquare, badge: null, mute: true },
+        { href: "/documents",  label: t("nav.documents"),  icon: FolderClosed,  badge: null },
+        { href: "/billboard",  label: t("nav.billboard"),  icon: Megaphone,     badge: null },
       ],
     },
     {
-      label: "Setup",
+      label: t("nav.setup"),
       items: [
-        { href: "/compliance", label: "Compliance",   icon: ShieldCheck, badge: null },
-        { href: "/reports",    label: "Reports",      icon: BarChart3,   badge: null },
-        { href: "/more",       label: "More",         icon: MoreHorizontal, badge: null },
+        { href: "/compliance", label: t("nav.compliance"), icon: ShieldCheck,    badge: null },
+        { href: "/reports",    label: t("nav.reports"),    icon: BarChart3,      badge: null },
+        { href: "/more",       label: t("nav.more"),       icon: MoreHorizontal, badge: null },
       ],
     },
   ];

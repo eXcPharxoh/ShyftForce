@@ -1,5 +1,7 @@
 "use client";
-import { Settings, LogOut, Clock, Sparkles, User as UserIcon, CreditCard, ChevronDown, Shield, Search } from "lucide-react";
+import { Settings, LogOut, Clock, Sparkles, User as UserIcon, CreditCard, ChevronDown, Shield, Search, Languages } from "lucide-react";
+import { LOCALES, type Locale } from "@/lib/i18n/dictionaries";
+import { useLocale, useT } from "@/lib/i18n/provider";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { initials } from "@/lib/utils";
@@ -15,6 +17,7 @@ import { Bolt } from "@/components/ui/logo";
  * Cmd+K opens the Co-pilot panel (acts as global search + assistant).
  */
 export function Topbar({ name, role, image, showPlatformAdmin = false }: { name: string; role?: string; image?: string | null; showPlatformAdmin?: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   // ⌘K now opens the palette (jump/search). Palette can escalate to the
   // full Co-pilot chat panel when the user types a free-form question.
@@ -64,14 +67,14 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
         >
           <Bolt size={14} />
           <span className="text-[13px] text-ink-300 flex-1 truncate group-hover:text-ink-50">
-            Ask Co-pilot or search…
+            {t("copilot.ask")}
           </span>
           <kbd className="kbd">⌘K</kbd>
         </button>
 
         {/* Right cluster */}
         <Link href="/attendance" className="btn-primary btn-sm hidden sm:inline-flex">
-          <Clock className="w-3.5 h-3.5" /> Clock
+          <Clock className="w-3.5 h-3.5" /> {t("action.clock_in").split(" ")[0]}
         </Link>
 
         <NotificationsBell />
@@ -110,6 +113,7 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
               <MenuLink href="/hr/members"       icon={UserIcon}   label="Profile" />
               <MenuLink href="/settings/billing" icon={CreditCard} label="Billing & plan" />
               <MenuLink href="/more"             icon={Settings}   label="Settings" />
+              <LanguagePicker />
               {showPlatformAdmin && (
                 <>
                   <div className="my-1 mx-1 border-t border-white/[0.06]" />
@@ -148,5 +152,65 @@ function MenuLink({ href, icon: Icon, label }: { href: string; icon: any; label:
     <Link href={href} className="flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-ink-300 hover:bg-white/[0.04] hover:text-ink-50 transition">
       <Icon className="w-4 h-4 text-ink-500" /> {label}
     </Link>
+  );
+}
+
+function LanguagePicker() {
+  const currentLocale = useLocale();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState<Locale | null>(null);
+
+  async function pick(loc: Locale) {
+    if (loc === currentLocale || busy) return;
+    setBusy(loc);
+    try {
+      const res = await fetch("/api/me/locale", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale: loc }),
+      });
+      if (res.ok) {
+        // Hard reload so server-rendered translations pick up the new locale
+        window.location.reload();
+      } else {
+        setBusy(null);
+      }
+    } catch {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="border-t border-white/[0.06] mt-1 pt-1">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-ink-300 hover:bg-white/[0.04] hover:text-ink-50 transition"
+      >
+        <Languages className="w-4 h-4 text-ink-500" />
+        <span className="flex-1 text-left">Language</span>
+        <span className="text-[11px] text-ink-500 font-mono uppercase">{currentLocale}</span>
+      </button>
+      {open && (
+        <div className="px-1 pb-1">
+          {LOCALES.map(l => (
+            <button
+              key={l.code}
+              onClick={() => pick(l.code)}
+              disabled={!!busy}
+              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[13px] transition ${
+                l.code === currentLocale
+                  ? "bg-brand-500/10 text-brand-300"
+                  : "text-ink-300 hover:bg-white/[0.04]"
+              }`}
+            >
+              <span className="text-base">{l.flag}</span>
+              <span className="flex-1 text-left">{l.label}</span>
+              {l.code === currentLocale && <span className="text-success text-[10px]">✓</span>}
+              {busy === l.code && <span className="text-ink-500 text-[10px]">…</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
