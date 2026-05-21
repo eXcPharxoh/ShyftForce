@@ -50,24 +50,92 @@ export function CopilotPanel({ open, onClose, initialPrompt }: { open: boolean; 
     const next: ChatMsg[] = [...messages, { role: "user", content: body }];
     setMessages(next);
     setLoading(true);
+
+    // Stream the response via Server-Sent Events. The new /api/copilot/stream
+    // endpoint sends `delta` events for text chunks, `tool` for tool calls,
+    // and `done` / `error` as terminal events.
+    const idx = next.length;
+    setMessages(m => [...m, { role: "assistant", content: "" }]); // empty placeholder we'll fill
+    const traceAcc: any[] = [];
+
     try {
-      const res = await fetch("/api/copilot", {
+      const res = await fetch("/api/copilot/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setMessages([...next, { role: "assistant", content: `⚠️ ${data.error ?? "Something went wrong."}` }]);
-      } else {
-        const idx = next.length;
-        setMessages([...next, { role: "assistant", content: data.text || "(no text returned)" }]);
-        setTraces(t => ({ ...t, [idx]: data.trace ?? [] }));
-        const mutated = (data.trace ?? []).some((t: any) => t.type === "tool" && /create|publish|update|send_/.test(t.name ?? ""));
-        if (mutated) router.refresh();
+      if (!res.ok || !res.body) {
+        const err = await res.text().catch(() => "Stream error");
+        setMessages(m => {
+          const copy = [...m];
+          copy[idx] = { role: "assistant", content: `⚠️ ${err}` };
+          return copy;
+        });
+        setLoading(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let acc = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+
+        // SSE events are separated by \n\n
+        const events = buf.split("\n\n");
+        buf = events.pop() ?? ""; // keep the trailing partial
+
+        for (const block of events) {
+          const lines = block.split("\n");
+          let eventName = "message";
+          let dataLine = "";
+          for (const ln of lines) {
+            if (ln.startsWith("event:")) eventName = ln.slice(6).trim();
+            else if (ln.startsWith("data:")) dataLine += ln.slice(5).trim();
+          }
+          if (!dataLine) continue;
+          let payload: any;
+          try { payload = JSON.parse(dataLine); } catch { continue; }
+
+          if (eventName === "delta") {
+            acc += payload.text ?? "";
+            setMessages(m => {
+              const copy = [...m];
+              copy[idx] = { role: "assistant", content: acc };
+              return copy;
+            });
+          } else if (eventName === "tool") {
+            traceAcc.push({ type: "tool", name: payload.name, input: payload.input });
+            setTraces(t => ({ ...t, [idx]: [...traceAcc] }));
+          } else if (eventName === "done") {
+            if (payload.trace) setTraces(t => ({ ...t, [idx]: payload.trace }));
+            const finalText = (payload.text ?? acc).trim() || "(no text returned)";
+            setMessages(m => {
+              const copy = [...m];
+              copy[idx] = { role: "assistant", content: finalText };
+              return copy;
+            });
+            const mutated = (payload.trace ?? []).some((t: any) => t.type === "tool" && /create|publish|update|send_|cancel_|approve_|invite_|book_|log_|set_/.test(t.name ?? ""));
+            if (mutated) router.refresh();
+          } else if (eventName === "error") {
+            setMessages(m => {
+              const copy = [...m];
+              copy[idx] = { role: "assistant", content: `⚠️ ${payload.message ?? "Stream error"}` };
+              return copy;
+            });
+          }
+        }
       }
     } catch (e: any) {
-      setMessages(m => [...m, { role: "assistant", content: `⚠️ Network error: ${e.message ?? e}` }]);
+      setMessages(m => {
+        const copy = [...m];
+        copy[idx] = { role: "assistant", content: `⚠️ Network error: ${e.message ?? e}` };
+        return copy;
+      });
     } finally {
       setLoading(false);
     }
