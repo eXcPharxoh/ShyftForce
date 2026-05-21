@@ -15,7 +15,7 @@ const SUGGESTIONS = [
   "How many hours has each employee worked this period?",
 ];
 
-export function CopilotPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CopilotPanel({ open, onClose, initialPrompt }: { open: boolean; onClose: () => void; initialPrompt?: string }) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [draft, setDraft] = useState("");
@@ -27,6 +27,17 @@ export function CopilotPanel({ open, onClose }: { open: boolean; onClose: () => 
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
+
+  // When opened with a prefilled prompt (from the ⌘K palette), kick it off
+  // automatically. We use a ref to ensure each prompt only fires once.
+  const lastFiredPrompt = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!open || !initialPrompt) return;
+    if (lastFiredPrompt.current === initialPrompt) return;
+    lastFiredPrompt.current = initialPrompt;
+    void send(initialPrompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialPrompt]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });

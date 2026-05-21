@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { initials } from "@/lib/utils";
 import Link from "next/link";
 import { CopilotPanel } from "@/components/copilot/copilot-panel";
+import { CmdKPalette } from "@/components/cmdk/cmdk-palette";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { Bolt } from "@/components/ui/logo";
 
@@ -15,18 +16,30 @@ import { Bolt } from "@/components/ui/logo";
  */
 export function Topbar({ name, role, image, showPlatformAdmin = false }: { name: string; role?: string; image?: string | null; showPlatformAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
+  // ⌘K now opens the palette (jump/search). Palette can escalate to the
+  // full Co-pilot chat panel when the user types a free-form question.
+  const [cmdkOpen, setCmdkOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [copilotInitial, setCopilotInitial] = useState<string | undefined>(undefined);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault(); setCopilotOpen(v => !v);
+        e.preventDefault();
+        // If Co-pilot chat is open, ⌘K closes it. Otherwise toggle palette.
+        if (copilotOpen) setCopilotOpen(false);
+        else setCmdkOpen(v => !v);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [copilotOpen]);
+
+  function openCopilotWithPrompt(prompt?: string) {
+    setCopilotInitial(prompt);
+    setCopilotOpen(true);
+  }
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -41,9 +54,9 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
   return (
     <>
       <header className="h-14 sticky top-0 z-30 flex items-center px-6 gap-3 border-b border-white/[0.06] bg-ink-950/80 backdrop-blur-xl">
-        {/* Co-pilot / global search trigger — center pinned */}
+        {/* ⌘K palette trigger — center pinned */}
         <button
-          onClick={() => setCopilotOpen(true)}
+          onClick={() => setCmdkOpen(true)}
           className="group flex-1 max-w-[460px] mx-auto flex items-center gap-2.5 px-3.5 h-9 rounded-md
                      border border-white/[0.12] bg-white/[0.03] backdrop-blur-md
                      hover:bg-white/[0.06] hover:border-white/[0.2]
@@ -116,7 +129,16 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
           )}
         </div>
       </header>
-      <CopilotPanel open={copilotOpen} onClose={() => setCopilotOpen(false)} />
+      <CmdKPalette
+        open={cmdkOpen}
+        onClose={() => setCmdkOpen(false)}
+        onOpenCopilot={openCopilotWithPrompt}
+      />
+      <CopilotPanel
+        open={copilotOpen}
+        onClose={() => { setCopilotOpen(false); setCopilotInitial(undefined); }}
+        initialPrompt={copilotInitial}
+      />
     </>
   );
 }
