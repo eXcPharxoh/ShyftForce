@@ -189,6 +189,90 @@ export const JURISDICTIONS: Record<string, JurisdictionRules> = {
     minorLatestEndHour: 22,
     notes: "Retail, hospitality, food service with 500+ employees worldwide.",
   },
+  san_francisco: {
+    id: "san_francisco",
+    label: "San Francisco — Retail/Formula Bill of Rights",
+    region: "CA, USA",
+    predictiveSchedulingDays: 14,
+    predictabilityPay: {
+      brackets: [
+        { lessThanHoursNotice: 24,  hoursOwed: 4,    label: "Less than 24h notice (4h pay)" },
+        { lessThanHoursNotice: 168, hoursOwed: 1,    label: "Less than 7 days notice (1h pay)" },
+        { lessThanHoursNotice: 336, hoursOwed: 0.5,  label: "Less than 14 days notice (30 min)" },
+      ],
+    },
+    mealBreakAfterHours: 5,    // CA state rule
+    restBreakAfterHours: 4,
+    minRestGapHours: 11,        // 11h between shifts or extra pay
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 48,
+    minorEarliestStartHour: 5,
+    minorLatestEndHour: 22,
+    notes: "Formula retail (20+ locations) + chain restaurants. 14d notice, predictability pay, equal treatment for part-timers.",
+  },
+  emeryville: {
+    id: "emeryville",
+    label: "Emeryville — Fair Workweek",
+    region: "CA, USA",
+    predictiveSchedulingDays: 14,
+    predictabilityPay: {
+      brackets: [
+        { lessThanHoursNotice: 24,  hoursOwed: 4,    label: "Less than 24h notice" },
+        { lessThanHoursNotice: 336, hoursOwed: 1,    label: "Less than 14 days notice" },
+      ],
+    },
+    mealBreakAfterHours: 5,
+    restBreakAfterHours: 4,
+    minRestGapHours: 11,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 48,
+    minorEarliestStartHour: 5,
+    minorLatestEndHour: 22,
+    notes: "Retail (56+ employees) + fast-food (20+ locations globally). 11h right-to-rest mandatory.",
+  },
+  berkeley: {
+    id: "berkeley",
+    label: "Berkeley — Fair Workweek",
+    region: "CA, USA",
+    predictiveSchedulingDays: 14,
+    predictabilityPay: {
+      brackets: [
+        { lessThanHoursNotice: 24,  hoursOwed: 4,    label: "Less than 24h notice" },
+        { lessThanHoursNotice: 336, hoursOwed: 1,    label: "Less than 14 days notice" },
+      ],
+    },
+    mealBreakAfterHours: 5,
+    restBreakAfterHours: 4,
+    minRestGapHours: 11,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 48,
+    minorEarliestStartHour: 5,
+    minorLatestEndHour: 22,
+    notes: "Retail + food: 10+ employees. 14d notice + good-faith hours estimate at hire.",
+  },
+  new_york_state_retail: {
+    id: "new_york_state_retail",
+    label: "New York State — Retail (proposed 2026)",
+    region: "NY, USA",
+    predictiveSchedulingDays: 14,
+    predictabilityPay: {
+      brackets: [
+        { lessThanHoursNotice: 72,  hoursOwed: 1,    label: "Less than 72h notice" },
+      ],
+    },
+    mealBreakAfterHours: 6,    // NYS Labor Law §162
+    restBreakAfterHours: 0,
+    minRestGapHours: 11,
+    minorAgeThreshold: 18,
+    minorMaxDailyHours: 8,
+    minorMaxWeeklyHours: 28,
+    minorEarliestStartHour: 6,
+    minorLatestEndHour: 22,
+    notes: "Statewide retail extension of NYC Fair Workweek (S.6796 / A.7864) — apply if you have NYS retail operations.",
+  },
 };
 
 /** Apply a jurisdiction's rules to a settings object. Returns the merged settings. */

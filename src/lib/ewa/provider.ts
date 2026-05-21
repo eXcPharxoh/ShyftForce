@@ -42,25 +42,60 @@ const internalLedger: EwaProvider = {
 };
 
 // Stub providers — return an explicit message until real keys are wired
-function stubProvider(name: ProviderName, label: string): EwaProvider {
+function stubProvider(name: ProviderName, label: string, signupUrl?: string): EwaProvider {
   return {
     name,
     async initiate() {
       return {
         ok: false,
         newStatus: "failed",
-        failureReason: `${label} provider not configured. Set ${name.toUpperCase()}_API_KEY and implement initiate() in src/lib/ewa/provider.ts.`,
+        failureReason: `${label} provider not yet configured. ${signupUrl ? `Sign up at ${signupUrl} and set ` : "Set "}${name.toUpperCase()}_API_KEY + ${name.toUpperCase()}_WEBHOOK_SECRET in env.`,
       };
     },
   };
 }
 
+/**
+ * Branch is our reference EWA partner per the design handoff open question
+ * (vs Wagestream / Atomic). Reasoning:
+ *  - Native instant-payout to debit cards (no API for ACH delay)
+ *  - Already powers EWA for Walmart, Uber, Lyft contractor pay
+ *  - Public REST API with sandbox: https://branchapp.com/developers
+ *  - No bank/charter required — operates as a money transmitter
+ *  - Fee model: per-withdrawal flat $2.99 (or employer-subsidized free)
+ *
+ * When you sign up at https://branchapp.com/developers:
+ *   1. Set BRANCH_API_KEY  + BRANCH_WEBHOOK_SECRET in your .env
+ *   2. Implement the real Branch HTTP calls in `branchProvider.initiate()`
+ *   3. Wire /api/ewa/webhooks/branch to receive settlement events
+ *
+ * Until then the provider returns a friendly "not configured" message so the
+ * EWA settings UI can clearly show the integration status.
+ */
+async function branchInitiate(req: WithdrawalRequest): Promise<WithdrawalResult> {
+  const apiKey = process.env.BRANCH_API_KEY;
+  if (!apiKey) {
+    return {
+      ok: false, newStatus: "failed",
+      failureReason: "Branch is selected as your EWA partner but BRANCH_API_KEY is not set. Add it to .env (or use the internal_ledger provider until you sign up).",
+    };
+  }
+  // Live implementation goes here. Sketch:
+  //   POST https://api.branchapp.com/v1/payouts
+  //     { amount: req.amountCents, employee_id: req.memberId, ... }
+  //   → returns { id, status: "pending" | "succeeded" | "failed", ... }
+  return {
+    ok: false, newStatus: "failed",
+    failureReason: "Branch live integration not implemented yet — only env-var check is wired.",
+  };
+}
+
 const REGISTRY: Record<ProviderName, EwaProvider> = {
   internal_ledger: internalLedger,
-  branch: stubProvider("branch", "Branch"),
-  tapcheck: stubProvider("tapcheck", "Tapcheck"),
-  dailypay: stubProvider("dailypay", "DailyPay"),
-  stripe_treasury: stubProvider("stripe_treasury", "Stripe Treasury"),
+  branch: { name: "branch", initiate: branchInitiate },
+  tapcheck: stubProvider("tapcheck", "Tapcheck", "https://tapcheck.com/business"),
+  dailypay: stubProvider("dailypay", "DailyPay", "https://www.dailypay.com/business"),
+  stripe_treasury: stubProvider("stripe_treasury", "Stripe Treasury", "https://stripe.com/treasury"),
 };
 
 export async function getProviderForOrg(organizationId: string): Promise<EwaProvider> {

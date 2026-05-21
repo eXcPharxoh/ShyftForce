@@ -253,6 +253,133 @@ export const TOOLS: Tool[] = [
     description: "Fitness: list today's group fitness classes with instructor, time, room, and attendees.",
     input_schema: { type: "object", properties: {} },
   },
+
+  // -------- Workforce operations (cross-vertical) --------
+  {
+    name: "cancel_shift",
+    description: "Cancel an upcoming shift by ID. Manager+ only. If the shift is published, the system records predictability-pay impact automatically when applicable.",
+    input_schema: {
+      type: "object",
+      properties: {
+        shiftId: { type: "string" },
+        reason:  { type: "string", description: "Free-text reason captured in the audit log" },
+      },
+      required: ["shiftId"],
+    },
+  },
+  {
+    name: "approve_timesheets",
+    description: "Approve pending timesheet entries for the open pay period. Pass memberName to scope to one person, or omit to approve all unflagged entries. Manager+ only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        memberName: { type: "string", description: "Restrict approval to this employee" },
+        includeFlagged: { type: "boolean", description: "Approve even flagged entries (default false)" },
+      },
+    },
+  },
+  {
+    name: "approve_time_off",
+    description: "Approve or reject a time-off request. Manager+ only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        requestId: { type: "string" },
+        decision:  { type: "string", enum: ["approve", "reject"] },
+        note:      { type: "string", description: "Optional message to the requester" },
+      },
+      required: ["requestId", "decision"],
+    },
+  },
+  {
+    name: "list_expiring_permits",
+    description: "List permits expiring within the next N days (default 30). Used to remind the manager what's coming up for renewal.",
+    input_schema: {
+      type: "object",
+      properties: { days: { type: "number" } },
+    },
+  },
+  {
+    name: "invite_member",
+    description: "Send an invitation email to a new employee. Manager+ only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        email:    { type: "string" },
+        name:     { type: "string" },
+        role:     { type: "string", enum: ["EMPLOYEE", "MANAGER"] },
+        position: { type: "string" },
+      },
+      required: ["email", "name"],
+    },
+  },
+  {
+    name: "set_room_status",
+    description: "Hospitality: change a hotel room's status (clean / dirty / cleaning / out_of_order). Manager+ only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        roomNumber: { type: "string" },
+        status:     { type: "string", enum: ["clean", "dirty", "cleaning", "out_of_order"] },
+      },
+      required: ["roomNumber", "status"],
+    },
+  },
+  {
+    name: "book_meeting_room",
+    description: "Office: book a meeting room. Conflict-checked.",
+    input_schema: {
+      type: "object",
+      properties: {
+        roomName: { type: "string" },
+        date:     { type: "string", description: "YYYY-MM-DD" },
+        startTime:{ type: "string", description: "HH:MM 24-hour" },
+        endTime:  { type: "string", description: "HH:MM 24-hour" },
+        title:    { type: "string" },
+      },
+      required: ["roomName", "date", "startTime", "endTime", "title"],
+    },
+  },
+  {
+    name: "log_lost_found",
+    description: "Hospitality: log a lost & found item.",
+    input_schema: {
+      type: "object",
+      properties: {
+        description:   { type: "string" },
+        foundLocation: { type: "string" },
+      },
+      required: ["description"],
+    },
+  },
+  {
+    name: "book_pt_session",
+    description: "Fitness: book a personal training session for a trainer.",
+    input_schema: {
+      type: "object",
+      properties: {
+        trainerName: { type: "string" },
+        clientName:  { type: "string" },
+        date:        { type: "string", description: "YYYY-MM-DD" },
+        startTime:   { type: "string", description: "HH:MM" },
+        durationMins:{ type: "number" },
+        rateDollars: { type: "number" },
+      },
+      required: ["trainerName", "clientName", "date", "startTime"],
+    },
+  },
+  {
+    name: "set_skill_tier",
+    description: "Field service: set a member's skill tier (1=apprentice, 5=master). Affects which shifts they can be matched to.",
+    input_schema: {
+      type: "object",
+      properties: {
+        memberName: { type: "string" },
+        tier:       { type: "number", description: "1 to 5" },
+      },
+      required: ["memberName", "tier"],
+    },
+  },
 ];
 
 // ---------- Helpers ----------
@@ -718,6 +845,146 @@ export async function runTool(name: string, input: any, user: SessionUser) {
           message: v.message, recommendation: v.recommendation,
         })),
       };
+    }
+
+    // -------- Workforce operations (cross-vertical) --------
+
+    case "cancel_shift": {
+      if (!isManager(user)) return forbid();
+      const shift = await prisma.shift.findFirst({
+        where: { id: input.shiftId, location: { organizationId: orgId } },
+        select: { id: true, status: true },
+      });
+      if (!shift) return { error: "Shift not found" };
+      await prisma.shift.delete({ where: { id: shift.id } });
+      return { ok: true, shiftId: shift.id, reason: input.reason ?? null };
+    }
+
+    case "approve_timesheets": {
+      if (!isManager(user)) return forbid();
+      const period = await prisma.payPeriod.findFirst({
+        where: { organizationId: orgId, status: "open" },
+        select: { id: true },
+      });
+      if (!period) return { error: "No open pay period." };
+      const where: any = { payPeriodId: period.id, approved: false };
+      if (input.memberName) {
+        const m = await findMemberByName(orgId, input.memberName);
+        if (!m) return { error: `Member not found: ${input.memberName}` };
+        where.memberId = m.id;
+      }
+      if (!input.includeFlagged) where.flagged = false;
+      const r = await prisma.timesheetEntry.updateMany({ where, data: { approved: true } });
+      return { ok: true, approvedCount: r.count };
+    }
+
+    case "approve_time_off": {
+      if (!isManager(user)) return forbid();
+      const req = await prisma.timeOffRequest.findFirst({
+        where: { id: input.requestId, member: { organizationId: orgId } },
+        select: { id: true },
+      });
+      if (!req) return { error: "Request not found" };
+      const status = input.decision === "approve" ? "approved" : "rejected";
+      await prisma.timeOffRequest.update({ where: { id: req.id }, data: { status } });
+      return { ok: true, status };
+    }
+
+    case "list_expiring_permits": {
+      const days = input.days ?? 30;
+      const horizon = addDays(new Date(), days);
+      const items = await prisma.permit.findMany({
+        where: { organizationId: orgId, expiresOn: { lte: horizon, gte: new Date() } },
+        include: { member: { include: { user: true } } },
+        orderBy: { expiresOn: "asc" }, take: 25,
+      }).catch(() => [] as any[]);
+      return {
+        items: items.map((p: any) => ({
+          category: p.category,
+          owner: p.member?.user.name ?? "(agency-level)",
+          expiresOn: dateLabel(p.expiresOn),
+          daysLeft: Math.ceil((+p.expiresOn - +new Date()) / 86400_000),
+        })),
+      };
+    }
+
+    case "invite_member": {
+      if (!isManager(user)) return forbid();
+      // Defer to existing invitation flow — we just create the record.
+      const existing = await prisma.user.findUnique({ where: { email: input.email } });
+      if (existing) return { error: `User already exists with email ${input.email}` };
+      const inv = await prisma.invitation.create({
+        data: {
+          organizationId: orgId,
+          email: input.email,
+          role: input.role ?? "EMPLOYEE",
+          token: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+          expiresAt: addDays(new Date(), 14),
+        },
+      });
+      return { ok: true, invitationId: inv.id, note: "Invitation created. Email pipeline should now send." };
+    }
+
+    case "set_room_status": {
+      if (!isManager(user)) return forbid();
+      const room = await prisma.hotelRoom.findFirst({ where: { number: input.roomNumber, organizationId: orgId } });
+      if (!room) return { error: `Room ${input.roomNumber} not found` };
+      await prisma.hotelRoom.update({ where: { id: room.id }, data: { status: input.status } });
+      return { ok: true, room: room.number, status: input.status };
+    }
+
+    case "book_meeting_room": {
+      if (!user.memberId) return { error: "Not a member" };
+      const room = await prisma.meetingRoom.findFirst({ where: { name: { contains: input.roomName }, organizationId: orgId, active: true } });
+      if (!room) return { error: `Room not found: ${input.roomName}` };
+      const startsAt = combineDateTime(input.date, input.startTime);
+      const endsAt   = combineDateTime(input.date, input.endTime);
+      // Conflict check
+      const conflict = await prisma.meetingRoomBooking.findFirst({
+        where: { meetingRoomId: room.id, AND: [{ startsAt: { lt: endsAt } }, { endsAt: { gt: startsAt } }] },
+      });
+      if (conflict) return { error: "Conflicts with another booking" };
+      const b = await prisma.meetingRoomBooking.create({
+        data: { meetingRoomId: room.id, organizerId: user.memberId, startsAt, endsAt, title: input.title },
+      });
+      return { ok: true, bookingId: b.id };
+    }
+
+    case "log_lost_found": {
+      const item = await prisma.lostFoundItem.create({
+        data: {
+          organizationId: orgId,
+          description: input.description,
+          foundLocation: input.foundLocation ?? null,
+          loggedById: user.memberId ?? null,
+        },
+      });
+      return { ok: true, itemId: item.id };
+    }
+
+    case "book_pt_session": {
+      if (!user.memberId && !isManager(user)) return forbid();
+      const trainer = await findMemberByName(orgId, input.trainerName);
+      if (!trainer) return { error: `Trainer not found: ${input.trainerName}` };
+      const startsAt = combineDateTime(input.date, input.startTime);
+      const endsAt   = new Date(startsAt.getTime() + (input.durationMins ?? 60) * 60_000);
+      const s = await prisma.ptSession.create({
+        data: {
+          organizationId: orgId, trainerMemberId: trainer.id,
+          clientName: input.clientName, startsAt, endsAt,
+          rateCents: Math.round((input.rateDollars ?? 0) * 100),
+        },
+      });
+      return { ok: true, sessionId: s.id };
+    }
+
+    case "set_skill_tier": {
+      if (!isManager(user)) return forbid();
+      const m = await findMemberByName(orgId, input.memberName);
+      if (!m) return { error: `Member not found: ${input.memberName}` };
+      if (input.tier < 1 || input.tier > 5) return { error: "Tier must be 1-5" };
+      await prisma.member.update({ where: { id: m.id }, data: { skillTier: input.tier } });
+      return { ok: true, member: m.user.name, tier: input.tier };
     }
 
     default:
