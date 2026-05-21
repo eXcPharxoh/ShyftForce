@@ -56,7 +56,7 @@ export function HomeShell({
   greeting, name,
   kpis,
   roster,
-  activity,
+  activity: initialActivity,
   suggestions,
   demand,
   weekStats,
@@ -75,6 +75,24 @@ export function HomeShell({
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
+  }, []);
+
+  // Real-time activity polling — refresh every 15s without reloading.
+  // Replaces the server-rendered prop with the latest payload from
+  // /api/dashboard/activity. Survives network blips silently.
+  const [activity, setActivity] = useState(initialActivity);
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/dashboard/activity", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data.activity)) setActivity(data.activity);
+      } catch { /* ignore */ }
+    };
+    const t = setInterval(poll, 15_000);
+    return () => { cancelled = true; clearInterval(t); };
   }, []);
 
   return (

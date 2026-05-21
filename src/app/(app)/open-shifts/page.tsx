@@ -142,15 +142,23 @@ export default async function OpenShiftsPage() {
       )}
 
       {isManager && (
-        <section className="card overflow-hidden">
-          <header className="px-5 py-3 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold">All open shifts</h3>
-              <p className="text-[11px] text-ink-500">Auto-offer in waves to ranked candidates.</p>
+        <section>
+          {/* Tab strip — matches design spec */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="inline-flex p-1 bg-white/[0.03] border border-white/[0.06] rounded-md">
+              <span className="px-3 py-1.5 rounded-sm text-[12px] font-medium bg-brand-500/12 text-brand-300">
+                Open · {openShifts.length}
+              </span>
+              <span className="px-3 py-1.5 rounded-sm text-[12px] font-medium text-ink-300">
+                In progress · {openShifts.filter(s => s.openShiftOffers.some(o => o.status === "pending")).length}
+              </span>
+              <span className="px-3 py-1.5 rounded-sm text-[12px] font-medium text-ink-500">
+                Filled · —
+              </span>
             </div>
-            <span className="badge bg-amber-50 text-amber-800">{openShifts.length} open</span>
-          </header>
-          {openShifts.length === 0 && (
+          </div>
+
+          {openShifts.length === 0 ? (
             <EmptyState
               icon={Sparkles}
               tone="success"
@@ -158,19 +166,81 @@ export default async function OpenShiftsPage() {
               description="Every shift this week is assigned. When you create an unassigned shift on the Schedule, it'll show up here ready to auto-offer."
               action={<Link href="/schedule" className="btn-soft">Open Schedule →</Link>}
             />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {openShifts.map(s => {
+                const offered    = s.openShiftOffers.length;
+                const claimed    = s.openShiftOffers.filter(o => o.status === "claimed").length;
+                const pending    = s.openShiftOffers.filter(o => o.status === "pending").length;
+                const superseded = s.openShiftOffers.filter(o => o.status === "superseded").length;
+                const wave       = Math.max(0, ...s.openShiftOffers.map(o => o.wave));
+                return (
+                  <div key={s.id} className="card p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-brand-500">
+                          {wave > 0 ? `Wave ${wave}` : "Not yet offered"}
+                          {pending > 0 && ` · ${pending} pending`}
+                        </div>
+                        <h3 className="text-[15px] font-semibold mt-1">{s.position ?? "Open shift"}</h3>
+                        <div className="text-[12px] text-ink-300 mt-0.5">
+                          {s.location.name} · {dateLabel(s.startsAt)}
+                        </div>
+                        <div className="text-[11px] text-ink-500 font-mono">
+                          {timeLabel(s.startsAt)} – {timeLabel(s.endsAt)} · {fmtHours((+s.endsAt - +s.startsAt) / 3600_000)}
+                        </div>
+                      </div>
+                      <span className={`status ${
+                        claimed > 0 ? "status-success" :
+                        pending > 0 ? "status-info"    :
+                                      "status-warn"
+                      }`}>
+                        {claimed > 0 ? "Claimed" : pending > 0 ? "In progress" : "Open"}
+                      </span>
+                    </div>
+
+                    {/* Stacked offered-to avatars */}
+                    {offered > 0 && (
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex -space-x-2">
+                          {s.openShiftOffers.slice(0, 5).map((o, i) => (
+                            <div
+                              key={o.id}
+                              className="w-7 h-7 rounded-full text-[10px] font-semibold text-white flex items-center justify-center ring-2 ring-ink-900 shrink-0"
+                              style={{
+                                background: "linear-gradient(135deg, #6aa2ff, #3a6fd8)",
+                                zIndex: 10 - i,
+                              }}
+                              title={o.member.user.name}
+                            >
+                              {initials(o.member.user.name)}
+                            </div>
+                          ))}
+                          {offered > 5 && (
+                            <div className="w-7 h-7 rounded-full text-[10px] font-semibold text-ink-300 flex items-center justify-center ring-2 ring-ink-900 bg-white/[0.06]">
+                              +{offered - 5}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-ink-500">
+                          Offered to {offered} · {superseded > 0 ? `${superseded} superseded` : "all live"}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Inline ManagerOpenShiftRow gives us the action buttons */}
+                    <ManagerOpenShiftRow
+                      shift={{ id: s.id, position: s.position, locationName: s.location.name, startsAt: s.startsAt.toISOString(), endsAt: s.endsAt.toISOString() }}
+                      offers={s.openShiftOffers.map(o => ({
+                        id: o.id, memberId: o.memberId, name: o.member.user.name, avatar: o.member.user.avatar,
+                        wave: o.wave, status: o.status, expiresAt: o.expiresAt.toISOString(), respondedAt: o.respondedAt?.toISOString() ?? null,
+                      }))}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           )}
-          <ul className="divide-y divide-ink-100 dark:divide-ink-800">
-            {openShifts.map(s => (
-              <ManagerOpenShiftRow
-                key={s.id}
-                shift={{ id: s.id, position: s.position, locationName: s.location.name, startsAt: s.startsAt.toISOString(), endsAt: s.endsAt.toISOString() }}
-                offers={s.openShiftOffers.map(o => ({
-                  id: o.id, memberId: o.memberId, name: o.member.user.name, avatar: o.member.user.avatar,
-                  wave: o.wave, status: o.status, expiresAt: o.expiresAt.toISOString(), respondedAt: o.respondedAt?.toISOString() ?? null,
-                }))}
-              />
-            ))}
-          </ul>
         </section>
       )}
     </div>
