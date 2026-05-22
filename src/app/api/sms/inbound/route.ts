@@ -10,7 +10,7 @@
 // token. We verify when TWILIO_AUTH_TOKEN is configured.
 
 import { NextResponse } from "next/server";
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { replyToMessage } from "@/lib/replier/ai";
 import type { SessionUser } from "@/lib/session";
@@ -34,7 +34,10 @@ function verifyTwilioSignature(url: string, params: Record<string, string>, sign
   const sorted = Object.keys(params).sort().map(k => k + params[k]).join("");
   const data = url + sorted;
   const expected = createHmac("sha1", authToken).update(data).digest("base64");
-  return expected === signature;
+  // Constant-time compare to avoid leaking the signature byte-by-byte.
+  const a = Buffer.from(expected);
+  const b = Buffer.from(signature);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 function normalizePhone(p: string): string {
@@ -46,11 +49,14 @@ export async function POST(req: Request) {
   const raw = await req.text();
   const params = Object.fromEntries(new URLSearchParams(raw)) as Record<string, string>;
 
-  // Signature verification (skip in dev if no auth token)
+  // Signature verification. When an auth token IS configured we REQUIRE a valid
+  // signature — a missing header must NOT skip the check (that's the fail-open
+  // bug: an attacker would just omit X-Twilio-Signature to forge inbound SMS).
+  // Verification is only skipped entirely in dev where no token is set.
   const sig = req.headers.get("x-twilio-signature");
-  if (process.env.TWILIO_AUTH_TOKEN && sig) {
-    if (!verifyTwilioSignature(url, params, sig, process.env.TWILIO_AUTH_TOKEN)) {
-      console.warn("[sms/inbound] Twilio signature mismatch");
+  if (process.env.TWILIO_AUTH_TOKEN) {
+    if (!sig || !verifyTwilioSignature(url, params, sig, process.env.TWILIO_AUTH_TOKEN)) {
+      console.warn("[sms/inbound] Twilio signature missing or invalid — rejecting");
       return noReply();
     }
   }

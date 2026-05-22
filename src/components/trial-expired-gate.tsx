@@ -50,7 +50,7 @@ export function TrialExpiredGate({
   const proExtra  = Math.max(0, activeMembers - 5);
   const proPrice  = 29 + proExtra * 4;
   const bizExtra  = Math.max(0, activeMembers - 15);
-  const bizPrice  = 79 + bizExtra * 3;
+  const bizPrice  = 79 + bizExtra * 6; // matches PLANS.business.perSeatUSD (was $3 — under-quoted)
 
   return (
     <div
@@ -114,7 +114,7 @@ export function TrialExpiredGate({
             <div className="text-[12px] text-ink-500 mt-0.5">Multi-location with payroll + POS</div>
             <div className="mt-4 font-display text-[40px] font-medium grad-text-accent leading-none">${bizPrice}<span className="text-[16px] text-ink-500 font-normal">/mo</span></div>
             <div className="text-[11px] text-ink-500 mt-1 font-mono">
-              $79 base + 15 seats · $3/extra seat · {activeMembers} active
+              $79 base + 15 seats · $6/extra seat · {activeMembers} active
             </div>
             <button
               onClick={() => checkout("business")}
