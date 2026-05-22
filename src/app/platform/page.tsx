@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { fmtMoney, relTime } from "@/lib/utils";
-import { Building2, Users, Calendar, Wallet, AlertOctagon, TrendingUp, Activity, FileWarning } from "lucide-react";
+import { calculateMonthlyCost, normalizePlanKey } from "@/lib/stripe";
+import { Building2, Users, Calendar, Wallet, AlertOctagon, TrendingUp, Activity, FileWarning, DollarSign, PowerOff } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function PlatformOverview() {
     activeSubs, trialOrgs, pastDueSubs,
     newOrgsThisWeek, latestOrgs, latestSignups,
     incidentsOpen, ewaPending, networkOpen,
+    suspendedCount, paidOrgs,
   ] = await Promise.all([
     prisma.organization.count(),
     prisma.user.count(),
@@ -19,7 +21,9 @@ export default async function PlatformOverview() {
     prisma.shift.count(),
     prisma.shift.count({ where: { isOpen: true, startsAt: { gt: now } } }),
     prisma.organization.count({ where: { subscriptionStatus: "active" } }),
-    prisma.organization.count({ where: { plan: "trial" } }),
+    // On trial = trial window still open (signup stores plan "business", so the
+    // old plan:"trial" filter always returned 0).
+    prisma.organization.count({ where: { trialEndsAt: { gt: now } } }),
     prisma.organization.findMany({
       where: { subscriptionStatus: "past_due" },
       select: { id: true, name: true, plan: true },
@@ -31,7 +35,26 @@ export default async function PlatformOverview() {
     prisma.incidentReport.count({ where: { status: { in: ["open", "investigating"] } } }).catch(() => 0),
     prisma.ewaWithdrawal.count({ where: { status: { in: ["pending", "processing"] } } }).catch(() => 0),
     prisma.networkShiftOffer.count({ where: { status: "open" } }).catch(() => 0),
+    prisma.organization.count({ where: { suspendedAt: { lt: now } } }),
+    // Paid orgs (active sub) → MRR (seat counts fetched separately below).
+    prisma.organization.findMany({
+      where: { subscriptionStatus: "active" },
+      select: { id: true, plan: true },
+    }),
   ]);
+
+  // Active-seat counts for the paying orgs, then MRR = sum of base + overage.
+  const seatCounts = paidOrgs.length
+    ? await prisma.member.groupBy({
+        by: ["organizationId"],
+        where: { status: "active", organizationId: { in: paidOrgs.map((o) => o.id) } },
+        _count: { _all: true },
+      })
+    : [];
+  const seatByOrg = new Map(seatCounts.map((s) => [s.organizationId, s._count._all]));
+  const mrrUSD = paidOrgs.reduce((sum, o) => {
+    return sum + calculateMonthlyCost(normalizePlanKey(o.plan), seatByOrg.get(o.id) ?? 0).totalUSD;
+  }, 0);
 
   return (
     <div className="space-y-5">
@@ -57,16 +80,17 @@ export default async function PlatformOverview() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Stat icon={<DollarSign className="w-5 h-5" />} label="MRR" value={fmtMoney(mrrUSD)} sub={`${activeSubs} paying org${activeSubs === 1 ? "" : "s"}`} tone={mrrUSD > 0 ? "emerald" : "amber"} />
         <Stat icon={<Building2 className="w-5 h-5" />} label="Organizations" value={orgs} sub={`+${newOrgsThisWeek} this week`} tone="brand" />
         <Stat icon={<Users className="w-5 h-5" />} label="Users" value={users} sub={`${members} active members`} tone="ink" />
-        <Stat icon={<Calendar className="w-5 h-5" />} label="Shifts" value={shifts} sub={`${openShifts} open`} tone="ink" />
-        <Stat icon={<TrendingUp className="w-5 h-5" />} label="Paid" value={activeSubs} sub={`${trialOrgs} on trial`} tone={activeSubs > 0 ? "emerald" : "amber"} />
+        <Stat icon={<TrendingUp className="w-5 h-5" />} label="On trial" value={trialOrgs} sub={`${activeSubs} converted`} tone={trialOrgs > 0 ? "brand" : "ink"} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Stat icon={<Calendar className="w-5 h-5" />} label="Shifts" value={shifts} sub={`${openShifts} open`} tone="ink" />
         <Stat icon={<FileWarning className="w-5 h-5" />} label="Open incidents" value={incidentsOpen} tone={incidentsOpen > 0 ? "amber" : "ink"} />
         <Stat icon={<Wallet className="w-5 h-5" />} label="EWA pending" value={ewaPending} tone="ink" />
-        <Stat icon={<Activity className="w-5 h-5" />} label="Network offers open" value={networkOpen} tone="ink" />
+        <Stat icon={<PowerOff className="w-5 h-5" />} label="Suspended" value={suspendedCount} tone={suspendedCount > 0 ? "amber" : "ink"} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

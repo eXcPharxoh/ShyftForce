@@ -36,6 +36,11 @@ model Organization {
   trialEndsAt          DateTime?
   subscriptionStatus   String? // active | past_due | canceled | incomplete
 
+  // Platform-admin controls
+  suspendedAt      DateTime? // when set (and in the past), the workspace is frozen
+  suspendedReason  String? // shown to the org on the suspended gate
+  featureOverrides String? // JSON map of { [featureFlag]: boolean } overriding plan defaults
+
   // Payroll integration (Finch)
   finchAccessToken String? // encrypted in production
   finchProviderId  String? // e.g. "adp_workforce_now", "gusto", "paychex"

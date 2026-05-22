@@ -5,6 +5,7 @@ import { dateLabel, relTime } from "@/lib/utils";
 import { ImpersonateButton } from "@/components/platform/impersonate-button";
 import { OrgSettingsForm } from "@/components/platform/org-settings-form";
 import { UserActionsMenu } from "@/components/platform/user-actions-menu";
+import { FEATURE_CATALOG, PLANS, effectivePlanKey, parseFeatureOverrides } from "@/lib/stripe";
 import { Building2, ArrowLeft, Users, MapPin, Calendar, FileText, CreditCard } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +71,15 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           trialEndsAt: org.trialEndsAt ? org.trialEndsAt.toISOString() : null,
           isDemo: org.isDemo,
           timezone: org.timezone,
+          suspendedAt: org.suspendedAt ? org.suspendedAt.toISOString() : null,
+          suspendedReason: org.suspendedReason,
         }}
+        features={FEATURE_CATALOG.map((f) => ({
+          key: f.key,
+          label: f.label,
+          planDefault: PLANS[effectivePlanKey(org)].features.includes(f.key),
+        }))}
+        overrides={parseFeatureOverrides(org.featureOverrides)}
       />
 
       {org.locations.length > 0 && (

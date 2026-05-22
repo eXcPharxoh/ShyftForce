@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Bolt, Wordmark } from "@/components/ui/logo";
 import {
   Users, FolderClosed, MessageSquare, Megaphone,
-  MoreHorizontal, BarChart3, ShieldCheck, Settings, ChevronDown, Sparkles,
+  MoreHorizontal, BarChart3, ShieldCheck, Settings, ChevronDown, Sparkles, Shield,
 } from "lucide-react";
 import { primaryNavFor, verticalFor } from "@/lib/verticals/config";
 import { useT } from "@/lib/i18n/provider";
@@ -64,6 +64,8 @@ export function Sidebar({ orgName, industry, role, pendingOffers = 0, userName, 
     {
       label: t("nav.setup"),
       items: [
+        // Org owners get a consolidated Admin Console.
+        ...(role === "ADMIN" ? [{ href: "/admin", label: "Admin", icon: Shield, badge: null }] : []),
         { href: "/compliance", label: t("nav.compliance"), icon: ShieldCheck,    badge: null },
         { href: "/reports",    label: t("nav.reports"),    icon: BarChart3,      badge: null },
         { href: "/more",       label: t("nav.more"),       icon: MoreHorizontal, badge: null },

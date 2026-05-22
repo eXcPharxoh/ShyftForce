@@ -219,6 +219,61 @@ export function effectivePlanKey(org: { plan: string; trialEndsAt: Date | null }
   return normalizePlanKey(org.plan);
 }
 
+// ---------- Per-org feature overrides (platform-admin controlled) ----------
+
+/** Human-readable labels for every feature flag — used by the platform toggle UI. */
+export const FEATURE_CATALOG: { key: FeatureFlag; label: string }[] = [
+  { key: "ai_copilot",              label: "AI Co-pilot" },
+  { key: "auto_scheduler",          label: "Auto-Scheduler" },
+  { key: "compliance_autopilot",    label: "Compliance Autopilot" },
+  { key: "open_shift_marketplace",  label: "Open-Shift Marketplace" },
+  { key: "geofenced_clock_in",      label: "Geofenced clock-in" },
+  { key: "payroll_push",            label: "Payroll push (Finch)" },
+  { key: "advanced_reports",        label: "Advanced reports" },
+  { key: "worker_network",          label: "Worker Network" },
+  { key: "earned_wage_access",      label: "Earned wage access (EWA)" },
+  { key: "pos_integrations",        label: "POS integrations" },
+  { key: "client_billing",          label: "Client billing" },
+  { key: "tip_management",          label: "Tip management" },
+  { key: "predictability_pay",      label: "Predictability pay" },
+  { key: "audit_log",               label: "Audit log" },
+  { key: "sso",                     label: "SSO" },
+  { key: "custom_sla",              label: "Custom SLA" },
+  { key: "dedicated_csm",           label: "Dedicated CSM" },
+  { key: "on_prem",                 label: "On-prem" },
+];
+
+/** Parse the org.featureOverrides JSON into a partial flag→bool map. Safe on junk. */
+export function parseFeatureOverrides(json: string | null | undefined): Partial<Record<FeatureFlag, boolean>> {
+  if (!json) return {};
+  try {
+    const obj = JSON.parse(json);
+    if (!obj || typeof obj !== "object") return {};
+    const out: Partial<Record<FeatureFlag, boolean>> = {};
+    for (const { key } of FEATURE_CATALOG) {
+      if (typeof obj[key] === "boolean") out[key] = obj[key];
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Authoritative feature check. A platform-admin override (true/false) wins;
+ * otherwise we fall back to the org's effective plan (trial = business).
+ * Use this everywhere instead of planHasFeature when an Organization is in hand.
+ */
+export function orgHasFeature(
+  org: { plan: string; trialEndsAt: Date | null; featureOverrides?: string | null } | null | undefined,
+  feature: FeatureFlag,
+): boolean {
+  if (!org) return false;
+  const overrides = parseFeatureOverrides(org.featureOverrides);
+  if (typeof overrides[feature] === "boolean") return overrides[feature]!;
+  return planHasFeature(effectivePlanKey(org), feature);
+}
+
 // ---------- Stripe price IDs ----------
 // Two prices per paid plan in Stripe:
 //   1. Base (flat monthly fee)

@@ -15,6 +15,10 @@ const PatchSchema = z.object({
   trialEndsAt:        z.string().datetime().nullable().optional(),
   timezone:           z.string().max(60).optional(),
   isDemo:             z.boolean().optional(),
+  // Platform-admin controls
+  suspended:          z.boolean().optional(),
+  suspendedReason:    z.string().max(300).nullable().optional(),
+  featureOverrides:   z.record(z.string(), z.boolean()).nullable().optional(),
 }).strict();
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -42,19 +46,35 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const parsed = PatchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
 
-  const existing = await prisma.organization.findUnique({ where: { id }, select: { id: true, plan: true, subscriptionStatus: true } });
+  const existing = await prisma.organization.findUnique({ where: { id }, select: { id: true, plan: true, subscriptionStatus: true, suspendedAt: true } });
   if (!existing) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const data: any = { ...parsed.data };
-  if (parsed.data.trialEndsAt !== undefined) {
-    data.trialEndsAt = parsed.data.trialEndsAt ? new Date(parsed.data.trialEndsAt) : null;
+  // Map validated fields → Prisma data, excluding the synthetic ones we translate.
+  const { suspended, featureOverrides, trialEndsAt, ...rest } = parsed.data;
+  const data: any = { ...rest };
+
+  if (trialEndsAt !== undefined) {
+    data.trialEndsAt = trialEndsAt ? new Date(trialEndsAt) : null;
+  }
+  // Suspend/restore: setting suspended=true freezes the workspace now; false clears it.
+  if (suspended !== undefined) {
+    data.suspendedAt = suspended ? (existing.suspendedAt ?? new Date()) : null;
+    if (!suspended) data.suspendedReason = null;
+  }
+  if (featureOverrides !== undefined) {
+    data.featureOverrides = featureOverrides ? JSON.stringify(featureOverrides) : null;
   }
 
   try {
     const updated = await prisma.organization.update({ where: { id }, data });
+    const action =
+      suspended === true  ? "org.suspend" :
+      suspended === false ? "org.restore" :
+      parsed.data.plan && parsed.data.plan !== existing.plan ? "org.upgrade_plan" :
+      "org.update";
     await audit({
       organizationId: id, actorId: real.id,
-      action: parsed.data.plan && parsed.data.plan !== existing.plan ? "org.upgrade_plan" : "org.update",
+      action,
       entityType: "Organization", entityId: id,
       metadata: { byPlatformAdmin: real.email, changes: parsed.data, from: { plan: existing.plan, status: existing.subscriptionStatus } },
     });

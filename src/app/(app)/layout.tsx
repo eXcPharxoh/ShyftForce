@@ -5,6 +5,7 @@ import { Topbar } from "@/components/topbar";
 import { ImpersonationBanner } from "@/components/platform/impersonation-banner";
 import { TrialBanner } from "@/components/trial-banner";
 import { TrialExpiredGate } from "@/components/trial-expired-gate";
+import { SuspendedGate } from "@/components/suspended-gate";
 import { isPlatformAdminEmail } from "@/lib/platform/admin";
 import { isTrialActive } from "@/lib/stripe";
 import { initials } from "@/lib/utils";
@@ -28,6 +29,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         subscriptionStatus: true,
         stripeSubscriptionId: true,
         defaultLocale: true,
+        suspendedAt: true,
+        suspendedReason: true,
       },
     }),
     prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
@@ -54,6 +57,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const noActiveSub  = !org?.stripeSubscriptionId || !["active", "trialing"].includes(org?.subscriptionStatus ?? "");
   const showGate     = trialExpired && noActiveSub && (u.role === "ADMIN" || u.role === "MANAGER") && !showPlatformAdmin;
   const daysExpired  = org?.trialEndsAt ? Math.max(0, Math.floor((Date.now() - +org.trialEndsAt) / 86400000)) : 0;
+
+  // Suspension gate (platform-admin freeze). Applies to everyone in the org
+  // except platform admins, who manage suspension from /platform.
+  const showSuspended = !!org?.suspendedAt && org.suspendedAt < new Date() && !showPlatformAdmin;
 
   return (
     <LocaleProvider locale={locale}>
@@ -83,6 +90,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {showGate && (
         <TrialExpiredGate daysExpired={daysExpired} activeMembers={activeMembers} />
       )}
+
+      {/* Platform-admin suspension freeze — highest priority, covers the gate too. */}
+      {showSuspended && <SuspendedGate reason={org?.suspendedReason ?? null} />}
     </div>
     </LocaleProvider>
   );

@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 export type AuditAction =
   | "user.signup" | "user.login" | "user.logout" | "user.password_reset" | "user.verify_email"
   | "org.create" | "org.update" | "org.upgrade_plan" | "org.cancel_subscription"
+  | "org.suspend" | "org.restore"
   | "member.invite" | "member.invite_accept" | "member.role_change" | "member.deactivate"
   | "shift.create" | "shift.update" | "shift.delete" | "shift.publish"
   | "shift.auto_offer" | "shift.claim"
