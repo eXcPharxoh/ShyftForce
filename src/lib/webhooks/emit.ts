@@ -10,6 +10,7 @@
 
 import { createHmac } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { assertPublicWebhookUrl } from "./url-guard";
 
 export type WebhookEvent =
   | "shift.created"   | "shift.updated"   | "shift.deleted"  | "shift.published"
@@ -76,6 +77,18 @@ async function deliverOne(opts: {
       status:         "pending",
     },
   });
+
+  // SSRF guard — re-checked at delivery time so DNS rebinding between
+  // registration and now can't redirect us at an internal address.
+  try {
+    await assertPublicWebhookUrl(opts.url);
+  } catch (e: any) {
+    await prisma.webhookDelivery.update({
+      where: { id: delivery.id },
+      data: { status: "failed", responseBody: `blocked: ${e?.message ?? "unsafe url"}`.slice(0, RESPONSE_BODY_TRUNCATE_BYTES), attempts: 1 },
+    });
+    return;
+  }
 
   try {
     const res = await fetch(opts.url, {

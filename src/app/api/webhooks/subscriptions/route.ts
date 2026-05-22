@@ -6,6 +6,7 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
 import { audit } from "@/lib/audit";
+import { assertPublicWebhookUrl } from "@/lib/webhooks/url-guard";
 
 const WEBHOOK_EVENT_CATALOG = [
   "shift.created", "shift.updated", "shift.deleted", "shift.published",
@@ -45,6 +46,13 @@ export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
   const parsed = CreateSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
+
+  // Reject internal / private-IP targets up front (SSRF). Re-checked at delivery.
+  try {
+    await assertPublicWebhookUrl(parsed.data.url);
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? "Unsafe webhook URL" }, { status: 400 });
+  }
 
   // Generate the signing secret. Show it ONCE in the response; we store it
   // unhashed so we can sign outbound deliveries with it. (Customer is

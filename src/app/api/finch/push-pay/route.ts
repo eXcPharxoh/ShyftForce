@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
 import { FinchAPI } from "@/lib/finch";
 import { audit } from "@/lib/audit";
+import { overtimeByMember, OT_MULTIPLIER } from "@/lib/payroll/overtime";
 
 // POST /api/finch/push-pay  body: { payPeriodId? }
 // For each timesheet entry in the open period, push hours+pay to Finch as a pay statement.
@@ -24,25 +25,43 @@ export async function POST(req: Request) {
       });
   if (!period) return NextResponse.json({ error: "No pay period" }, { status: 404 });
 
-  // Aggregate hours per member for the period
-  const byMember = new Map<string, { hours: number; rate: number; externalId: string | null }>();
+  // Per-member rate + external payroll ID lookup, and the day-level hour
+  // entries OT needs (overtime is computed per member-week, not per period total).
+  const rateByMember = new Map<string, number>();
+  const extIdByMember = new Map<string, string | null>();
   for (const e of period.entries) {
-    const cur = byMember.get(e.memberId) ?? { hours: 0, rate: e.member.hourlyRate ?? 0, externalId: e.member.externalEmployeeId };
-    cur.hours += e.hours;
-    byMember.set(e.memberId, cur);
+    rateByMember.set(e.memberId, e.member.hourlyRate ?? 0);
+    extIdByMember.set(e.memberId, e.member.externalEmployeeId);
   }
+  const otByMember = overtimeByMember(
+    period.entries.map((e) => ({ memberId: e.memberId, date: e.date, hours: e.hours })),
+  );
 
   let pushed = 0; let skipped = 0; const errors: string[] = [];
-  for (const [memberId, agg] of byMember) {
-    if (!agg.externalId) { skipped++; continue; }
+  for (const [memberId, split] of otByMember) {
+    const externalId = extIdByMember.get(memberId);
+    if (!externalId) { skipped++; continue; }
+    const rate = rateByMember.get(memberId) ?? 0;
+    const regularCents  = Math.round(split.regularHours * rate * 100);
+    const overtimeCents = Math.round(split.overtimeHours * rate * OT_MULTIPLIER * 100);
+    const grossCents    = regularCents + overtimeCents;
+    const totalHours    = split.regularHours + split.overtimeHours;
+
+    // Two earnings lines so the OT premium (0.5×) is paid and reported correctly.
+    const earnings = [
+      { type: "regular", amount: regularCents, currency: "usd", hours: split.regularHours },
+    ];
+    if (split.overtimeHours > 0) {
+      earnings.push({ type: "overtime", amount: overtimeCents, currency: "usd", hours: split.overtimeHours });
+    }
+
     try {
-      const gross = agg.hours * agg.rate;
       await FinchAPI.createPayStatement(org.finchAccessToken, {
-        individual_id: agg.externalId,
+        individual_id: externalId,
         type: "regular_payroll",
-        total_hours: agg.hours,
-        gross_pay: { amount: Math.round(gross * 100), currency: "usd" },
-        earnings: [{ type: "salary", amount: Math.round(gross * 100), currency: "usd", hours: agg.hours }],
+        total_hours: totalHours,
+        gross_pay: { amount: grossCents, currency: "usd" },
+        earnings,
       });
       pushed++;
     } catch (e: any) {

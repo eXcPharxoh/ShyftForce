@@ -57,7 +57,9 @@ export async function computeDifferentialPay(opts: {
     const multiplier = best?.multiplier ?? 1;
     const flatAddCents = best?.flatAddCents ?? 0;
     const effectiveRate = opts.baseHourlyRateUSD * multiplier;
-    const cents = Math.round(effectiveRate * 100 * fractionOfHour) + flatAddCents * fractionOfHour;
+    // Round the whole per-line amount ONCE so the flat-add term can't leak
+    // fractional cents into the running integer total.
+    const cents = Math.round(effectiveRate * 100 * fractionOfHour + flatAddCents * fractionOfHour);
     totalCents += cents;
     lines.push({
       hourStart, ruleName: best?.name ?? null,

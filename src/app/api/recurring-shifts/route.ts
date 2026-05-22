@@ -38,6 +38,13 @@ export async function POST(req: Request) {
   const member = await prisma.member.findUnique({ where: { id: parsed.data.memberId } });
   if (!member || member.organizationId !== u.organizationId) return NextResponse.json({ error: "member not in org" }, { status: 404 });
 
+  // Location must also belong to the caller's org (don't trust the body id).
+  const loc = await prisma.location.findFirst({
+    where: { id: parsed.data.locationId, organizationId: u.organizationId },
+    select: { id: true },
+  });
+  if (!loc) return NextResponse.json({ error: "location not in org" }, { status: 404 });
+
   const r = await prisma.recurringShift.create({
     data: {
       memberId: parsed.data.memberId,

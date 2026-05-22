@@ -28,6 +28,34 @@ async function findOpenPosting(token: string) {
   });
 }
 
+// Lightweight in-memory rate limiter for the public POST. Keyed by IP+token.
+// Not distributed (per-instance), but stops a single source from flooding
+// applications. The 30-day same-email de-dupe below is the second line.
+const RL = new Map<string, { count: number; resetAt: number }>();
+const RL_LIMIT = 5;
+const RL_WINDOW_MS = 60_000;
+
+function rateLimited(key: string): boolean {
+  const now = Date.now();
+  // Opportunistic cleanup so the map can't grow without bound.
+  if (RL.size > 5000) {
+    for (const [k, v] of RL) if (v.resetAt < now) RL.delete(k);
+  }
+  const e = RL.get(key);
+  if (!e || e.resetAt < now) {
+    RL.set(key, { count: 1, resetAt: now + RL_WINDOW_MS });
+    return false;
+  }
+  e.count++;
+  return e.count > RL_LIMIT;
+}
+
+function clientIp(req: Request): string {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0].trim();
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
+
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const p = await findOpenPosting(token);
@@ -49,6 +77,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
 
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+
+  if (rateLimited(`${clientIp(req)}|${token}`)) {
+    return NextResponse.json({ error: "Too many submissions — please wait a moment and try again." }, { status: 429 });
+  }
+
   const p = await findOpenPosting(token);
   if (!p) return NextResponse.json({ error: "Posting not available" }, { status: 404 });
 

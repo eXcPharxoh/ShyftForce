@@ -71,20 +71,28 @@ export async function getOrInitBalance(memberId: string, policyId: string) {
       const available = newAccrued - balance.hoursUsed;
       if (available > policy.maxBalance) newAccrued = balance.hoursUsed + policy.maxBalance;
     }
-    balance = await prisma.ptoBalance.update({
-      where: { id: balance.id },
+    // Atomic guard against double-accrual: only the first concurrent caller whose
+    // row still shows a prior accrual year wins. updateMany's WHERE makes the
+    // "have we already credited this year?" check and the write a single SQL
+    // statement, so two parallel reads can't both add a year's hours.
+    await prisma.ptoBalance.updateMany({
+      where: { id: balance.id, NOT: { lastAccrualYear: year } },
       data: {
         hoursAccrued: newAccrued,
         lastAccrualAt: new Date(),
         lastAccrualYear: year,
       },
     });
+    // Re-read so we return the committed state regardless of who won the race.
+    balance = (await prisma.ptoBalance.findUnique({ where: { id: balance.id } })) ?? balance;
   }
   return balance;
 }
 
 /** Deduct hours from a balance. Allows negative if policy says so. */
 export async function deduct(memberId: string, policyId: string, hours: number) {
+  // Never let a negative request act as a stealth refund / balance inflation.
+  hours = Math.max(0, hours);
   const balance = await getOrInitBalance(memberId, policyId);
   const policy = await prisma.ptoPolicy.findUnique({ where: { id: policyId } });
   if (policy?.accrualMethod === "unlimited") return balance;
@@ -99,6 +107,7 @@ export async function deduct(memberId: string, policyId: string, hours: number) 
 
 /** Refund hours back into the balance (e.g. when an approved request is rescinded). */
 export async function refund(memberId: string, policyId: string, hours: number) {
+  hours = Math.max(0, hours);
   const balance = await getOrInitBalance(memberId, policyId);
   return prisma.ptoBalance.update({
     where: { id: balance.id },
@@ -200,8 +209,10 @@ export async function snapshotForMembers(memberIds: string[], organizationId: st
         .then(b => balanceByKey.set(`${p.memberId}|${p.policyId}`, b))
     ),
     ...toAccrue.map(u =>
-      prisma.ptoBalance.update({
-        where: { id: u.id },
+      // Conditional update (see getOrInitBalance) so a concurrent accrual for the
+      // same member-year can't double-credit hours.
+      prisma.ptoBalance.updateMany({
+        where: { id: u.id, NOT: { lastAccrualYear: year } },
         data: { hoursAccrued: u.hoursAccrued, lastAccrualAt: new Date(), lastAccrualYear: year },
       })
     ),

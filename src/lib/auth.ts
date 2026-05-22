@@ -6,6 +6,14 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { verifyCode } from "./totp";
 
+// Brute-force lockout policy.
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+// Precomputed once at module load. Compared against when the email doesn't
+// exist so a missing-user login takes the same time as a wrong-password login
+// (defeats user-enumeration by timing).
+const DUMMY_HASH = bcrypt.hashSync("user-enumeration-decoy", 10);
+
 // OAuth providers are only added when their client IDs are configured. Lets
 // us deploy without setting them up and skip the "this provider isn't
 // configured" screen.
@@ -72,9 +80,39 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
           include: { member: { include: { organization: true, location: true } } },
         });
-        if (!user) return null;
+        if (!user) {
+          // Constant-ish time: do a throwaway compare so a non-existent email
+          // can't be distinguished from a wrong password by response latency.
+          await bcrypt.compare(credentials.password, DUMMY_HASH);
+          return null;
+        }
+
+        // Account lockout — refuse while the cooldown window is active.
+        if (user.lockedUntil && user.lockedUntil > new Date()) {
+          throw new Error("ACCOUNT_LOCKED");
+        }
+
         const ok = await bcrypt.compare(credentials.password, user.password);
-        if (!ok) return null;
+        if (!ok) {
+          // Increment failures; lock after the threshold.
+          const attempts = user.failedLoginAttempts + 1;
+          const lockedUntil = attempts >= MAX_LOGIN_ATTEMPTS
+            ? new Date(Date.now() + LOCKOUT_MINUTES * 60_000)
+            : null;
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { failedLoginAttempts: attempts, lockedUntil },
+          }).catch(() => {});
+          return null;
+        }
+
+        // Password correct — clear any prior failure state.
+        if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { failedLoginAttempts: 0, lockedUntil: null },
+          }).catch(() => {});
+        }
 
         // 2FA gate. If TOTP is enabled, require a fresh code OR a recovery code.
         // We throw a specifically-named Error so the login page can detect

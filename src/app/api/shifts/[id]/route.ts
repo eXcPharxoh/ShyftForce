@@ -80,6 +80,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const m = await prisma.member.findFirst({ where: { id: data.modMemberId, organizationId: u.organizationId }, select: { id: true } });
     if (!m) return NextResponse.json({ error: "MOD member not in org" }, { status: 404 });
   }
+  // Primary assignee must belong to this org (guards the assignment itself, and
+  // makes the skill-tier/permit findUnique lookups below safe).
+  if (body.memberId) {
+    const m = await prisma.member.findFirst({ where: { id: body.memberId, organizationId: u.organizationId }, select: { id: true } });
+    if (!m) return NextResponse.json({ error: "Member not in org" }, { status: 404 });
+  }
 
   // Compliance block: refuse to assign a member whose mandatory permit is
   // currently expired. Manager can either renew the permit or toggle

@@ -22,6 +22,11 @@ export async function POST(req: Request) {
   if (memberId) {
     const m = await prisma.member.findUnique({ where: { id: memberId } });
     if (!m || m.organizationId !== u.organizationId) return NextResponse.json({ error: "member not in your org" }, { status: 404 });
+    // Employees may only attach documents to their own profile; managers/admins
+    // can attach to anyone in the org.
+    if (u.role === "EMPLOYEE" && memberId !== u.memberId) {
+      return NextResponse.json({ error: "You can only upload documents to your own profile" }, { status: 403 });
+    }
   }
 
   const doc = await prisma.document.create({

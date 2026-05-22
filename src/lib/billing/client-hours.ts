@@ -2,6 +2,7 @@
 // (or scheduled shifts if no timesheets). Used to generate client invoices.
 
 import { prisma } from "@/lib/prisma";
+import { splitOvertime } from "@/lib/payroll/overtime";
 
 export type ClientBillingRow = {
   clientId: string;
@@ -16,9 +17,6 @@ export type ClientBillingRow = {
   subtotalCents: number;
   byLocation: { locationId: string; locationName: string; hours: number; cents: number }[];
 };
-
-const OT_THRESHOLD_DAILY = 8;
-const OT_THRESHOLD_WEEKLY = 40;
 
 export async function computeClientBilling(opts: {
   organizationId: string;
@@ -49,7 +47,12 @@ export async function computeClientBilling(opts: {
 
     let hoursRegular = 0;
     let hoursOvertime = 0;
-    const locTotals = new Map<string, { hours: number }>();
+    // Per-location regular/OT split so the byLocation cents include OT premium.
+    const locTotals = new Map<string, { regular: number; overtime: number }>();
+
+    // Build a flat list of {memberId, date, hours, locationId} entries, then run
+    // the shared OT engine (max of daily >8h and weekly >40h, per member-week).
+    let hourEntries: { memberId: string; date: Date; hours: number; locationId: string }[] = [];
 
     if (source === "timesheets") {
       const entries = await prisma.timesheetEntry.findMany({
@@ -61,34 +64,9 @@ export async function computeClientBilling(opts: {
         },
         include: { member: true },
       });
-      // Sum hours by day per member to compute OT
-      const dailyHours = new Map<string, number>(); // key memberId|date → hours
-      for (const e of entries) {
-        const key = `${e.memberId}|${new Date(e.date).toISOString().slice(0,10)}`;
-        dailyHours.set(key, (dailyHours.get(key) ?? 0) + e.hours);
-      }
-      const weeklyHours = new Map<string, number>();
-      for (const e of entries) {
-        const d = new Date(e.date);
-        const monday = new Date(d); monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-        const wkKey = `${e.memberId}|${monday.toISOString().slice(0,10)}`;
-        weeklyHours.set(wkKey, (weeklyHours.get(wkKey) ?? 0) + e.hours);
-      }
-      for (const e of entries) {
-        const memberLocId = e.member.locationId ?? "";
-        if (!locIds.includes(memberLocId)) continue;
-        const slot = locTotals.get(memberLocId) ?? { hours: 0 };
-        slot.hours += e.hours;
-        locTotals.set(memberLocId, slot);
-
-        const dayKey = `${e.memberId}|${new Date(e.date).toISOString().slice(0,10)}`;
-        const dayTotal = dailyHours.get(dayKey) ?? 0;
-        const dayOT = Math.max(0, dayTotal - OT_THRESHOLD_DAILY);
-        const ratio = dayOT / dayTotal || 0;
-        const entryOT = e.hours * ratio;
-        hoursOvertime += entryOT;
-        hoursRegular += e.hours - entryOT;
-      }
+      hourEntries = entries
+        .filter((e) => locIds.includes(e.member.locationId ?? ""))
+        .map((e) => ({ memberId: e.memberId, date: new Date(e.date), hours: e.hours, locationId: e.member.locationId ?? "" }));
     } else {
       // Fall back to scheduled shifts
       const shifts = await prisma.shift.findMany({
@@ -99,16 +77,18 @@ export async function computeClientBilling(opts: {
           memberId: { not: null },
         },
       });
-      for (const s of shifts) {
-        const h = (+s.endsAt - +s.startsAt) / 3600_000;
-        const slot = locTotals.get(s.locationId) ?? { hours: 0 };
-        slot.hours += h;
-        locTotals.set(s.locationId, slot);
-        // Crude OT: anything over 8h in a shift = OT
-        const dayOT = Math.max(0, h - OT_THRESHOLD_DAILY);
-        hoursRegular += h - dayOT;
-        hoursOvertime += dayOT;
-      }
+      hourEntries = shifts
+        .filter((s) => s.memberId)
+        .map((s) => ({ memberId: s.memberId!, date: s.startsAt, hours: (+s.endsAt - +s.startsAt) / 3600_000, locationId: s.locationId }));
+    }
+
+    for (const e of splitOvertime(hourEntries)) {
+      hoursRegular += e.regularHours;
+      hoursOvertime += e.overtimeHours;
+      const slot = locTotals.get(e.locationId) ?? { regular: 0, overtime: 0 };
+      slot.regular += e.regularHours;
+      slot.overtime += e.overtimeHours;
+      locTotals.set(e.locationId, slot);
     }
 
     const subtotalCents = Math.round(
@@ -123,7 +103,8 @@ export async function computeClientBilling(opts: {
       hoursRegular, hoursOvertime, subtotalCents,
       byLocation: [...locTotals.entries()].map(([id, v]) => {
         const loc = c.locations.find((l) => l.id === id);
-        return { locationId: id, locationName: loc?.name ?? "?", hours: v.hours, cents: Math.round(v.hours * c.billRateCents) };
+        const cents = Math.round(v.regular * c.billRateCents + v.overtime * c.billRateCents * c.overtimeMultiplier);
+        return { locationId: id, locationName: loc?.name ?? "?", hours: v.regular + v.overtime, cents };
       }),
     });
   }
