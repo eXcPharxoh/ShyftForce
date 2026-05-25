@@ -3,8 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime connection. In production point this at the Neon POOLED endpoint
+  // (host has "-pooler", add ?pgbouncer=true&connection_limit=1) so serverless
+  // invocations don't exhaust the connection cap.
+  url       = env("DATABASE_URL")
+  // Direct (non-pooled) endpoint used by `prisma migrate`. Falls back to the
+  // same value in dev where DATABASE_URL is already a direct connection.
+  directUrl = env("DIRECT_URL")
 }
 
 model Organization {
