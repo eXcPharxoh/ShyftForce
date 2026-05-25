@@ -30,10 +30,13 @@ async function handler(req: Request) {
   const auth = req.headers.get("authorization");
   const url = new URL(req.url);
   const secret = url.searchParams.get("secret");
-  if (process.env.CRON_SECRET) {
-    if (auth !== `Bearer ${process.env.CRON_SECRET}` && secret !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+  // Fail CLOSED: an unset CRON_SECRET must NOT skip auth.
+  const expected = process.env.CRON_SECRET;
+  if (!expected) {
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 503 });
+  }
+  if (auth !== `Bearer ${expected}` && secret !== expected) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const now = new Date();

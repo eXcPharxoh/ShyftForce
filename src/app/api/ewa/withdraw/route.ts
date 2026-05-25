@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { featureGuard } from "@/lib/feature-guard";
 import { getEwaBalance } from "@/lib/ewa/calc";
 import { getProviderForOrg } from "@/lib/ewa/provider";
 import { audit } from "@/lib/audit";
@@ -13,6 +14,8 @@ const Schema = z.object({
 
 export async function POST(req: Request) {
   const u = await requireUser();
+  const denied = await featureGuard(u.organizationId, "earned_wage_access");
+  if (denied) return denied;
   const parsed = Schema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireManagerOrAdmin } from "@/lib/session";
+import { featureGuard } from "@/lib/feature-guard";
 import { computeClientBilling } from "@/lib/billing/client-hours";
 import { csvResponse, toCsv } from "@/lib/csv";
 
 // GET /api/clients/billing?from=&to=&source=timesheets|shifts&format=json|csv
 export async function GET(req: Request) {
   const u = await requireManagerOrAdmin();
+  const denied = await featureGuard(u.organizationId, "client_billing");
+  if (denied) return denied;
   const url = new URL(req.url);
   const from = url.searchParams.get("from");
   const to   = url.searchParams.get("to");

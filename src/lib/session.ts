@@ -70,9 +70,25 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   };
 }
 
+/** Live check: has a platform admin frozen this org? PK lookup, selects one col. */
+async function isOrgSuspended(orgId: string): Promise<boolean> {
+  const o = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: { suspendedAt: true },
+  });
+  return !!o?.suspendedAt && o.suspendedAt < new Date();
+}
+
 export async function requireUser(): Promise<SessionUser> {
   const u = await getSessionUser();
   if (!u) redirect("/login");
+  // Platform-admin suspension freeze — enforced here so it covers BOTH pages
+  // and API route handlers (a 307 to /suspended blocks the action either way).
+  // Impersonating admins (impersonatedByUserId set) are exempt so they can
+  // still diagnose a frozen tenant from /platform.
+  if (!u.impersonatedByUserId && (await isOrgSuspended(u.organizationId))) {
+    redirect("/suspended");
+  }
   return u;
 }
 
