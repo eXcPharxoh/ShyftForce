@@ -1,69 +1,96 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
-import { secondaryNavFor, verticalFor } from "@/lib/verticals/config";
+import { moreNavFor, verticalFor } from "@/lib/verticals/config";
 
 export default async function MorePage() {
   const u = await requireUser();
   const vertical = verticalFor(u.organizationIndustry);
-  const items = secondaryNavFor(u.organizationIndustry, u.role);
+  const items = moreNavFor(u.organizationIndustry, u.role);
 
-  // Group items by rough category for visual scanning
+  // Plain-language groups, ordered by how often a typical business reaches for
+  // them. Everything the app can do (minus the pinned core) lives here, so
+  // /more is the complete, scannable directory.
   const groups: { label: string; items: typeof items }[] = [
     {
-      label: "Money & retention",
-      items: items.filter((m) => ["/ewa", "/settings/ewa", "/reports/labor-live", "/settings/pos", "/reports/client-billing", "/tips", "/cash-drawer", "/settings/labor-target", "/reports/form-8027"].includes(m.href)),
-    },
-    {
-      label: "Schedule & coverage",
-      items: items.filter((m) => ["/schedule/coverage", "/schedule/forecast", "/settings/recurring-shifts", "/settings/availability"].includes(m.href)),
-    },
-    {
-      label: "Vertical-specific",
+      label: "Scheduling",
       items: items.filter((m) => [
-        "/settings/departments", "/settings/pos-lanes", "/shrink",
-        "/vm-tasks", "/loss-prevention",
-        "/settings/hot-desks", "/settings/meeting-rooms", "/workspace", "/visitors",
-        "/settings/fitness-classes", "/classes", "/pt-sessions",
-        "/settings/crews", "/settings/equipment", "/safety",
-        "/rooms", "/lost-found",
-        "/settings/sub-pool", "/sub-callout", "/settings/class-periods", "/conferences",
-        "/settings/patient-ratios", "/settings/shift-differentials", "/on-call",
-        "/settings/vehicles", "/job-closeout",
+        "/open-shifts", "/schedule/coverage", "/schedule/forecast",
+        "/settings/recurring-shifts", "/settings/availability",
+        "/settings/pto", "/settings/time-off-blackouts",
       ].includes(m.href)),
     },
     {
-      label: "Network",
+      label: "Your team",
+      items: items.filter((m) => [
+        "/hr", "/hr/jobs", "/hr/reviews", "/hr/surveys", "/log-book",
+        "/documents", "/messenger", "/billboard", "/training",
+      ].includes(m.href)),
+    },
+    {
+      label: `${vertical.label} tools`,
+      items: items.filter((m) => [
+        // restaurant
+        "/tips", "/eighty-six", "/cash-drawer", "/stations", "/settings/checklists", "/settings/labor-target",
+        // grocery / retail
+        "/settings/departments", "/settings/pos-lanes", "/shrink", "/vm-tasks", "/loss-prevention",
+        // office
+        "/workspace", "/visitors", "/settings/hot-desks", "/settings/meeting-rooms",
+        // fitness
+        "/classes", "/pt-sessions", "/settings/fitness-classes",
+        // construction
+        "/safety", "/settings/crews", "/settings/equipment",
+        // hospitality
+        "/rooms", "/lost-found",
+        // education
+        "/sub-callout", "/settings/sub-pool", "/settings/class-periods", "/conferences",
+        // healthcare
+        "/settings/patient-ratios", "/settings/shift-differentials", "/on-call",
+        // field service
+        "/settings/vehicles", "/job-closeout",
+        // security
+        "/incidents", "/clients", "/settings/checkpoints",
+      ].includes(m.href)),
+    },
+    {
+      label: "Pay & money",
+      items: items.filter((m) => [
+        "/ewa", "/settings/ewa", "/tips", "/expenses",
+        "/reports/client-billing", "/reports/labor-live", "/settings/pos", "/reports/form-8027",
+      ].includes(m.href)),
+    },
+    {
+      label: "Worker network",
       items: items.filter((m) => ["/worker/profile", "/network", "/network/available"].includes(m.href)),
     },
     {
-      label: "People & policy",
-      items: items.filter((m) => ["/hr", "/hr/jobs", "/log-book", "/documents", "/messenger", "/billboard", "/settings/pto", "/settings/time-off-blackouts", "/compliance", "/hr/surveys", "/training", "/hr/reviews", "/settings/checklists", "/stations", "/eighty-six"].includes(m.href)),
-    },
-    {
-      label: "Reporting",
+      label: "Reports",
       items: items.filter((m) => [
-        "/reports", "/expenses",
-        "/reports/shrink", "/reports/room-turn-time", "/reports/safety-acks",
+        "/reports", "/reports/shrink", "/reports/room-turn-time", "/reports/safety-acks",
         "/reports/class-attendance", "/reports/pt-payout", "/reports/vm-completion",
       ].includes(m.href)),
     },
     {
-      label: "Workspace",
-      items: items.filter((m) => ["/settings/billing", "/settings/locations", "/settings/integrations", "/settings/audit", "/settings/notifications", "/settings/security", "/settings/permits", "/settings/webhooks", "/settings/api-keys", "/settings/kiosks", "/settings/custom-roles", "/settings/checkpoints"].includes(m.href)),
+      label: "Settings",
+      items: items.filter((m) => [
+        "/compliance", "/settings/billing", "/settings/locations", "/settings/integrations",
+        "/settings/audit", "/settings/notifications", "/settings/security", "/settings/permits",
+        "/settings/webhooks", "/settings/api-keys", "/settings/kiosks", "/settings/custom-roles",
+      ].includes(m.href)),
     },
   ];
+  // Anything not explicitly mapped still shows up, so nothing ever disappears.
   const placed = new Set(groups.flatMap((g) => g.items.map((i) => i.href)));
   const other = items.filter((m) => !placed.has(m.href));
-  if (other.length > 0) groups.push({ label: "Other", items: other });
+  if (other.length > 0) groups.push({ label: "More tools", items: other });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <header>
         <div className="text-[11px] uppercase tracking-wider font-bold text-ink-400 mb-1 flex items-center gap-1.5">
           <span>{vertical.emoji}</span> {vertical.label} workspace
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">More</h1>
-        <p className="text-sm text-ink-500">{vertical.pitch}</p>
+        <h1 className="text-2xl font-bold tracking-tight">Everything else</h1>
+        <p className="text-sm text-ink-500">Every tool in your workspace, organized. Your day-to-day lives in the sidebar — this is the full toolbox.</p>
       </header>
 
       {groups.filter((g) => g.items.length > 0).map((g) => (
@@ -71,8 +98,8 @@ export default async function MorePage() {
           <h2 className="text-[11px] uppercase tracking-wider font-bold text-ink-500 dark:text-ink-400 mb-2">{g.label}</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {g.items.map(({ href, label, icon: Icon, highlight }) => (
-              <Link key={href} href={href} className={`card card-hover p-4 flex items-center gap-3 ${highlight ? "ring-1 ring-rose-200 dark:ring-rose-500/20" : ""}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${highlight ? "bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300" : "bg-ink-100 text-ink-700 dark:bg-ink-800 dark:text-ink-300"}`}>
+              <Link key={href} href={href} className={`card card-hover p-4 flex items-center gap-3 ${highlight ? "ring-1 ring-brand-500/25" : ""}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${highlight ? "bg-brand-500/15 text-brand-300" : "bg-white/[0.04] text-ink-300"}`}>
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="font-medium text-sm">{label}</div>

@@ -622,14 +622,55 @@ export function verticalFor(industry: string | null | undefined): VerticalConfig
   return (VERTICALS as Record<string, VerticalConfig>)[industry] ?? VERTICALS.default;
 }
 
-/** Filter modules for the sidebar's primary section, respecting role. */
-export function primaryNavFor(industry: string | null | undefined, role: "ADMIN" | "MANAGER" | "EMPLOYEE"): NavItem[] {
+// --- Progressive-disclosure nav model ---------------------------------------
+// The everyday sidebar shows a small, predictable set so a new business isn't
+// overwhelmed: a UNIVERSAL CORE (the scheduling loop every business uses) plus
+// at most a few industry "hero" tools. Everything else stays one tap away in
+// the grouped /more directory — nothing is removed, just deprioritised.
+
+/** The universal scheduling loop, pinned for every vertical + role, in order. */
+export const CORE_HREFS = ["/dashboard", "/schedule", "/attendance", "/open-shifts", "/time-off"] as const;
+
+/** Max industry hero tools shown in the sidebar before the rest go to /more. */
+const MAX_SIDEBAR_HEROES = 3;
+
+type Role = "ADMIN" | "MANAGER" | "EMPLOYEE";
+
+/** Every module visible to this vertical + role (not hidden, role-permitted). */
+function visibleModules(industry: string | null | undefined, role: Role): NavItem[] {
   const v = verticalFor(industry);
-  return v.modules.filter((m) => m.primary && !m.hidden && (m.role !== "manager" || role !== "EMPLOYEE"));
+  return v.modules.filter((m) => !m.hidden && (m.role !== "manager" || role !== "EMPLOYEE"));
 }
 
-/** Modules NOT in primary nav, used by /more page. Respects role + hidden. */
-export function secondaryNavFor(industry: string | null | undefined, role: "ADMIN" | "MANAGER" | "EMPLOYEE"): NavItem[] {
+/**
+ * Sidebar "Workspace" section: the universal core (in canonical order) followed
+ * by up to MAX_SIDEBAR_HEROES of this vertical's flagship tools. Overflow heroes
+ * are NOT lost — they appear in /more via moreNavFor().
+ */
+export function primaryNavFor(industry: string | null | undefined, role: Role): NavItem[] {
+  const vis = visibleModules(industry, role);
+  const core = CORE_HREFS
+    .map((href) => vis.find((m) => m.href === href))
+    .filter((m): m is NavItem => Boolean(m));
+  const coreSet = new Set<string>(CORE_HREFS);
+  const heroes = vis
+    .filter((m) => m.primary && m.highlight && !coreSet.has(m.href))
+    .slice(0, MAX_SIDEBAR_HEROES);
+  return [...core, ...heroes];
+}
+
+/**
+ * The complete /more directory: everything available to this user EXCEPT the
+ * pinned core (which always lives in the sidebar / bottom bar). This is the
+ * single source of truth for "everything the app can do" — grouped by the page.
+ */
+export function moreNavFor(industry: string | null | undefined, role: Role): NavItem[] {
+  const coreSet = new Set<string>(CORE_HREFS);
+  return visibleModules(industry, role).filter((m) => !coreSet.has(m.href));
+}
+
+/** @deprecated kept for compatibility — use moreNavFor (complete directory). */
+export function secondaryNavFor(industry: string | null | undefined, role: Role): NavItem[] {
   const v = verticalFor(industry);
   return v.modules.filter((m) => !m.primary && !m.hidden && (m.role !== "manager" || role !== "EMPLOYEE"));
 }

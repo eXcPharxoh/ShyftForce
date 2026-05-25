@@ -1,6 +1,7 @@
 import { requireUser, getRealSessionUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { Sidebar } from "@/components/sidebar";
+import { BottomNav } from "@/components/bottom-nav";
 import { Topbar } from "@/components/topbar";
 import { ImpersonationBanner } from "@/components/platform/impersonation-banner";
 import { TrialBanner } from "@/components/trial-banner";
@@ -80,9 +81,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         )}
         {onTrial && <TrialBanner daysLeft={daysLeft} />}
         <Topbar name={u.name} role={u.role} image={u.image} showPlatformAdmin={showPlatformAdmin} />
-        <main className="flex-1 px-8 py-7 max-w-[1480px] w-full mx-auto">
+        {/* pb-24 on mobile keeps content clear of the bottom nav; lg restores normal spacing. */}
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-7 pb-24 lg:pb-7 max-w-[1480px] w-full mx-auto">
           {children}
         </main>
+        {/* Mobile-only primary navigation (sidebar is hidden < lg). */}
+        <BottomNav />
       </div>
 
       {/* Trial-expired hard gate (managers only) — full-screen modal blocks

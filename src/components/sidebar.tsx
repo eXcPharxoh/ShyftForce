@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Bolt, Wordmark } from "@/components/ui/logo";
 import {
-  Users, FolderClosed, MessageSquare, Megaphone,
-  MoreHorizontal, BarChart3, ShieldCheck, Settings, ChevronDown, Sparkles, Shield,
+  Users, MessageSquare,
+  MoreHorizontal, BarChart3, Settings, ChevronDown, Sparkles, Shield,
 } from "lucide-react";
 import { primaryNavFor, verticalFor } from "@/lib/verticals/config";
 import { useT } from "@/lib/i18n/provider";
@@ -43,6 +43,12 @@ export function Sidebar({ orgName, industry, role, pendingOffers = 0, userName, 
     return k ? t(k) : fallback;
   };
 
+  const isManager = role === "ADMIN" || role === "MANAGER";
+
+  // Progressive disclosure: the sidebar shows the universal core + this
+  // vertical's top hero tools (from primaryNavFor), then a slim People and
+  // Setup section. Everything else lives one tap away in /more — so a new
+  // business sees ~10 focused items, not 17. Employees see even fewer.
   const sections: { label?: string; items: { href: string; label: string; icon: any; badge: number | null; highlight?: boolean; mute?: boolean }[] }[] = [
     {
       label: t("nav.workspace"),
@@ -55,19 +61,20 @@ export function Sidebar({ orgName, industry, role, pendingOffers = 0, userName, 
     {
       label: t("nav.people"),
       items: [
-        { href: "/hr",         label: t("nav.hr"),         icon: Users,         badge: null },
         { href: "/messenger",  label: t("nav.messenger"),  icon: MessageSquare, badge: null, mute: true },
-        { href: "/documents",  label: t("nav.documents"),  icon: FolderClosed,  badge: null },
-        { href: "/billboard",  label: t("nav.billboard"),  icon: Megaphone,     badge: null },
+        // Team management is a manager concern; employees reach their own info
+        // from the profile menu, keeping their sidebar minimal.
+        ...(isManager ? [{ href: "/hr", label: t("nav.hr"), icon: Users, badge: null }] : []),
       ],
     },
     {
       label: t("nav.setup"),
       items: [
-        // Org owners get a consolidated Admin Console.
+        // Reports + the Admin console are owner/manager tools.
+        ...(isManager ? [{ href: "/reports", label: t("nav.reports"), icon: BarChart3, badge: null }] : []),
         ...(role === "ADMIN" ? [{ href: "/admin", label: "Admin", icon: Shield, badge: null }] : []),
-        { href: "/compliance", label: t("nav.compliance"), icon: ShieldCheck,    badge: null },
-        { href: "/reports",    label: t("nav.reports"),    icon: BarChart3,      badge: null },
+        // Documents, News Feed, Compliance, billing, integrations, etc. all live
+        // in the grouped More directory now — reachable, just not crowding here.
         { href: "/more",       label: t("nav.more"),       icon: MoreHorizontal, badge: null },
       ],
     },
