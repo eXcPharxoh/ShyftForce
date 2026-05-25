@@ -62,7 +62,13 @@ export default async function Dashboard() {
       },
     }),
     prisma.shift.count({ where: { isOpen: true, location: { organizationId: orgId }, startsAt: { gte: now } } }),
-    prisma.attendanceLog.findMany({ where: { member: { organizationId: orgId } }, orderBy: { at: "asc" } }),
+    // Bounded to the last 36h: enough to resolve current clock-in status
+    // (incl. overnight shifts) without scanning the org's entire attendance
+    // history on every dashboard load. Uses the AttendanceLog(at) index.
+    prisma.attendanceLog.findMany({
+      where: { member: { organizationId: orgId }, at: { gte: new Date(now.getTime() - 36 * 3600_000) } },
+      orderBy: { at: "asc" },
+    }),
     prisma.payPeriod.findFirst({ where: { organizationId: orgId, status: "open" }, include: { entries: true } }),
     prisma.attendanceLog.findMany({
       where: { member: { organizationId: orgId }, at: { gte: addDays(now, -1) } },
