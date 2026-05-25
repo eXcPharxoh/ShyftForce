@@ -5,6 +5,7 @@ import { HomeShell, type RosterEntry, type ActivityEntry, type CopilotSuggestion
 import { VerticalWidgets } from "@/components/dashboard/vertical-widgets";
 import { TurnoverWidget } from "@/components/dashboard/turnover-widget";
 import { PermitExpiryWidget } from "@/components/dashboard/permit-expiry-widget";
+import { GettingStarted } from "@/components/dashboard/getting-started";
 
 export const dynamic = "force-dynamic";
 
@@ -188,6 +189,9 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Onboarding checklist — auto-hides once the workspace is set up. */}
+      {isManager && <GettingStarted orgId={orgId} role={u.role} />}
+
       <HomeShell
         greeting={greeting}
         name={u.name}
