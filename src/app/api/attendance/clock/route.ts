@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { distanceMeters } from "@/lib/geo";
+import { parseDescriptor, isValidDescriptor, compareFaces, normalizeFaceMode } from "@/lib/face/match";
 import { z } from "zod";
 
 const Schema = z.object({
@@ -11,13 +12,14 @@ const Schema = z.object({
   longitude:      z.number().min(-180).max(180).optional(),
   accuracyMeters: z.number().min(0).max(100_000).optional(),
   photoData:      z.string().max(500_000).optional(), // data URL ("data:image/jpeg;base64,...")
+  faceDescriptor: z.array(z.number()).length(128).optional(), // on-device face print
 }).strict();
 
 export async function POST(req: Request) {
   const u = await requireUser();
   const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
-  const { memberId, type, latitude, longitude, accuracyMeters, photoData } = parsed.data;
+  const { memberId, type, latitude, longitude, accuracyMeters, photoData, faceDescriptor } = parsed.data;
 
   if (memberId !== u.memberId && u.role === "EMPLOYEE") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -82,6 +84,38 @@ export async function POST(req: Request) {
     }
   }
 
+  // ---- Face verification (anti-buddy-punch, on-device descriptor) ----
+  // The browser sends a 128-float face print; we compare it server-side to the
+  // member's enrolled print per the org's mode. Only on a self clock-in.
+  let faceMatch: boolean | null = null;
+  let faceDistance: number | null = null;
+  if (selfPunch && type === "clock_in") {
+    const orgFace = await prisma.organization.findUnique({
+      where: { id: u.organizationId },
+      select: { faceVerification: true },
+    });
+    const mode = normalizeFaceMode(orgFace?.faceVerification);
+    const enrolled = parseDescriptor(member.faceDescriptor);
+    if (mode !== "off" && enrolled) {
+      if (faceDescriptor && isValidDescriptor(faceDescriptor)) {
+        const cmp = compareFaces(enrolled, faceDescriptor);
+        faceMatch = cmp.match;
+        faceDistance = cmp.distance;
+        if (mode === "block" && !cmp.match) {
+          return NextResponse.json(
+            { error: "Your face didn't match your enrolled photo. Please clock in yourself.", code: "face_mismatch" },
+            { status: 422 },
+          );
+        }
+      } else if (mode === "block") {
+        return NextResponse.json(
+          { error: "A face check is required to clock in. Allow camera access and try again.", code: "face_required" },
+          { status: 422 },
+        );
+      }
+    }
+  }
+
   // Post-shift checklist gate: if clocking out, refuse if any required
   // post_shift template (for this org + applicable location) has no
   // completed instance for this member today.
@@ -135,6 +169,8 @@ export async function POST(req: Request) {
         distanceMeters: distance,
         withinGeofence,
         verified,
+        faceMatch,
+        faceDistance,
       },
     });
 

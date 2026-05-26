@@ -7,6 +7,8 @@ import { TimesheetActions } from "@/components/attendance/timesheet-actions";
 import { RunPayrollButton } from "@/components/attendance/run-payroll-button";
 import { GeofenceMap } from "@/components/ui/geofence-map";
 import { LocationsPunchMap } from "@/components/geo/locations-punch-map";
+import { FaceEnrollment } from "@/components/attendance/face-enrollment";
+import { FaceVerificationToggle } from "@/components/attendance/face-verification-toggle";
 import Link from "next/link";
 import { MapPin, ShieldCheck, AlertTriangle, Camera, Clock as ClockIcon } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -90,6 +92,12 @@ export default async function AttendancePage() {
           height={360}
         />
       )}
+
+      {/* Face verification: owner policy toggle + self-enrollment. */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        {u.role === "ADMIN" && <FaceVerificationToggle />}
+        <FaceEnrollment />
+      </div>
 
       {/* 5-stat row per design: On time / Late / No-show / Missed-out / Avg variance */}
       {(() => {

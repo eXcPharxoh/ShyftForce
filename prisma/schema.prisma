@@ -47,6 +47,12 @@ model Organization {
   suspendedReason  String? // shown to the org on the suspended gate
   featureOverrides String? // JSON map of { [featureFlag]: boolean } overriding plan defaults
 
+  // Anti-buddy-punch face verification at clock-in:
+  //   "off"   = disabled (default)
+  //   "flag"  = compare + record mismatch for manager review, but allow the punch
+  //   "block" = reject the punch on mismatch
+  faceVerification String @default("off")
+
   // Payroll integration (Finch)
   finchAccessToken String? // encrypted in production
   finchProviderId  String? // e.g. "adp_workforce_now", "gusto", "paychex"
@@ -864,6 +870,14 @@ model Member {
   // as a bcrypt hash so a DB read doesn't leak punch-in credentials.
   kioskPinHash String?
 
+  // Face verification (anti-buddy-punch). We store a non-reversible 128-float
+  // face descriptor computed ON THE DEVICE (face-api.js) — never the raw photo —
+  // as a JSON array. Compared server-side at clock-in. faceConsentAt records
+  // explicit biometric consent (BIPA/GDPR); clearing the descriptor honors deletion.
+  faceDescriptor String?   // JSON number[128]
+  faceEnrolledAt DateTime?
+  faceConsentAt  DateTime?
+
   // FIELD SERVICE: skill tier (1 = apprentice, 5 = master). Used by the
   // job-complexity matcher so a Level-1 tech doesn't get auto-offered a
   // Level-5 job they can't do. Null = unranked / not applicable.
@@ -1146,6 +1160,8 @@ model AttendanceLog {
   distanceMeters Float? // computed distance to assigned location
   withinGeofence Boolean? // null = unknown (no GPS), true/false = computed
   verified       Boolean  @default(false) // true if both GPS+photo were captured
+  faceMatch      Boolean? // null = not checked, true/false = face-descriptor match result
+  faceDistance   Float?   // euclidean distance to enrolled descriptor (lower = better)
 
   member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 

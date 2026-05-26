@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, MapPin, X, CheckCircle2, AlertTriangle, Loader2, Coffee, LogOut, Clock } from "lucide-react";
+import { Camera, MapPin, X, CheckCircle2, AlertTriangle, Loader2, Coffee, LogOut, Clock, ScanFace } from "lucide-react";
 import { fmtDistance } from "@/lib/geo";
+import { computeFaceDescriptor } from "@/lib/face/client";
 
 type Action = "clock_in" | "clock_out" | "break_start" | "break_end";
 
@@ -34,6 +35,13 @@ export function ClockInDialog({
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<any | null>(null);
 
+  // Face verification (anti-buddy-punch). Mode + enrollment fetched on open.
+  const [faceMode, setFaceMode] = useState<"off" | "flag" | "block">("off");
+  const [faceEnrolled, setFaceEnrolled] = useState(false);
+  const [faceDescriptor, setFaceDescriptor] = useState<number[] | null>(null);
+  const [faceChecking, setFaceChecking] = useState(false);
+  const [faceError, setFaceError] = useState<string | null>(null);
+
   // Live distance estimate for UI feedback
   const distance = coords && assignedLocation?.latitude != null && assignedLocation?.longitude != null
     ? haversine(coords.lat, coords.lng, assignedLocation.latitude, assignedLocation.longitude)
@@ -47,8 +55,11 @@ export function ClockInDialog({
   const hasGeofence = assignedLocation?.latitude != null && assignedLocation?.longitude != null;
   const needsPhoto = action === "clock_in";
   const needsOnSite = (action === "clock_in" || action === "clock_out") && hasGeofence;
+  const faceActive = action === "clock_in" && faceMode !== "off" && faceEnrolled;
   const blockReason =
     needsPhoto && !photoData        ? "Take a photo to continue" :
+    faceActive && faceChecking      ? "Checking your face…" :
+    faceActive && faceMode === "block" && !faceDescriptor ? (faceError ?? "Face not recognized — retake facing the camera") :
     needsOnSite && !coords          ? "Waiting for your location…" :
     needsOnSite && withinFence === false ? `You're outside the geofence — move within ${assignedLocation?.geofenceRadiusMeters}m of ${assignedLocation?.name} to continue` :
     null;
@@ -97,7 +108,18 @@ export function ClockInDialog({
     };
   }, [open]);
 
-  function capture() {
+  // Fetch the org's face-verification mode + this member's enrollment on open.
+  useEffect(() => {
+    if (!open || action !== "clock_in") return;
+    let cancelled = false;
+    fetch("/api/me/face/enroll")
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled) { setFaceMode((d.mode ?? "off")); setFaceEnrolled(!!d.enrolled); } })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [open, action]);
+
+  async function capture() {
     if (!videoRef.current || !canvasRef.current) return;
     const v = videoRef.current; const c = canvasRef.current;
     const w = 320, h = 320;
@@ -111,6 +133,18 @@ export function ClockInDialog({
     ctx.drawImage(v, sx, sy, sw, sh, 0, 0, w, h);
     const data = c.toDataURL("image/jpeg", 0.7);
     setPhotoData(data);
+
+    // Compute the on-device face print from the captured frame when the org
+    // verifies faces and this member is enrolled. Only the descriptor is sent.
+    if (faceActive) {
+      setFaceChecking(true); setFaceError(null); setFaceDescriptor(null);
+      const fr = await computeFaceDescriptor(c);
+      setFaceChecking(false);
+      if (fr.ok) setFaceDescriptor(fr.descriptor);
+      else setFaceError(fr.reason === "no_face"
+        ? "Face not detected — retake clearly facing the camera."
+        : "Face check unavailable — retake.");
+    }
   }
 
   async function submit() {
@@ -121,6 +155,7 @@ export function ClockInDialog({
         memberId, type: action,
         latitude: coords?.lat, longitude: coords?.lng, accuracyMeters: coords?.accuracy,
         photoData: photoData ?? undefined,
+        faceDescriptor: faceDescriptor ?? undefined,
       }),
     });
     const data = await res.json();
@@ -168,7 +203,16 @@ export function ClockInDialog({
                   <button onClick={capture} className="absolute inset-x-0 bottom-3 mx-auto w-12 h-12 rounded-full bg-white border-4 border-white/40 hover:scale-105 transition" aria-label="Capture" />
                 )}
                 {photoData && (
-                  <button onClick={() => setPhotoData(null)} className="absolute top-2 right-2 px-2 py-1 rounded-md bg-ink-900/70 text-white text-[11px]">Retake</button>
+                  <button onClick={() => { setPhotoData(null); setFaceDescriptor(null); setFaceError(null); }} className="absolute top-2 right-2 px-2 py-1 rounded-md bg-ink-900/70 text-white text-[11px]">Retake</button>
+                )}
+                {faceActive && photoData && (
+                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-center gap-1.5 text-[11px] px-2 py-1 rounded-md bg-ink-900/70 text-white">
+                    {faceChecking
+                      ? <><Loader2 className="w-3 h-3 animate-spin" /> Checking face…</>
+                      : faceDescriptor
+                        ? <><ScanFace className="w-3 h-3 text-emerald-400" /> Face captured</>
+                        : <><ScanFace className="w-3 h-3 text-amber-400" /> {faceError ?? "No face — retake"}</>}
+                  </div>
                 )}
               </div>
               <canvas ref={canvasRef} className="hidden" />
