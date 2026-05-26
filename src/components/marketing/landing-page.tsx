@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, Play, Check, ChevronRight } from "lucide-react";
+import { ArrowRight, Play, Check, ChevronRight, MapPin, ShieldCheck, Camera } from "lucide-react";
 import { Bolt, Wordmark } from "@/components/ui/logo";
+import { GeoMap } from "@/components/geo/geo-map";
 
 /**
  * ShyftForce marketing landing page.
@@ -25,6 +26,7 @@ export function LandingPage() {
       <TrustMarquee />
       <MetricsStrip />
       <FeaturesBento />
+      <GeofenceShowcase />
       <IndustriesSwitcher />
       <DeepDives />
       <Pricing />
@@ -654,6 +656,72 @@ const INDUSTRIES = [
   { key: "office",        emoji: "◳", label: "Office",       desc: "Hot-desk, meeting rooms, hybrid teams.", positions: ["Receptionist", "Admin", "IT", "HR", "Manager"], compliance: "PTO accruals · OT cap" },
   { key: "fitness",       emoji: "◐", label: "Fitness",      desc: "Class roster, PT bookings, instructor cert.", positions: ["Trainer", "Instructor", "Front Desk", "Manager", "Maintenance"], compliance: "Group fitness cert · CPR · liability" },
 ];
+
+/* ============================================================================
+   GEOFENCED CLOCK-IN SHOWCASE — real Leaflet map, advertises GPS + photo proof
+   ============================================================================ */
+function GeofenceShowcase() {
+  // Illustrative sample data (decorative). Shows a site geofence with on-site
+  // (green) punches and one off-site (amber) attempt.
+  const sites = [{ id: "demo", name: "Downtown Store", lat: 30.2672, lng: -97.7431, radius: 160 }];
+  const punches = [
+    { lat: 30.2675, lng: -97.7428, inside: true,  label: "Maria · clock in · on-site" },
+    { lat: 30.2669, lng: -97.7434, inside: true,  label: "Devon · clock in · on-site" },
+    { lat: 30.2705, lng: -97.7472, inside: false, label: "Flagged · 470m away" },
+  ];
+
+  return (
+    <section id="geofence" className="section-pad relative">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <Reveal>
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] font-semibold text-brand-300 mb-3">
+                <MapPin className="w-3.5 h-3.5" /> Geofenced clock-in
+              </div>
+              <h2 className="font-display text-[clamp(28px,4vw,42px)] font-medium tracking-tight-2 leading-[1.05]">
+                Know it&rsquo;s really them —<br />on-site, on the map.
+              </h2>
+              <p className="text-ink-300 mt-4 text-[15px] leading-relaxed max-w-md">
+                Every punch is pinned to a live map and checked against the site&rsquo;s geofence.
+                Off-site attempts are blocked and flagged in amber, so &ldquo;my buddy clocked me
+                in&rdquo; stops being a thing.
+              </p>
+              <ul className="mt-6 space-y-3">
+                {[
+                  { icon: MapPin, t: "GPS geofence per site", d: "Punches outside the radius are rejected, not just logged." },
+                  { icon: Camera, t: "Photo on every clock-in", d: "A timestamped selfie managers can review at a glance." },
+                  { icon: ShieldCheck, t: "Audit trail on the map", d: "See exactly where each shift started — green inside, amber outside." },
+                ].map(({ icon: Icon, t, d }) => (
+                  <li key={t} className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-brand-500/15 text-brand-300 flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-ink-50">{t}</div>
+                      <div className="text-[12.5px] text-ink-400">{d}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+
+          <Reveal delay={120}>
+            <div className="rounded-2xl border border-white/[0.08] bg-ink-900/40 p-3 shadow-2xl">
+              <GeoMap sites={sites} punches={punches} height={360} interactive={false} />
+              <div className="flex items-center justify-between px-2 pt-3 text-[11px] text-ink-400">
+                <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" /> On-site punch</span>
+                <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /> Off-site (flagged)</span>
+                <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-brand-400" /> Geofence</span>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function IndustriesSwitcher() {
   const [active, setActive] = useState(0);

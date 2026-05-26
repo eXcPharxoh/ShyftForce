@@ -42,6 +42,17 @@ export function ClockInDialog({
     ? distance <= assignedLocation.geofenceRadiusMeters
     : null;
 
+  // Mirror the server's anti-buddy-punch rules so the user sees what's needed
+  // instead of getting a 422 after submitting.
+  const hasGeofence = assignedLocation?.latitude != null && assignedLocation?.longitude != null;
+  const needsPhoto = action === "clock_in";
+  const needsOnSite = (action === "clock_in" || action === "clock_out") && hasGeofence;
+  const blockReason =
+    needsPhoto && !photoData        ? "Take a photo to continue" :
+    needsOnSite && !coords          ? "Waiting for your location…" :
+    needsOnSite && withinFence === false ? `You're outside the geofence — move within ${assignedLocation?.geofenceRadiusMeters}m of ${assignedLocation?.name} to continue` :
+    null;
+
   // Boot camera + geolocation when modal opens
   useEffect(() => {
     if (!open) return;
@@ -215,11 +226,16 @@ export function ClockInDialog({
         </div>
 
         {!result && (
-          <footer className="border-t border-ink-200 dark:border-ink-800 p-4 flex items-center justify-end gap-2 shrink-0">
-            <button onClick={onClose} className="btn-ghost">Cancel</button>
-            <button onClick={submit} disabled={submitting} className={`btn-primary bg-${meta.tone}-500 hover:bg-${meta.tone}-600`}>
-              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><meta.icon className="w-4 h-4" /> {meta.label}</>}
-            </button>
+          <footer className="border-t border-ink-200 dark:border-ink-800 p-4 flex flex-col gap-2 shrink-0">
+            {blockReason && (
+              <div className="text-[11px] text-amber-600 dark:text-amber-400 text-center">{blockReason}</div>
+            )}
+            <div className="flex items-center justify-end gap-2">
+              <button onClick={onClose} className="btn-ghost">Cancel</button>
+              <button onClick={submit} disabled={submitting || !!blockReason} className={`btn-primary bg-${meta.tone}-500 hover:bg-${meta.tone}-600`}>
+                {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><meta.icon className="w-4 h-4" /> {meta.label}</>}
+              </button>
+            </div>
           </footer>
         )}
       </div>

@@ -42,6 +42,46 @@ export async function POST(req: Request) {
 
   const verified = (latitude != null && longitude != null) && !!photo;
 
+  // ---- Anti-buddy-punch enforcement (Tier 1 + 2) ----
+  // Applies only to employees punching for THEMSELVES. Managers/admins (who can
+  // also correct other people's punches) are exempt to avoid GPS lockouts.
+  const selfPunch = memberId === u.memberId;
+  if (u.role === "EMPLOYEE" && selfPunch) {
+    // (2) A selfie is required to clock in. The photo is stored for manager
+    //     review (face-match is a later tier); requiring it deters a friend.
+    if (type === "clock_in" && !photo) {
+      return NextResponse.json(
+        { error: "A photo is required to clock in.", code: "photo_required" },
+        { status: 422 },
+      );
+    }
+    // (1) Geofence — enforced only when the site has one configured (lat/lng set),
+    //     so orgs without geofences are unaffected.
+    const hasGeofence = loc?.latitude != null && loc?.longitude != null;
+    if (hasGeofence && (type === "clock_in" || type === "clock_out")) {
+      if (latitude == null || longitude == null) {
+        return NextResponse.json(
+          { error: "Location is required to clock in at this site. Turn on location access and try again.", code: "gps_required" },
+          { status: 422 },
+        );
+      }
+      // Give the benefit of the doubt for GPS drift / indoor accuracy, capped at 75m.
+      const grace = Math.min(accuracyMeters ?? 0, 75);
+      const radius = loc!.geofenceRadiusMeters ?? 100;
+      if ((distance ?? Infinity) - grace > radius) {
+        return NextResponse.json(
+          {
+            error: `You're ${Math.round(distance ?? 0)}m from ${loc!.name} — you must be on-site (within ${radius}m) to ${type === "clock_in" ? "clock in" : "clock out"}.`,
+            code: "outside_geofence",
+            distanceMeters: distance,
+            geofenceRadiusMeters: radius,
+          },
+          { status: 422 },
+        );
+      }
+    }
+  }
+
   // Post-shift checklist gate: if clocking out, refuse if any required
   // post_shift template (for this org + applicable location) has no
   // completed instance for this member today.

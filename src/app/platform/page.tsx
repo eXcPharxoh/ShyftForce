@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { fmtMoney, relTime } from "@/lib/utils";
 import { calculateMonthlyCost, normalizePlanKey } from "@/lib/stripe";
+import { PlatformMap } from "@/components/platform/platform-map";
 import { Building2, Users, Calendar, Wallet, AlertOctagon, TrendingUp, Activity, FileWarning, DollarSign, PowerOff } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -129,6 +130,8 @@ export default async function PlatformOverview() {
           </ul>
         </section>
       </div>
+
+      <PlatformMap />
     </div>
   );
 }

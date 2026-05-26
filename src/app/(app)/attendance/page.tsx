@@ -6,6 +6,7 @@ import { ClockButton } from "@/components/attendance/clock-button";
 import { TimesheetActions } from "@/components/attendance/timesheet-actions";
 import { RunPayrollButton } from "@/components/attendance/run-payroll-button";
 import { GeofenceMap } from "@/components/ui/geofence-map";
+import { LocationsPunchMap } from "@/components/geo/locations-punch-map";
 import Link from "next/link";
 import { MapPin, ShieldCheck, AlertTriangle, Camera, Clock as ClockIcon } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -77,6 +78,18 @@ export default async function AttendancePage() {
           />
         )}
       </PageHeader>
+
+      {/* Real map of where punches actually happened vs the geofence — the
+          buddy-punch audit view (managers only). */}
+      {isManager && (
+        <LocationsPunchMap
+          orgId={orgId}
+          sinceHours={168}
+          title="Clock-in locations"
+          subtitle="Last 7 days — green inside the geofence, amber outside"
+          height={360}
+        />
+      )}
 
       {/* 5-stat row per design: On time / Late / No-show / Missed-out / Avg variance */}
       {(() => {

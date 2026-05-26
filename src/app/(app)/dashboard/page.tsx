@@ -6,6 +6,7 @@ import { VerticalWidgets } from "@/components/dashboard/vertical-widgets";
 import { TurnoverWidget } from "@/components/dashboard/turnover-widget";
 import { PermitExpiryWidget } from "@/components/dashboard/permit-expiry-widget";
 import { GettingStarted } from "@/components/dashboard/getting-started";
+import { LocationsPunchMap } from "@/components/geo/locations-punch-map";
 
 export const dynamic = "force-dynamic";
 
@@ -222,6 +223,11 @@ export default async function Dashboard() {
       {/* Vertical-specific widgets row */}
       {u.memberId && (
         <VerticalWidgets organizationId={u.organizationId} memberId={u.memberId} industry={u.organizationIndustry} />
+      )}
+
+      {/* Live locations map — sites, geofences, and today's punches (in/out). */}
+      {isManager && (
+        <LocationsPunchMap orgId={u.organizationId} sinceHours={24} subtitle="Sites, geofences, and today's clock-ins" />
       )}
 
       {/* Manager-only HR widgets */}
