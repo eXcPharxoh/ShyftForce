@@ -77,6 +77,7 @@ export default async function AttendancePage() {
         title="Attendance & Payroll"
         subtitle={period ? `Pay period · ${dateLabel(period.startsOn)} → ${dateLabel(period.endsOn)}` : "No active pay period"}
       >
+        {isManager && <Link href="/attendance/review" className="btn-outline"><ShieldCheck className="w-3.5 h-3.5" /> Review flagged</Link>}
         <Link href="#tipping" className="btn-outline">Tip Management</Link>
         {isManager && (
           <RunPayrollButton

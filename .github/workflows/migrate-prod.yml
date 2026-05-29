@@ -1,0 +1,44 @@
+name: Migrate production database
+
+# Runs `prisma migrate deploy` against prod whenever a push to main contains
+# new migration files. Keeps the build-time Vercel deploy migration-free
+# (so a bad migration can't brick all deploys), while still making schema
+# rollout automatic and verifiable.
+#
+# Requires repo secrets:
+#   PROD_DATABASE_URL — pooled Neon URL used at runtime (-pooler host)
+#   PROD_DIRECT_URL   — direct Neon URL used by migrate (no pooler)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "prisma/migrations/**"
+      - "prisma/schema.prisma"
+      - ".github/workflows/migrate-prod.yml"
+
+jobs:
+  migrate:
+    name: prisma migrate deploy
+    runs-on: ubuntu-latest
+    concurrency:
+      group: migrate-prod
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install deps
+        run: npm ci --no-audit --no-fund
+      - name: Show migration status
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          DIRECT_URL:   ${{ secrets.PROD_DIRECT_URL }}
+        run: npx prisma migrate status
+      - name: Apply pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          DIRECT_URL:   ${{ secrets.PROD_DIRECT_URL }}
+        run: npx prisma migrate deploy

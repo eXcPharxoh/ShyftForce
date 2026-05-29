@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Camera, MapPin, X, CheckCircle2, AlertTriangle, Loader2, Coffee, LogOut, Clock, ScanFace } from "lucide-react";
 import { fmtDistance } from "@/lib/geo";
 import { computeFaceDescriptor } from "@/lib/face/client";
+import { detectLiveness, pickRandomGesture, gestureLabel, type LivenessGesture } from "@/lib/face/liveness";
 
 type Action = "clock_in" | "clock_out" | "break_start" | "break_end";
 
@@ -41,6 +42,10 @@ export function ClockInDialog({
   const [faceDescriptor, setFaceDescriptor] = useState<number[] | null>(null);
   const [faceChecking, setFaceChecking] = useState(false);
   const [faceError, setFaceError] = useState<string | null>(null);
+  // Liveness gesture: random prompt before capture — blocks printed-photo and
+  // unattended-screen attacks. Only kicks in when face verification is active.
+  const [livenessGesture, setLivenessGesture] = useState<LivenessGesture | null>(null);
+  const [livenessState, setLivenessState] = useState<"idle" | "watching" | "passed" | "failed">("idle");
 
   // Live distance estimate for UI feedback
   const distance = coords && assignedLocation?.latitude != null && assignedLocation?.longitude != null
@@ -58,6 +63,12 @@ export function ClockInDialog({
   const faceActive = action === "clock_in" && faceMode !== "off" && faceEnrolled;
   const blockReason =
     needsPhoto && !photoData        ? "Take a photo to continue" :
+    faceActive && livenessState === "watching" && livenessGesture
+      ? gestureLabel(livenessGesture)
+      :
+    faceActive && faceMode === "block" && livenessState === "failed"
+      ? "Liveness check failed — retry"
+      :
     faceActive && faceChecking      ? "Checking your face…" :
     faceActive && faceMode === "block" && !faceDescriptor ? (faceError ?? "Face not recognized — retake facing the camera") :
     needsOnSite && !coords          ? "Waiting for your location…" :
@@ -118,6 +129,39 @@ export function ClockInDialog({
       .catch(() => {});
     return () => { cancelled = true; };
   }, [open, action]);
+
+  // Kick off liveness detection once the camera is live AND face is required.
+  // Runs in the browser only (uses face-api landmarks) — block-mode users
+  // can't capture until they pass.
+  useEffect(() => {
+    if (!open || action !== "clock_in") return;
+    if (faceMode === "off" || !faceEnrolled) return;
+    if (livenessState !== "idle") return;
+    // Wait for the video stream to be actually playing before watching.
+    const t = setTimeout(async () => {
+      const v = videoRef.current;
+      if (!v || v.readyState < 2) { setLivenessState("idle"); return; }
+      const gesture = pickRandomGesture();
+      setLivenessGesture(gesture);
+      setLivenessState("watching");
+      try {
+        const ok = await detectLiveness(v, gesture, 6000);
+        setLivenessState(ok ? "passed" : "failed");
+      } catch {
+        // Network/model load failures → don't block in flag mode, do block in block mode.
+        setLivenessState(faceMode === "block" ? "failed" : "passed");
+      }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [open, action, faceMode, faceEnrolled, livenessState]);
+
+  function retryLiveness() {
+    setLivenessGesture(null);
+    setLivenessState("idle");
+    setPhotoData(null);
+    setFaceDescriptor(null);
+    setFaceError(null);
+  }
 
   async function capture() {
     if (!videoRef.current || !canvasRef.current) return;
@@ -200,10 +244,31 @@ export function ClockInDialog({
                   </div>
                 )}
                 {!photoError && !photoData && (
-                  <button onClick={capture} className="absolute inset-x-0 bottom-3 mx-auto w-12 h-12 rounded-full bg-white border-4 border-white/40 hover:scale-105 transition" aria-label="Capture" />
+                  <button
+                    onClick={capture}
+                    disabled={faceActive && faceMode === "block" && livenessState !== "passed"}
+                    className="absolute inset-x-0 bottom-3 mx-auto w-12 h-12 rounded-full bg-white border-4 border-white/40 hover:scale-105 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Capture"
+                  />
+                )}
+                {/* Liveness prompt overlay */}
+                {faceActive && !photoData && livenessGesture && livenessState !== "passed" && (
+                  <div className="absolute inset-x-0 top-3 mx-auto w-fit max-w-[90%] px-3 py-1.5 rounded-full bg-ink-900/85 text-white text-[11px] font-semibold backdrop-blur flex items-center gap-1.5">
+                    {livenessState === "watching" && <span className="w-2 h-2 rounded-full bg-amber-300 animate-pulse" />}
+                    {livenessState === "failed" && <span className="w-2 h-2 rounded-full bg-rose-400" />}
+                    <span>{livenessState === "failed" ? "Didn't catch it — " : ""}{gestureLabel(livenessGesture)}</span>
+                  </div>
+                )}
+                {faceActive && livenessState === "failed" && !photoData && (
+                  <button
+                    onClick={retryLiveness}
+                    className="absolute top-2 left-2 px-2 py-1 rounded-md bg-ink-900/70 text-white text-[11px]"
+                  >
+                    Retry liveness
+                  </button>
                 )}
                 {photoData && (
-                  <button onClick={() => { setPhotoData(null); setFaceDescriptor(null); setFaceError(null); }} className="absolute top-2 right-2 px-2 py-1 rounded-md bg-ink-900/70 text-white text-[11px]">Retake</button>
+                  <button onClick={() => { setPhotoData(null); setFaceDescriptor(null); setFaceError(null); setLivenessState("idle"); setLivenessGesture(null); }} className="absolute top-2 right-2 px-2 py-1 rounded-md bg-ink-900/70 text-white text-[11px]">Retake</button>
                 )}
                 {faceActive && photoData && (
                   <div className="absolute bottom-2 left-2 right-2 flex items-center justify-center gap-1.5 text-[11px] px-2 py-1 rounded-md bg-ink-900/70 text-white">

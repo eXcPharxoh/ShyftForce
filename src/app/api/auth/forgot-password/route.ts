@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "node:crypto";
 import { Email, sendEmail } from "@/lib/email";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const Schema = z.object({ email: z.string().email().toLowerCase().trim() });
 
 export async function POST(req: Request) {
+  // Cap reset attempts per IP — prevents email-bombing a target by spamming
+  // password-reset emails to their inbox.
+  const ip = clientIp(req);
+  const limit = rateLimit({ key: `forgot:${ip}`, max: 5, windowMs: 15 * 60_000 });
+  if (!limit.allowed) {
+    return NextResponse.json({ ok: true }); // mirror the enumeration-safe success path
+  }
   const body = await req.json();
   const parsed = Schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ ok: true }); // never leak whether email exists

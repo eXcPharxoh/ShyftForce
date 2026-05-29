@@ -6,6 +6,7 @@ import { randomBytes } from "node:crypto";
 import { Email, sendEmail } from "@/lib/email";
 import { audit } from "@/lib/audit";
 import { ensureDefaultPolicies } from "@/lib/pto/service";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const Schema = z.object({
   name:    z.string().min(2).max(60),
@@ -15,6 +16,16 @@ const Schema = z.object({
 });
 
 export async function POST(req: Request) {
+  // Cap signup attempts per IP — stops automated org-spam without affecting
+  // legitimate users (each one only signs up once).
+  const ip = clientIp(req);
+  const limit = rateLimit({ key: `signup:${ip}`, max: 5, windowMs: 10 * 60_000 });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many signup attempts. Try again in a few minutes." },
+      { status: 429 },
+    );
+  }
   const body = await req.json();
   const parsed = Schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten().fieldErrors }, { status: 400 });

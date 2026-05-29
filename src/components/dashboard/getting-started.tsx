@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { CheckCircle2, Circle, MapPin, Users, CalendarPlus, Plug, ArrowRight, Rocket } from "lucide-react";
+import { SetupComplete } from "./setup-complete";
 
 /**
  * Getting-Started checklist — shown on the dashboard to owners/managers while
@@ -72,8 +73,10 @@ export async function GettingStarted({ orgId, role }: { orgId: string; role: "AD
 
   const required = steps.filter((s) => s.required);
   const requiredDone = required.filter((s) => s.done).length;
-  // Once every required step is done, the workspace is set up — hide the card.
-  if (requiredDone >= required.length) return null;
+  // Once every required step is done, fire a one-shot celebration instead of
+  // just disappearing. SetupComplete handles the session flag so it doesn't
+  // re-fire every page load.
+  if (requiredDone >= required.length) return <SetupComplete />;
 
   const nextStep = steps.find((s) => !s.done);
 
