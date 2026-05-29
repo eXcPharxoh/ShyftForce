@@ -63,7 +63,7 @@ export function HomeShell({
 }: {
   greeting: string;
   name: string;
-  kpis: { labor: string; laborDelta?: string; openShifts: number; clockedIn: number; compliancePct: number };
+  kpis: { labor: string; laborDelta?: string; openShifts: number; clockedIn: number; compliancePct: number | null };
   roster: RosterEntry[];
   activity: ActivityEntry[];
   suggestions: CopilotSuggestion[];
@@ -131,10 +131,19 @@ export function HomeShell({
         />
         <Kpi
           label="Compliance"
-          value={`${kpis.compliancePct}%`}
-          sub={kpis.compliancePct >= 95 ? "All rules passing" : "Review violations"}
+          value={kpis.compliancePct == null ? "—" : `${kpis.compliancePct}%`}
+          sub={
+            kpis.compliancePct == null            ? "No shifts this week" :
+            kpis.compliancePct >= 95              ? "All rules passing"   :
+                                                    "Review violations"
+          }
           icon={ShieldCheck}
-          tone={kpis.compliancePct >= 95 ? "success" : kpis.compliancePct >= 80 ? "warn" : "danger"}
+          tone={
+            kpis.compliancePct == null ? "info" :
+            kpis.compliancePct >= 95   ? "success" :
+            kpis.compliancePct >= 80   ? "warn" :
+                                         "danger"
+          }
         />
       </section>
 

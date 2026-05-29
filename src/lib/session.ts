@@ -98,6 +98,40 @@ export async function requireManagerOrAdmin(): Promise<SessionUser> {
   return u;
 }
 
+/**
+ * Gate a server action / route handler on a specific permission.
+ * Admins always pass. Otherwise the member's built-in role ∪ assigned custom
+ * roles must include the requested permission(s). Failure → redirect to
+ * /dashboard so we don't leak the page's existence.
+ *
+ * Pass `redirectTo` to override the redirect target (e.g. for API routes that
+ * should throw 403 instead — caller handles that branch separately).
+ */
+export async function requirePermission(
+  permission: import("./permissions").Permission | import("./permissions").Permission[],
+  opts: { redirectTo?: string } = {},
+): Promise<SessionUser> {
+  const u = await requireUser();
+  if (u.role === "ADMIN") return u; // shortcut — admins bypass the lookup
+  const { hasPermission } = await import("./permissions");
+  const ok = await hasPermission(u.memberId, permission);
+  if (!ok) redirect(opts.redirectTo ?? "/dashboard");
+  return u;
+}
+
+/** Same as requirePermission but returns null on failure instead of redirecting.
+ *  Use in API routes so the caller can return a 403 JSON response. */
+export async function checkPermission(
+  permission: import("./permissions").Permission | import("./permissions").Permission[],
+): Promise<{ user: SessionUser } | { user: SessionUser; denied: true } | null> {
+  const u = await getSessionUser();
+  if (!u) return null;
+  if (u.role === "ADMIN") return { user: u };
+  const { hasPermission } = await import("./permissions");
+  const ok = await hasPermission(u.memberId, permission);
+  return ok ? { user: u } : { user: u, denied: true };
+}
+
 /** Returns the REAL session user (ignoring impersonation). Used for /platform routes. */
 export async function getRealSessionUser(): Promise<SessionUser | null> {
   const s: any = await getServerSession(authOptions);

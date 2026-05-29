@@ -1,4 +1,4 @@
-import { requireManagerOrAdmin } from "@/lib/session";
+import { requirePermission } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { relTime } from "@/lib/utils";
 import { FileText } from "lucide-react";
@@ -79,7 +79,8 @@ const ENTITY_FILTERS = [
 ];
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<{ p?: string; type?: string; q?: string }> }) {
-  const u = await requireManagerOrAdmin();
+  // audit.read — granted to managers by default; custom roles can extend.
+  const u = await requirePermission("audit.read");
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.p ?? "1", 10));
   const typeFilter = sp.type ?? "";

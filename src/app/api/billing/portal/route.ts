@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireManagerOrAdmin } from "@/lib/session";
+import { checkPermission } from "@/lib/session";
 import { stripe } from "@/lib/stripe";
 
 export async function POST(req: Request) {
-  const u = await requireManagerOrAdmin();
+  // billing.write — opening the portal lets the user change card / cancel plan
+  const check = await checkPermission("billing.write");
+  if (!check) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("denied" in check) return NextResponse.json({ error: "You don't have billing permission." }, { status: 403 });
+  const u = check.user;
   if (!process.env.STRIPE_SECRET_KEY) return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
   const org = await prisma.organization.findUnique({ where: { id: u.organizationId } });
   if (!org?.stripeCustomerId) return NextResponse.json({ error: "No billing account yet — start a subscription first." }, { status: 400 });

@@ -1,16 +1,24 @@
 /**
- * Minimal observability shim. The whole app calls captureException /
- * captureMessage / trackEvent from here — without these helpers, prod 500s
- * are invisible until someone screenshots one.
+ * Observability shim. Every callsite goes through captureException /
+ * captureMessage / trackEvent so we can wire in a real backend later without
+ * touching call sites.
  *
- * Today: logs to console with structured prefixes.
- * Tomorrow: swap the bodies for @sentry/nextjs + posthog/segment — no caller
- * has to change.
+ * **Current behavior:** structured `console.error` / `console.info`. That's it.
+ * There is no Sentry integration wired in. If you want errors aggregated in a
+ * dashboard you must either:
+ *   1. `npm i @sentry/nextjs`, add `sentry.{client,server}.config.ts`, and
+ *      replace the bodies here with `Sentry.captureException(...)` etc., OR
+ *   2. Point your hosting platform's log drain at console output (Vercel /
+ *      Fly / Render all stream `console.*` to a queryable log UI).
+ *
+ * Setting `SENTRY_DSN` alone does NOT turn anything on. We log a one-time
+ * warning the first time a capture happens while DSN is set, so an operator
+ * who set the env var and assumed it was working sees the gap immediately.
  *
  * Environment:
- *   SENTRY_DSN            — server-side DSN; if unset, falls through to console
- *   NEXT_PUBLIC_SENTRY_DSN— client-side DSN (must be NEXT_PUBLIC_ to ship to browser)
- *   NEXT_PUBLIC_ANALYTICS — flip on/off in dev without losing the wiring
+ *   SENTRY_DSN            — only used for the "you set this but it's not wired" warning
+ *   NEXT_PUBLIC_SENTRY_DSN— same, client-side
+ *   NEXT_PUBLIC_ANALYTICS — flip trackEvent on/off in dev without losing the wiring
  */
 
 const SERVER_DSN  = process.env.SENTRY_DSN ?? "";
@@ -18,15 +26,24 @@ const CLIENT_DSN  = process.env.NEXT_PUBLIC_SENTRY_DSN ?? "";
 const ANALYTICS_ON = (process.env.NEXT_PUBLIC_ANALYTICS ?? "1") !== "0";
 
 const isServer = typeof window === "undefined";
-const dsnConfigured = isServer ? !!SERVER_DSN : !!CLIENT_DSN;
+const dsnSetButNotWired = isServer ? !!SERVER_DSN : !!CLIENT_DSN;
+
+let warnedAboutDsn = false;
+function warnIfMisconfigured() {
+  if (dsnSetButNotWired && !warnedAboutDsn) {
+    warnedAboutDsn = true;
+    console.warn(
+      "[obs] SENTRY_DSN is set but @sentry/nextjs is not installed/wired. " +
+      "Errors are being written to console only. See src/lib/observability.ts."
+    );
+  }
+}
 
 type Severity = "fatal" | "error" | "warning" | "info" | "debug";
 
-/** Capture an exception. Safe to call without a DSN — falls through to console. */
+/** Capture an exception. Writes to structured console; no remote sink wired. */
 export function captureException(err: unknown, context?: Record<string, unknown>) {
-  if (dsnConfigured) {
-    // TODO(sentry): import("@sentry/nextjs").then(s => s.captureException(err, { extra: context }))
-  }
+  warnIfMisconfigured();
   const tag = isServer ? "[obs:server]" : "[obs:client]";
   if (err instanceof Error) {
     console.error(tag, err.message, { stack: err.stack, ...context });
@@ -35,11 +52,9 @@ export function captureException(err: unknown, context?: Record<string, unknown>
   }
 }
 
-/** Capture a non-error message at a given severity. */
+/** Capture a non-error message at a given severity. Console-only. */
 export function captureMessage(message: string, level: Severity = "info", context?: Record<string, unknown>) {
-  if (dsnConfigured) {
-    // TODO(sentry): import("@sentry/nextjs").then(s => s.captureMessage(message, { level, extra: context }))
-  }
+  warnIfMisconfigured();
   const fn = level === "error" || level === "fatal" ? console.error
            : level === "warning"                    ? console.warn
            : console.info;

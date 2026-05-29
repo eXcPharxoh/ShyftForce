@@ -109,7 +109,7 @@ export default async function ReviewsPage() {
                     </div>
                   )}
                 </div>
-                <Link href={`/hr/reviews/${r.id}`} className="btn-ghost text-xs">Open →</Link>
+                <span className="text-[11px] text-ink-500 dark:text-ink-400 italic">Detail view coming soon</span>
               </div>
             </li>
           ))}

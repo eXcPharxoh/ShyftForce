@@ -35,7 +35,11 @@ export default async function TrainingPage() {
         title="Training"
         subtitle={`${courses.length} course${courses.length === 1 ? "" : "s"} available`}
       >
-        {isManager && <Link href="/training/author" className="btn-primary text-sm">+ New course</Link>}
+        {isManager && (
+          <span className="btn-outline text-sm opacity-60 cursor-not-allowed" title="Course authoring is on the roadmap">
+            + New course (soon)
+          </span>
+        )}
       </PageHeader>
 
       {courses.length === 0 ? (
@@ -47,7 +51,7 @@ export default async function TrainingPage() {
             description={isManager
               ? "Author your first course. Use it for onboarding, safety, compliance, or skill-building."
               : "Your manager will publish courses here when they're ready."}
-            action={isManager ? <Link href="/training/author" className="btn-primary">Create a course</Link> : undefined}
+            action={undefined}
           />
         </div>
       ) : (
@@ -58,7 +62,7 @@ export default async function TrainingPage() {
             const started = !!e?.startedAt && !completed;
             const badge = CATEGORY_BADGE[c.category ?? "other"] ?? "badge-gray";
             return (
-              <Link key={c.id} href={`/training/${c.id}`} className="card card-hover p-5 flex flex-col gap-2">
+              <div key={c.id} className="card p-5 flex flex-col gap-2 opacity-90" title="Course viewer is on the roadmap">
                 <div className="flex items-start justify-between gap-2">
                   <span className={badge + " text-[10px]"}>{c.category ?? "other"}</span>
                   {completed && <span className="badge bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center gap-1 text-[10px]"><CheckCircle2 className="w-3 h-3" /> {e?.score ?? "✓"}</span>}
@@ -70,7 +74,8 @@ export default async function TrainingPage() {
                   <span className="flex items-center gap-1"><PlayCircle className="w-3 h-3" /> {c._count.lessons} lesson{c._count.lessons === 1 ? "" : "s"}</span>
                   <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {c.estimatedMinutes} min</span>
                 </div>
-              </Link>
+                <div className="text-[10px] text-ink-500 dark:text-ink-400 mt-1 italic">Course viewer coming soon</div>
+              </div>
             );
           })}
         </div>

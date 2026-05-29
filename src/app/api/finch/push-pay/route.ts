@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireManagerOrAdmin } from "@/lib/session";
+import { checkPermission } from "@/lib/session";
 import { featureGuard } from "@/lib/feature-guard";
 import { FinchAPI } from "@/lib/finch";
 import { audit } from "@/lib/audit";
@@ -9,7 +9,11 @@ import { overtimeByMember, OT_MULTIPLIER } from "@/lib/payroll/overtime";
 // POST /api/finch/push-pay  body: { payPeriodId? }
 // For each timesheet entry in the open period, push hours+pay to Finch as a pay statement.
 export async function POST(req: Request) {
-  const u = await requireManagerOrAdmin();
+  // payroll.run — managers get this by default; custom roles can grant it to others.
+  const check = await checkPermission("payroll.run");
+  if (!check) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("denied" in check) return NextResponse.json({ error: "You don't have payroll permission." }, { status: 403 });
+  const u = check.user;
   const denied = await featureGuard(u.organizationId, "payroll_push");
   if (denied) return denied;
   const org = await prisma.organization.findUnique({ where: { id: u.organizationId } });

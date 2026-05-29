@@ -6,11 +6,9 @@ export default function DPAPage() {
       <p className="text-ink-500 dark:text-ink-400">Last updated: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
 
       <div className="mt-10 space-y-6 text-ink-700 dark:text-ink-300 leading-relaxed">
-        <section>
-          <h2 className="text-2xl font-bold tracking-tight-2 text-ink-900 dark:text-ink-50 mt-8 mb-3">Placeholder DPA</h2>
-          <p><b>This is a placeholder Data Processing Agreement for development.</b> Replace with a real DPA before signing B2B contracts. Many enterprise customers will require a signed DPA before they can purchase.</p>
-          <p className="mt-3">Need a real DPA template? Use <a href="https://termly.io" className="text-brand-600 dark:text-brand-400 hover:underline">Termly</a> or have a privacy lawyer draft one. Vanta and Drata also bundle a DPA template with their SOC 2 packages.</p>
-        </section>
+        <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-[13px] text-amber-900 dark:text-amber-200">
+          <b>Draft DPA.</b> This document outlines our intended posture for processing personal data on behalf of customers. For an executable, counsel-reviewed DPA suitable for B2B signing, email <a href="mailto:legal@shyftforce.com" className="underline">legal@shyftforce.com</a> with your entity details.
+        </div>
 
         <section>
           <h2 className="text-2xl font-bold tracking-tight-2 text-ink-900 dark:text-ink-50 mt-8 mb-3">Standard contractual clauses</h2>

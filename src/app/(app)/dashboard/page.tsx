@@ -100,11 +100,18 @@ export default async function Dashboard() {
   const todayEntries = (period?.entries ?? []).filter(e => new Date(e.date).getTime() >= todayStart.getTime() && new Date(e.date).getTime() < tomorrow.getTime());
   const laborToday = todayEntries.reduce((a, e) => a + e.hours * (members.find(m => m.id === e.memberId)?.hourlyRate ?? 0), 0);
 
-  // Compliance pct — derived from week shifts violations
-  // Simple heuristic: # of shifts with no violation / total
-  const weeklyShiftCount = weekShifts.length || 1;
-  // For now compute a soft estimate. The full engine call is heavier; we keep this lightweight.
-  const compliancePct = 100; // until we re-introduce the engine call cheaply
+  // Compliance % — cheap heuristic derived from the week's open predictability
+  // events vs total assigned shifts. We DON'T run the full engine here (heavy);
+  // instead we count flagged events that the manager hasn't resolved yet.
+  // Returns null when there's no data so the UI can show "—" instead of a
+  // misleading "100%".
+  const weeklyShiftCount = weekShifts.length;
+  const openPredictability = await prisma.predictabilityPayEvent.count({
+    where: { organizationId: orgId, resolvedAt: null, occurredAt: { gte: weekStart, lt: weekEnd } },
+  }).catch(() => 0);
+  const compliancePct = weeklyShiftCount === 0
+    ? null
+    : Math.max(0, Math.round(100 * (1 - openPredictability / weeklyShiftCount)));
 
   // ---------- Roster (today, scheduled or in-progress) ----------
   const roster: RosterEntry[] = todayShifts

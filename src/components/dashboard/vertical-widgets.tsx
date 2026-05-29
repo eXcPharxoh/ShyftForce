@@ -171,7 +171,9 @@ async function buildTile(key: string, organizationId: string, memberId: string):
       };
     }
     case "networkOffers": {
-      const profile = await prisma.workerProfile.findUnique({ where: { userId: memberId.length === 36 ? memberId : "no" } }).catch(() => null);
+      // WorkerProfile is keyed by userId, not memberId — look up the user.
+      const member = await prisma.member.findUnique({ where: { id: memberId }, select: { userId: true } }).catch(() => null);
+      const profile = member ? await prisma.workerProfile.findUnique({ where: { userId: member.userId } }).catch(() => null) : null;
       const open = profile ? await prisma.networkShiftOffer.count({
         where: { status: "open", postingOrgId: { not: organizationId }, OR: [{ invitedWorkerId: profile.id }, ...(profile.discoverable ? [{ invitedWorkerId: null }] : [])] },
       }) : 0;

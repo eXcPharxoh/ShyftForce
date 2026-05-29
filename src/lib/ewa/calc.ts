@@ -23,6 +23,9 @@ export type EwaBalance = {
   feeCentsPerWithdrawal: number;
   minWithdrawalCents: number;
   blockReason?: string | null;     // "ewa_disabled" | "below_minimum" | "cap_reached" | null
+  /** Which payout provider is configured. internal_ledger = no real cash movement
+   *  — withdrawal is recorded as an IOU and deducted from the next paycheck. */
+  providerName: "internal_ledger" | "branch" | "tapcheck" | "dailypay" | "stripe_treasury";
 };
 
 export async function getEwaBalance(opts: { memberId: string; organizationId: string; now?: Date }): Promise<EwaBalance> {
@@ -121,5 +124,6 @@ export async function getEwaBalance(opts: { memberId: string; organizationId: st
     feeCentsPerWithdrawal,
     minWithdrawalCents,
     blockReason,
+    providerName: (settings?.providerName ?? "internal_ledger") as EwaBalance["providerName"],
   };
 }

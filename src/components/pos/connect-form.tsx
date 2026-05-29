@@ -54,7 +54,7 @@ export function ConnectForm({ providers, locations }: { providers: Provider[]; l
                 <label className="label">Provider</label>
                 <select className="input" value={provider} onChange={(e) => setProvider(e.target.value as any)}>
                   {providers.map((p) => (
-                    <option key={p.id} value={p.id}>{p.label} {p.status === "stub" ? "(needs API keys)" : p.status === "manual" ? "(no integration)" : ""}</option>
+                    <option key={p.id} value={p.id}>{p.label} {p.status === "stub" ? "(beta — manual token only)" : p.status === "manual" ? "(no live integration — enter revenue by hand)" : ""}</option>
                   ))}
                 </select>
               </div>
@@ -74,8 +74,8 @@ export function ConnectForm({ providers, locations }: { providers: Provider[]; l
                     <label className="label">Access token</label>
                     <input className="input font-mono text-xs" value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="paste here — encrypt at rest in production" />
                   </div>
-                  <div className="text-[11px] text-ink-500 dark:text-ink-400 bg-ink-50/60 dark:bg-ink-800/60 rounded-lg p-2 leading-snug">
-                    For now, paste a long-lived token. Production deployment should use OAuth — see <span className="font-mono">src/lib/pos/{provider}.ts</span> for the integration shell.
+                  <div className="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-500/10 rounded-lg p-2 leading-snug">
+                    <b>Beta integration.</b> Paste a long-lived access token issued out-of-band — the OAuth handshake isn&rsquo;t live yet. The connection will sync sales every 15 min using this token. If the token expires you&rsquo;ll need to refresh it manually here.
                   </div>
                 </>
               )}

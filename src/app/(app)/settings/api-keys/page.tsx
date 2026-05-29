@@ -1,4 +1,4 @@
-import { requireManagerOrAdmin } from "@/lib/session";
+import { requirePermission } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { ApiKeysClient } from "@/components/settings/api-keys-client";
@@ -7,7 +7,8 @@ import { Key } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function ApiKeysPage() {
-  const u = await requireManagerOrAdmin();
+  // settings.api_keys — admins only by default; custom roles can grant it.
+  const u = await requirePermission("settings.api_keys");
   const keys = await prisma.apiKey.findMany({
     where: { organizationId: u.organizationId },
     orderBy: { createdAt: "desc" },

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireManagerOrAdmin } from "@/lib/session";
+import { checkPermission } from "@/lib/session";
 import { stripe, stripePricesForPlan, PLANS, type PlanKey } from "@/lib/stripe";
 import { audit } from "@/lib/audit";
 
@@ -10,7 +10,12 @@ const Schema = z.object({
 }).strict();
 
 export async function POST(req: Request) {
-  const u = await requireManagerOrAdmin();
+  // billing.write — managers don't get this by default; only admins or members
+  // with a custom role that explicitly grants it can start a checkout session.
+  const check = await checkPermission("billing.write");
+  if (!check) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("denied" in check) return NextResponse.json({ error: "You don't have billing permission." }, { status: 403 });
+  const u = check.user;
   if (!process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json({ error: "Stripe not configured. Set STRIPE_SECRET_KEY in .env." }, { status: 500 });
   }

@@ -1113,7 +1113,7 @@ function Pricing() {
       cta: "Start 7-day trial",
       ctaPrimary: true,
       popular: true,
-      features: ["Everything in Free", "AI Co-pilot + Auto-Scheduler", "Compliance Autopilot (6 rule families)", "Open-Shift Marketplace", "Geofenced clock-in + selfie", "POS integration (Toast/Square/Clover)", "Up to 25 seats included scaling"],
+      features: ["Everything in Free", "AI Co-pilot + Auto-Scheduler", "Compliance Autopilot (6 rule families)", "Open-Shift Marketplace", "Geofenced clock-in + selfie", "POS revenue tracking (manual + integrations on the way)", "Up to 25 seats included scaling"],
     },
     {
       name: "Business",
@@ -1123,7 +1123,7 @@ function Pricing() {
       cta: "Start 7-day trial",
       ctaPrimary: false,
       popular: false,
-      features: ["Everything in Pro", "Multi-location dashboard", "Custom compliance jurisdictions", "Custom roles + permissions", "API + webhooks", "SSO (Google + Microsoft)", "Priority support · 99.9% SLA"],
+      features: ["Everything in Pro", "Multi-location dashboard", "Custom compliance jurisdictions", "API + webhooks", "Google SSO", "Priority support · 99.9% SLA"],
     },
     {
       name: "Enterprise",
@@ -1133,7 +1133,7 @@ function Pricing() {
       cta: "Contact sales",
       ctaPrimary: false,
       popular: false,
-      features: ["Everything in Business", "Custom contract + DPA", "SAML SSO + SCIM", "Custom onboarding", "Dedicated CSM", "24/7 support + Slack channel", "Audit logs · BAA · SOC 2 in progress"],
+      features: ["Everything in Business", "Custom contract + DPA", "Custom onboarding", "Dedicated CSM", "24/7 support + Slack channel", "Audit logs · BAA · SOC 2 in progress"],
     },
   ];
   return (

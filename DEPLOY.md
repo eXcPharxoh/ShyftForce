@@ -57,7 +57,7 @@ Set all of these in **Project → Settings → Environment Variables** for
 | `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` + `STRIPE_PRICE_*` | Stripe values | unset = billing flows return 500 |
 | `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_FROM_NUMBER` | Twilio values | unset = SMS logs to console (clean fallback) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys` | optional; unset = no push |
-| `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` | optional Sentry DSNs | unset = `lib/observability` logs to console |
+| `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` | **NOT WIRED YET** — kept for future use | even when set, errors go to console; see `src/lib/observability.ts` to plug in real Sentry |
 
 ### 2.3 GitHub Actions secrets
 
@@ -221,7 +221,7 @@ corresponding feature won't function:
 | Finch payroll | `FINCH_CLIENT_ID`, `FINCH_CLIENT_SECRET`, `FINCH_REDIRECT_URI` | Finch connect returns 500 |
 | POS integrations | `TOAST_*`, `SQUARE_*` (or `CLOVER_*`) | provider connect returns 500 |
 | Cron loops | `CRON_SECRET` | cron routes return 503 (fail-closed) |
-| Error tracking | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | falls through to console |
+| Error tracking | _none — not wired_ | structured console output only; install `@sentry/nextjs` + wire `src/lib/observability.ts` to enable |
 | Demo seed page | (none) | `/api/admin/seed-demo?secret=$CRON_SECRET` always available to operators |
 
 ---

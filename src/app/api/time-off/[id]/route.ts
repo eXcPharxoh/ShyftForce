@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireManagerOrAdmin } from "@/lib/session";
+import { checkPermission } from "@/lib/session";
 import { deduct, refund, hoursForRequest } from "@/lib/pto/service";
 import { audit } from "@/lib/audit";
 import { smsTimeOffDecision } from "@/lib/sms";
@@ -9,7 +9,11 @@ import { sendPush } from "@/lib/push";
 import { notifySlack } from "@/lib/slack";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const u = await requireManagerOrAdmin();
+  // timeoff.approve — managers by default; custom roles can extend.
+  const check = await checkPermission("timeoff.approve");
+  if (!check) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("denied" in check) return NextResponse.json({ error: "You don't have time-off approval permission." }, { status: 403 });
+  const u = check.user;
   const { id } = await params;
   const { status } = await req.json();
   if (!["pending", "approved", "rejected"].includes(status)) return NextResponse.json({ error: "bad status" }, { status: 400 });

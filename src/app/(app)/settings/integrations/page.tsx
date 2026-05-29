@@ -2,12 +2,19 @@ import { requireManagerOrAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { FinchConnectCard } from "@/components/integrations/finch-card";
-import { Wrench, MessageSquare, Calendar, CreditCard } from "lucide-react";
+import { Wrench, MessageSquare, Calendar, CheckCircle2 } from "lucide-react";
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ connected?: string; error?: string }> }) {
   const u = await requireManagerOrAdmin();
   const sp = await searchParams;
-  const org = await prisma.organization.findUnique({ where: { id: u.organizationId } });
+  const [org, slack] = await Promise.all([
+    prisma.organization.findUnique({ where: { id: u.organizationId } }),
+    prisma.slackConnection.findUnique({
+      where: { organizationId: u.organizationId },
+      select: { teamName: true, installedAt: true, defaultChannel: true },
+    }).catch(() => null),
+  ]);
+  const slackConfigured = !!process.env.SLACK_CLIENT_ID;
 
   return (
     <div className="space-y-5 max-w-4xl">
@@ -35,15 +42,42 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         connectedAt={org?.finchConnectedAt?.toISOString()}
       />
 
+      {/* Slack — real OAuth-backed integration (chat.postMessage + channels:read).
+          Surfaces a connect button when not yet linked; status badge once linked. */}
+      <section className="card p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#4A154B]/10 text-[#4A154B] dark:bg-[#4A154B]/20 dark:text-purple-300 flex items-center justify-center shrink-0">
+            <MessageSquare className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="h-section !mb-0">Slack</h3>
+              {slack && <span className="badge-green inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Connected</span>}
+            </div>
+            <p className="text-[13px] text-ink-500 dark:text-ink-400 mt-1">
+              Post approval requests, shift offers, and incident pings into Slack channels.
+            </p>
+            {slack ? (
+              <div className="mt-3 text-[12px] text-ink-600 dark:text-ink-300">
+                Workspace: <b>{slack.teamName ?? "—"}</b>
+                {slack.defaultChannel && <> · default channel: <code className="text-[11px]">{slack.defaultChannel}</code></>}
+                <div className="mt-2 text-ink-500 dark:text-ink-400">Channel routing is managed via the API for now — full settings UI coming.</div>
+              </div>
+            ) : slackConfigured ? (
+              <a href="/api/slack/connect" className="btn-primary mt-3 inline-flex">Connect Slack</a>
+            ) : (
+              <div className="mt-3 text-[12px] text-amber-700 dark:text-amber-300">Slack OAuth isn&apos;t configured on this server. Set <code>SLACK_CLIENT_ID</code> + <code>SLACK_CLIENT_SECRET</code> to enable.</div>
+            )}
+          </div>
+        </div>
+      </section>
+
       <section className="card p-5">
         <h3 className="h-section mb-3">Coming soon</h3>
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
           {[
-            { icon: CreditCard,    name: "Stripe",          desc: "Customer billing (already wired)" },
             { icon: Calendar,      name: "Google Calendar", desc: "Auto-sync each member's shifts" },
-            { icon: MessageSquare, name: "Slack",           desc: "Notify channels for approvals + alerts" },
-            { icon: MessageSquare, name: "Microsoft Teams", desc: "Same as Slack, for the M365 crowd" },
-            { icon: Calendar,      name: "Square / Toast",  desc: "POS sales for tip pool + demand forecasting" },
+            { icon: MessageSquare, name: "Microsoft Teams", desc: "Notifications for the M365 crowd" },
             { icon: Calendar,      name: "QuickBooks",      desc: "Direct accounting export" },
           ].map(i => {
             const Icon = i.icon;

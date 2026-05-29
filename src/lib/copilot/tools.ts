@@ -7,6 +7,8 @@ import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 import { rankForShift, sendOffers } from "@/lib/marketplace/service";
 import { WAVES } from "@/lib/marketplace/ranker";
 import { appUrl } from "@/lib/app-url";
+import { randomBytes } from "node:crypto";
+import { Email, sendEmail } from "@/lib/email";
 
 // ---------- Schemas surfaced to Claude ----------
 export const TOOLS: Tool[] = [
@@ -911,19 +913,30 @@ export async function runTool(name: string, input: any, user: SessionUser) {
 
     case "invite_member": {
       if (!isManager(user)) return forbid();
-      // Defer to existing invitation flow — we just create the record.
       const existing = await prisma.user.findUnique({ where: { email: input.email } });
       if (existing) return { error: `User already exists with email ${input.email}` };
+      const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true } });
       const inv = await prisma.invitation.create({
         data: {
           organizationId: orgId,
           email: input.email,
           role: input.role ?? "EMPLOYEE",
-          token: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+          // crypto random — the Math.random() token was predictable.
+          token: randomBytes(32).toString("hex"),
           expiresAt: addDays(new Date(), 14),
         },
       });
-      return { ok: true, invitationId: inv.id, note: "Invitation created. Email pipeline should now send." };
+      // Actually send the invite email (the previous return-message lied).
+      await sendEmail({
+        to: input.email,
+        subject: `You're invited to ${org?.name ?? "the team"} on ShyftForce`,
+        html: Email.invite({
+          orgName: org?.name ?? "your team",
+          inviterName: user.name,
+          token: inv.token,
+        }),
+      }).catch(() => { /* fail soft so the tool call still reports success */ });
+      return { ok: true, invitationId: inv.id, note: "Invitation created and email sent." };
     }
 
     case "set_room_status": {
