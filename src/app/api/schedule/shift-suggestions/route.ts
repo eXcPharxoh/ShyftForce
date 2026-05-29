@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
 import { addDays, startOfWeek } from "@/lib/utils";
+import { loadEligibilityData, disqualifyingReason } from "@/lib/schedule/eligibility";
 import { z } from "zod";
 
 const Schema = z.object({ shiftId: z.string().min(1) }).strict();
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
   const weekStart = startOfWeek(shift.startsAt);
   const weekEnd = addDays(weekStart, 7);
 
-  const [members, weekShifts] = await Promise.all([
+  const [members, weekShifts, eligibility] = await Promise.all([
     prisma.member.findMany({
       where: { organizationId: u.organizationId, status: "active" },
       include: { user: { select: { name: true } } },
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
       },
       select: { memberId: true, startsAt: true, endsAt: true },
     }),
+    loadEligibilityData(u.organizationId, weekStart, weekEnd),
   ]);
 
   const hoursByMember = new Map<string, number>();
@@ -61,6 +63,9 @@ export async function POST(req: Request) {
     if (shift.position && m.position && m.position !== shift.position) continue;
     const ranges = rangesByMember.get(m.id) ?? [];
     if (ranges.some((r) => r.start < endMs && r.end > startMs)) continue;
+    // Honor PTO + availability rules — suggesting someone we KNOW can't work
+    // would be worse than no suggestion.
+    if (disqualifyingReason(m.id, shift.startsAt, shift.endsAt, eligibility)) continue;
     const current = hoursByMember.get(m.id) ?? 0;
     if (current + shiftHours > MAX_HOURS) continue;
     eligible.push({

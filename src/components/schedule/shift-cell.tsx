@@ -33,6 +33,7 @@ export function ShiftCell({
 }) {
   const [open, setOpen] = useState(false);
   const isDraft = shift.status === "draft";
+  const isSample = (shift.notes ?? "").startsWith("[sample]");
   const colors = colorForPosition(shift.position);
 
   return (
@@ -40,12 +41,19 @@ export function ShiftCell({
       <button
         onClick={() => canEdit && setOpen(true)}
         disabled={!canEdit}
-        className={`block w-full text-left rounded-lg px-2 py-1.5 text-[11px] transition border
-          ${isDraft
-            ? "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 text-amber-900 dark:text-amber-200 border-dashed"
-            : `${colors.bg} ${colors.border} ${colors.text}`}
+        className={`block w-full text-left rounded-lg px-2 py-1.5 text-[11px] transition border relative
+          ${isSample
+            ? "bg-ink-50 dark:bg-ink-800/40 border-ink-300 dark:border-ink-700 border-dashed text-ink-600 dark:text-ink-400"
+            : isDraft
+              ? "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 text-amber-900 dark:text-amber-200 border-dashed"
+              : `${colors.bg} ${colors.border} ${colors.text}`}
           ${canEdit ? "cursor-pointer hover:scale-[1.02] hover:shadow-sm" : "cursor-default"}`}
       >
+        {isSample && (
+          <span className="absolute -top-1.5 -right-1 text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full bg-ink-900/80 text-ink-50 dark:bg-ink-50/90 dark:text-ink-900">
+            Sample
+          </span>
+        )}
         <div className="font-semibold">{shift.startTime} – {shift.endTime}</div>
         <div className="opacity-80 truncate">{shift.position || shift.locationName}</div>
       </button>

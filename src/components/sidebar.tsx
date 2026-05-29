@@ -72,7 +72,9 @@ export function Sidebar({ orgName, industry, role, pendingOffers = 0, userName, 
       items: [
         // Reports + the Admin console are owner/manager tools.
         ...(isManager ? [{ href: "/reports", label: t("nav.reports"), icon: BarChart3, badge: null }] : []),
-        ...(role === "ADMIN" ? [{ href: "/admin", label: "Admin", icon: Shield, badge: null }] : []),
+        // Owner console for THIS workspace — distinct from the SaaS Operator
+        // console at admin.shyftforce.com.
+        ...(role === "ADMIN" ? [{ href: "/admin", label: "Workspace", icon: Shield, badge: null }] : []),
         // Documents, News Feed, Compliance, billing, integrations, etc. all live
         // in the grouped More directory now — reachable, just not crowding here.
         { href: "/more",       label: t("nav.more"),       icon: MoreHorizontal, badge: null },

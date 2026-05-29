@@ -12,6 +12,7 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [industry, setIndustry] = useState<string | null>(null);
   const [firstLocation, setFirstLocation] = useState("");
+  const [firstLocationAddress, setFirstLocationAddress] = useState("");
 
   // Step-2 customization state. Seeded from the chosen industry template the
   // first time the user lands on Step 2, but every value below is theirs to
@@ -65,7 +66,9 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         industry,
-        firstLocation: firstLocation.trim() ? { name: firstLocation.trim() } : undefined,
+        firstLocation: firstLocation.trim()
+          ? { name: firstLocation.trim(), address: firstLocationAddress.trim() || undefined }
+          : undefined,
         // User-customized values — the API uses these instead of the template
         // defaults if provided.
         positions,
@@ -252,10 +255,22 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
         {step === 3 && (
           <section className="card p-6">
             <h2 className="font-bold text-lg mb-1">Add your first location</h2>
-            <p className="text-sm text-ink-500 dark:text-ink-400 mb-5">You can add coordinates and more sites in Settings later.</p>
+            <p className="text-sm text-ink-500 dark:text-ink-400 mb-5">
+              Drop the address too — we&rsquo;ll geocode it so your geofence and live map work on day one.
+              Skip the address and you can drop a pin later.
+            </p>
             <label className="label">Location name</label>
             <input className="input text-base" placeholder='e.g. "Main Street Store"' value={firstLocation} onChange={(e) => setFirstLocation(e.target.value)} autoFocus />
-            <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-2">Skip to add later — you can finish setup either way.</div>
+            <label className="label mt-4">Address <span className="text-ink-400 dark:text-ink-500 font-normal">(optional)</span></label>
+            <input
+              className="input text-base"
+              placeholder='e.g. "440 N Barranca Ave, Covina, CA"'
+              value={firstLocationAddress}
+              onChange={(e) => setFirstLocationAddress(e.target.value)}
+            />
+            <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-2">
+              We use OpenStreetMap to look it up — nothing else leaves your workspace.
+            </div>
           </section>
         )}
 

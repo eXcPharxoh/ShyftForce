@@ -8,6 +8,22 @@ import { z } from "zod";
 
 const Schema = z.object({ mode: z.enum(["off", "flag", "block"]) }).strict();
 
+export async function GET() {
+  const u = await requireUser();
+  // Counts feed the guardrail confirm dialog ("3 of 12 members enrolled —
+  // switching to Block will lock the other 9 out").
+  const [org, activeMembers, enrolledCount] = await Promise.all([
+    prisma.organization.findUnique({ where: { id: u.organizationId }, select: { faceVerification: true } }),
+    prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
+    prisma.member.count({ where: { organizationId: u.organizationId, status: "active", faceEnrolledAt: { not: null } } }),
+  ]);
+  return NextResponse.json({
+    mode: org?.faceVerification ?? "off",
+    activeMembers,
+    enrolledCount,
+  });
+}
+
 export async function PATCH(req: Request) {
   const u = await requireUser();
   if (u.role !== "ADMIN") {

@@ -80,6 +80,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ id: 
           planDefault: PLANS[effectivePlanKey(org)].features.includes(f.key),
         }))}
         overrides={parseFeatureOverrides(org.featureOverrides)}
+        activeMemberCount={org.members.filter((m) => m.status === "active").length}
       />
 
       {org.locations.length > 0 && (

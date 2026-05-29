@@ -44,8 +44,26 @@ export async function LocationsPunchMap({
     }),
   ]);
 
-  // Nothing to map yet → don't render the card at all (keeps the page clean).
-  if (locations.length === 0) return null;
+  // Check whether there's ANY location at all (with or without coords) — so a
+  // brand-new org sees a useful "add an address" nudge instead of just a blank.
+  if (locations.length === 0) {
+    const anyLocation = await prisma.location.count({ where: { organizationId: orgId } });
+    if (anyLocation === 0) return null; // truly nothing yet — keep the page clean
+    return (
+      <section className="card overflow-hidden">
+        <header className="px-5 py-3 border-b border-white/[0.06] flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-brand-400" />
+          <h3 className="text-sm font-semibold">{title}</h3>
+        </header>
+        <div className="px-5 py-6 text-center">
+          <div className="text-[13px] text-ink-300 font-medium">Your locations don&rsquo;t have coordinates yet.</div>
+          <p className="text-[12px] text-ink-500 mt-1 max-w-md mx-auto">
+            Add an address in <a href="/settings/locations" className="text-brand-300 underline">Locations</a> and the map will fill in — plus your geofence will actually work.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   const sites: GeoSite[] = locations.map((l) => ({
     id: l.id,

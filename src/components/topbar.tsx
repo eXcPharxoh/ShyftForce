@@ -118,7 +118,7 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
                 <>
                   <div className="my-1 mx-1 border-t border-white/[0.06]" />
                   <Link href="/platform" className="flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-rose-300 hover:bg-rose-500/10 transition font-medium">
-                    <Shield className="w-4 h-4" /> Platform admin
+                    <Shield className="w-4 h-4" /> Operator console
                   </Link>
                 </>
               )}

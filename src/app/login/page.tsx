@@ -1,6 +1,6 @@
 "use client";
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo, Wordmark } from "@/components/ui/logo";
@@ -24,6 +24,15 @@ export default function LoginPage() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState<string | null>(null);
+  // Demo panel only renders when the seed user actually exists in this database.
+  // Otherwise the buttons would 'Invalid credentials' and look broken.
+  const [demoAvailable, setDemoAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch("/api/demo-status")
+      .then((r) => r.json())
+      .then((d) => setDemoAvailable(!!d.exists))
+      .catch(() => setDemoAvailable(false));
+  }, []);
   // 2FA state. Once the server tells us TOTP_REQUIRED, we show the code field
   // and reuse the same email/password on next submit.
   const [needsTotp, setNeedsTotp] = useState(false);
@@ -196,6 +205,7 @@ export default function LoginPage() {
             Don&apos;t have an account? <Link href="/signup" className="text-brand-600 font-semibold hover:underline">Start free trial →</Link>
           </div>
 
+          {demoAvailable && (
           <div className="mt-6 pt-5 border-t border-ink-100 dark:border-ink-800">
             <div className="text-[10px] uppercase font-bold tracking-wider text-ink-400 dark:text-ink-500 mb-2 flex items-center gap-1.5">
               <Sparkles className="w-3 h-3" /> One-click demo
@@ -224,10 +234,8 @@ export default function LoginPage() {
                 </button>
               ))}
             </div>
-            <div className="text-[10px] text-ink-400 dark:text-ink-500 mt-2 text-center">
-              Demo data only loads after seeding the Platinum Security org.
-            </div>
           </div>
+          )}
         </form>
       </div>
     </main>

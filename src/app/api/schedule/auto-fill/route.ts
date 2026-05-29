@@ -16,6 +16,7 @@ import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
 import { addDays, startOfWeek } from "@/lib/utils";
 import { audit } from "@/lib/audit";
+import { loadEligibilityData, disqualifyingReason } from "@/lib/schedule/eligibility";
 import { z } from "zod";
 
 const Schema = z.object({
@@ -51,8 +52,9 @@ export async function POST(req: Request) {
     : startOfWeek(new Date());
   const weekEnd = addDays(weekStart, 7);
 
-  // Pull this week's shifts (open + assigned) and active members.
-  const [shifts, members] = await Promise.all([
+  // Pull this week's shifts (open + assigned), active members, and the
+  // eligibility data (time-off + availability) for the same window.
+  const [shifts, members, eligibility] = await Promise.all([
     prisma.shift.findMany({
       where: {
         location: { organizationId: u.organizationId },
@@ -65,6 +67,7 @@ export async function POST(req: Request) {
       where: { organizationId: u.organizationId, status: "active" },
       include: { user: { select: { name: true } } },
     }),
+    loadEligibilityData(u.organizationId, weekStart, weekEnd),
   ]);
 
   // Pre-compute current hours per member from already-assigned shifts.
@@ -92,28 +95,30 @@ export async function POST(req: Request) {
     const endMs = +sh.endsAt;
     const label = `${sh.position ?? "Shift"} · ${fmtDay(sh.startsAt)} ${fmtTime(sh.startsAt)}–${fmtTime(sh.endsAt)} (${sh.location.name})`;
 
-    // Find eligible members.
+    // Find eligible members. Order of checks: position → overlap → time-off →
+    // availability → max-hours. Whichever filter rejected them is tracked so
+    // the preview can show *why* nobody was eligible.
     const eligible: { m: typeof members[number]; current: number }[] = [];
+    const exclusions: string[] = []; // for the skipped-reason summary
     for (const m of members) {
-      // Position match (only enforce when the shift declares one).
       if (sh.position && m.position && sh.position !== m.position) continue;
-      // Overlap check.
       const ranges = rangesByMember.get(m.id) ?? [];
-      const overlaps = ranges.some((r) => r.start < endMs && r.end > startMs);
-      if (overlaps) continue;
+      if (ranges.some((r) => r.start < endMs && r.end > startMs)) continue;
+      const blocked = disqualifyingReason(m.id, sh.startsAt, sh.endsAt, eligibility);
+      if (blocked) { exclusions.push(`${m.user.name} (${blocked})`); continue; }
       const current = hoursByMember.get(m.id) ?? 0;
-      // Max-hours guard.
-      if (current + hours > maxHours) continue;
+      if (current + hours > maxHours) { exclusions.push(`${m.user.name} (over ${maxHours}h)`); continue; }
       eligible.push({ m, current });
     }
 
     if (eligible.length === 0) {
+      const tail = exclusions.length > 0 ? ` Excluded: ${exclusions.slice(0, 3).join(", ")}${exclusions.length > 3 ? "…" : ""}` : "";
       skipped.push({
         shiftId: sh.id,
         shiftLabel: label,
-        reason: sh.position
-          ? `No active member with position "${sh.position}" available without overlap or going over ${maxHours}h.`
-          : `No active member available without overlap or going over ${maxHours}h.`,
+        reason: (sh.position
+          ? `No member with position "${sh.position}" was available.`
+          : `No active member was available.`) + tail,
       });
       continue;
     }

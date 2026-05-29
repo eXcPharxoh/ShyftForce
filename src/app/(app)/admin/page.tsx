@@ -85,7 +85,7 @@ export default async function AdminConsolePage() {
       <PageHeader
         eyebrow="Owner console"
         icon={Shield}
-        title="Admin"
+        title="Workspace"
         subtitle={`Everything you need to run ${org.name} — billing, people, roles, and workspace settings in one place.`}
       />
 

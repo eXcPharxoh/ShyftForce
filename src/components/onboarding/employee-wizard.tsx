@@ -1,10 +1,17 @@
 "use client";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Sparkles, Check, ChevronRight, ChevronLeft, Loader2, ArrowRight, Phone, ScanFace, Calendar, Clock, MessageSquare, Smartphone,
+  Sparkles, Check, ChevronRight, ChevronLeft, Loader2, ArrowRight, Phone, ScanFace, Calendar, Clock, MessageSquare, Smartphone, Sun, Cloud, Moon,
 } from "lucide-react";
 import { FaceEnrollment } from "@/components/attendance/face-enrollment";
+
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAYPARTS: { key: "morning" | "afternoon" | "evening"; label: string; sub: string; icon: any }[] = [
+  { key: "morning",   label: "Morning",   sub: "6am – noon", icon: Sun },
+  { key: "afternoon", label: "Afternoon", sub: "noon – 6pm", icon: Cloud },
+  { key: "evening",   label: "Evening",   sub: "6pm – midnight", icon: Moon },
+];
 
 /**
  * Employee first-time onboarding. Fires once when a freshly-invited team member
@@ -25,23 +32,48 @@ export function EmployeeWizard({
 }) {
   const r = useRouter();
   const showFace = faceMode !== "off";
-  const totalSteps = showFace ? 4 : 3;
+  // Welcome / Phone / Availability / (Face?) / Tour
+  const totalSteps = showFace ? 5 : 4;
 
   const [step, setStep] = useState<number>(1);
   const [phone, setPhone] = useState("");
   const [smsOptIn, setSmsOptIn] = useState(true);
+
+  // Default to "available everywhere" — the wizard only writes UNavailability
+  // rules for the cells they uncheck, so leaving everything on = no rules.
+  const initialAvailability: Record<string, boolean> = {};
+  for (let d = 0; d < 7; d++) for (const p of DAYPARTS) initialAvailability[`${d}-${p.key}`] = true;
+  const [availability, setAvailability] = useState<Record<string, boolean>>(initialAvailability);
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Phone is optional — empty means "I'll skip." If they typed something, it
+  // has to look like a real number (7-15 digits) so SMS doesn't fail silently.
+  const phoneDigits = phone.replace(/[^\d]/g, "");
+  const phoneValid = phone.trim() === "" || (phoneDigits.length >= 7 && phoneDigits.length <= 15);
 
   async function finish() {
     setSaving(true); setError(null);
     try {
+      // Flatten availability map → array. Only send cells they changed FROM
+      // the default (true). The API stores any "available:false" as a rule.
+      const availabilityPayload = Object.entries(availability)
+        .filter(([_, v]) => v === false)
+        .map(([key]) => {
+          const [d, p] = key.split("-");
+          return { dayOfWeek: parseInt(d, 10), daypart: p as "morning" | "afternoon" | "evening", available: false };
+        });
+
       const res = await fetch("/api/me/onboarding/complete", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phone.trim() || null, smsOptIn }),
+        body: JSON.stringify({
+          phone: phone.trim() || null,
+          smsOptIn,
+          availability: availabilityPayload,
+        }),
       });
       if (!res.ok) throw new Error("Failed to save");
-      // Land them on the schedule — the most useful page for an employee.
       r.push("/schedule");
       r.refresh();
     } catch (e: any) {
@@ -50,10 +82,16 @@ export function EmployeeWizard({
     }
   }
 
-  const stepKind: "welcome" | "phone" | "face" | "tour" =
+  function toggleCell(day: number, daypart: string) {
+    const k = `${day}-${daypart}`;
+    setAvailability((prev) => ({ ...prev, [k]: !prev[k] }));
+  }
+
+  const stepKind: "welcome" | "phone" | "availability" | "face" | "tour" =
     step === 1 ? "welcome" :
     step === 2 ? "phone" :
-    step === 3 && showFace ? "face" :
+    step === 3 ? "availability" :
+    step === 4 && showFace ? "face" :
     "tour";
 
   return (
@@ -106,12 +144,15 @@ export function EmployeeWizard({
             <label className="label">Mobile number</label>
             <input
               type="tel"
-              className="input text-base"
+              className={`input text-base ${phone && !phoneValid ? "border-rose-400 focus:border-rose-500" : ""}`}
               placeholder="+1 (555) 123-4567"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               autoFocus
             />
+            {phone && !phoneValid && (
+              <div className="text-[11px] text-rose-400 mt-1">That doesn&rsquo;t look like a phone number. Skip it for now if you&rsquo;d rather.</div>
+            )}
             <label className="flex items-start gap-2 text-[13px] text-ink-300 cursor-pointer mt-3">
               <input
                 type="checkbox"
@@ -124,6 +165,60 @@ export function EmployeeWizard({
             <p className="text-[11px] text-ink-500 mt-3">
               You can skip — your manager can still assign you shifts, you just won&rsquo;t get a text.
             </p>
+          </section>
+        )}
+
+        {stepKind === "availability" && (
+          <section className="card p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Calendar className="w-4 h-4 text-brand-400" />
+              <h2 className="font-bold text-lg">When CAN&rsquo;T you work?</h2>
+            </div>
+            <p className="text-sm text-ink-400 mb-4">
+              Tap any block to <b>turn it off</b>. We&rsquo;ll keep those times free —
+              auto-scheduling won&rsquo;t put you on a shift then. Leave everything on if
+              you&rsquo;re flexible.
+            </p>
+            <div className="overflow-x-auto -mx-2 px-2">
+              <div className="grid grid-cols-[auto_repeat(7,1fr)] gap-1.5 min-w-[440px]">
+                <div />
+                {DAYS.map((d) => (
+                  <div key={d} className="text-[10px] uppercase tracking-wider font-semibold text-ink-500 text-center pb-1">{d}</div>
+                ))}
+                {DAYPARTS.map((dp) => (
+                  <Fragment key={dp.key}>
+                    <div className="flex items-center gap-1.5 pr-2 text-[12px] text-ink-300">
+                      <dp.icon className="w-3.5 h-3.5 text-ink-500" />
+                      <div>
+                        <div className="font-medium leading-tight">{dp.label}</div>
+                        <div className="text-[10px] text-ink-500">{dp.sub}</div>
+                      </div>
+                    </div>
+                    {DAYS.map((_, d) => {
+                      const on = availability[`${d}-${dp.key}`];
+                      return (
+                        <button
+                          key={`${d}-${dp.key}`}
+                          type="button"
+                          onClick={() => toggleCell(d, dp.key)}
+                          className={`h-10 rounded-md border transition text-[10px] font-medium ${
+                            on
+                              ? "bg-brand-500/15 border-brand-500/40 text-brand-300 hover:bg-brand-500/25"
+                              : "bg-ink-800/50 border-ink-700 text-ink-500 hover:border-ink-600"
+                          }`}
+                          aria-label={`${DAYS[d]} ${dp.label} ${on ? "available" : "unavailable"}`}
+                        >
+                          {on ? "✓" : "—"}
+                        </button>
+                      );
+                    })}
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+            <div className="text-[11px] text-ink-500 mt-3">
+              Tip: you can change this later under your profile.
+            </div>
           </section>
         )}
 
@@ -168,9 +263,15 @@ export function EmployeeWizard({
           <button onClick={() => setStep((s) => s - 1)} className="btn-ghost"><ChevronLeft className="w-4 h-4" /> Back</button>
         ) : <div />}
         {step < totalSteps ? (
-          <button onClick={() => setStep((s) => s + 1)} className="btn-primary ml-auto">Next <ChevronRight className="w-4 h-4" /></button>
+          <button
+            onClick={() => setStep((s) => s + 1)}
+            disabled={stepKind === "phone" && !phoneValid}
+            className="btn-primary ml-auto"
+          >
+            Next <ChevronRight className="w-4 h-4" />
+          </button>
         ) : (
-          <button onClick={finish} disabled={saving} className="btn-primary ml-auto">
+          <button onClick={finish} disabled={saving || !phoneValid} className="btn-primary ml-auto">
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <>I&rsquo;m all set <Check className="w-4 h-4" /></>}
           </button>
         )}

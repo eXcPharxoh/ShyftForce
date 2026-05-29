@@ -22,8 +22,28 @@ function colorForId(id: string): string {
 export default async function SchedulePage({ searchParams }: { searchParams: Promise<{ w?: string; v?: string }> }) {
   const u = await requireUser();
   const sp = await searchParams;
-  const weekOffset = parseInt(sp.w ?? "0", 10);
   const view = (sp.v ?? "position") as "position" | "employee";
+
+  // Default to the first week (in the next 4 weeks) that actually has shifts.
+  // Brand-new orgs land here after onboarding seeds sample shifts for next week —
+  // without this they'd see an empty grid first and think the app was broken.
+  // Only auto-jumps when no explicit ?w= is in the URL.
+  let weekOffset = parseInt(sp.w ?? "0", 10);
+  if (sp.w === undefined) {
+    const thisWeekStart = startOfWeek(new Date());
+    const lookaheadEnd = addDays(thisWeekStart, 28);
+    const earliest = await prisma.shift.findFirst({
+      where: {
+        location: { organizationId: u.organizationId },
+        startsAt: { gte: thisWeekStart, lt: lookaheadEnd },
+      },
+      orderBy: { startsAt: "asc" },
+      select: { startsAt: true },
+    });
+    if (earliest) {
+      weekOffset = Math.floor((+earliest.startsAt - +thisWeekStart) / (7 * 86400_000));
+    }
+  }
   const weekStart = addDays(startOfWeek(new Date()), weekOffset * 7);
   const weekEnd = addDays(weekStart, 7);
 
@@ -60,6 +80,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const totalHours = shifts.reduce((acc, s) => acc + (+s.endsAt - +s.startsAt) / 3600000, 0);
   const openShiftsList = shifts.filter(s => s.isOpen);
   const drafts = shifts.filter(s => s.status === "draft");
+  const sampleShifts = shifts.filter(s => (s.notes ?? "").startsWith("[sample]"));
   const isManager = u.role === "ADMIN" || u.role === "MANAGER";
 
   const memberById = new Map(members.map(m => [m.id, m]));
@@ -135,7 +156,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
               <TemplatesButton weekStart={weekStart.toISOString().slice(0,10)} />
               <ScheduleActions weekStart={weekStart.toISOString().slice(0,10)} />
               <AutoFillButton weekStart={weekStart.toISOString().slice(0,10)} openShiftCount={openShiftsList.length} />
-              <AutoScheduleButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />
+              <AutoScheduleButton locations={locations.map(l => ({ id: l.id, name: l.name }))} aiConfigured={!!process.env.SHYFTFORCE_AI_KEY} />
               <PublishWeekButton weekStart={weekStart.toISOString().slice(0,10)} draftCount={drafts.length} />
             </>
           )}
@@ -163,8 +184,20 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
         <ScheduleControls locations={locations} totalShifts={shifts.length} openShifts={openShiftsList.length} drafts={drafts.length} />
       </div>
 
-      {/* GRID */}
-      <div className="card overflow-x-auto">
+      {/* Banner for the sample shifts we seeded during onboarding so a new owner
+          can clearly tell them from real shifts they'll be on the hook for. */}
+      {isManager && sampleShifts.length > 0 && (
+        <div className="rounded-xl border border-dashed border-ink-300 dark:border-ink-700 bg-ink-50 dark:bg-ink-900/60 px-4 py-3 flex items-start gap-3 text-[13px]">
+          <span className="text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full bg-ink-900/80 text-ink-50 dark:bg-ink-50/90 dark:text-ink-900 shrink-0 mt-0.5">Sample</span>
+          <div className="flex-1 text-ink-700 dark:text-ink-300">
+            <span className="font-medium text-ink-900 dark:text-ink-100">{sampleShifts.length} sample shift{sampleShifts.length === 1 ? "" : "s"}</span>{" "}
+            from your onboarding so the schedule isn&rsquo;t empty. Drag your team in, click <b>Auto-fill</b>, or just delete them — they aren&rsquo;t real shifts yet.
+          </div>
+        </div>
+      )}
+
+      {/* GRID — desktop only; the wide week table is hostile on phones. */}
+      <div className="card overflow-x-auto hidden lg:block">
         <table className="w-full text-sm min-w-[1100px]">
           <thead>
             <tr className="border-b border-white/[0.06]">
@@ -254,6 +287,51 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
         </table>
       </div>
 
+      {/* MOBILE day-by-day list — replaces the wide grid below lg.  */}
+      <div className="lg:hidden space-y-3">
+        {days.map((d: Date) => {
+          const dayShifts = shifts
+            .filter((s) => new Date(s.startsAt).toDateString() === d.toDateString())
+            .sort((a, b) => +a.startsAt - +b.startsAt);
+          const isToday = d.toDateString() === new Date().toDateString();
+          return (
+            <details key={+d} open={isToday || dayShifts.length > 0} className="card overflow-hidden">
+              <summary className="px-4 py-3 flex items-center justify-between cursor-pointer list-none">
+                <div className="flex items-center gap-2">
+                  <div className={`text-[11px] font-mono uppercase tracking-wider ${isToday ? "text-brand-300" : "text-ink-500"}`}>
+                    {d.toLocaleDateString("en-US", { weekday: "short" })}
+                  </div>
+                  <div className="text-[15px] font-bold tracking-tight">
+                    {d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </div>
+                  {isToday && <span className="badge bg-brand-500/15 text-brand-300 text-[10px]">Today</span>}
+                </div>
+                <div className="text-[11px] text-ink-500">
+                  {dayShifts.length} shift{dayShifts.length === 1 ? "" : "s"}
+                </div>
+              </summary>
+              {dayShifts.length > 0 && (
+                <div className="px-4 pb-3 space-y-1.5">
+                  {dayShifts.map((s) => (
+                    <ShiftCell
+                      key={s.id}
+                      canEdit={isManager}
+                      members={membersList}
+                      verticals={verticalOptions}
+                      positions={allPositions}
+                      shift={shiftPayload(s)}
+                    />
+                  ))}
+                </div>
+              )}
+              {dayShifts.length === 0 && (
+                <div className="px-4 pb-4 text-[12px] text-ink-500">No shifts.</div>
+              )}
+            </details>
+          );
+        })}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <section className="card p-4">
           <div className="flex items-center justify-between mb-3">
@@ -300,10 +378,11 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
 function PositionView({
   shifts, memberById, days, weekStart, canEdit, members, verticals, positions, payload, colorForId,
 }: any) {
-  // Group shifts by position
+  // Group shifts by position — include OPEN shifts too so a brand-new org
+  // with seeded sample shifts (all open) still sees them under their positions
+  // instead of an empty "No assigned shifts this week" screen.
   const byPos = new Map<string, any[]>();
   for (const s of shifts) {
-    if (!s.memberId) continue;
     const pos = s.position ?? "(no position)";
     if (!byPos.has(pos)) byPos.set(pos, []);
     byPos.get(pos)!.push(s);

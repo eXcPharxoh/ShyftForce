@@ -4,6 +4,7 @@ import { requireManagerOrAdmin } from "@/lib/session";
 import { templateByKey } from "@/lib/industry-templates";
 import { audit } from "@/lib/audit";
 import { addDays, startOfWeek } from "@/lib/utils";
+import { geocodeAddress } from "@/lib/geo/geocode";
 import { z } from "zod";
 
 const Schema = z.object({
@@ -11,6 +12,7 @@ const Schema = z.object({
   firstLocation: z.object({
     name: z.string().min(1),
     timezone: z.string().optional(),
+    address: z.string().max(300).optional(), // we'll geocode if provided
   }).optional(),
   seedSampleData: z.boolean().optional().default(true),
   // Customizations from the editable Step 2 of onboarding. Each one is optional —
@@ -68,11 +70,17 @@ export async function POST(req: Request) {
     orderBy: { createdAt: "asc" },
   });
   if (!firstLocation && parsed.data.firstLocation) {
+    // Geocode the address (if provided) so the geofence + map work on day one.
+    // Quietly skips if Nominatim is down — we still create the location.
+    const geo = parsed.data.firstLocation.address
+      ? await geocodeAddress(parsed.data.firstLocation.address)
+      : null;
     firstLocation = await prisma.location.create({
       data: {
         organizationId: u.organizationId,
         name: parsed.data.firstLocation.name,
         geofenceRadiusMeters: geofenceMeters,
+        ...(geo ? { latitude: geo.lat, longitude: geo.lng } : {}),
       },
     });
   } else if (firstLocation && parsed.data.geofenceMeters !== undefined) {
@@ -152,7 +160,10 @@ export async function POST(req: Request) {
               position,
               status: "draft",
               isOpen: true,
-              notes: `Sample ${block.name} shift — drag a teammate here to assign`,
+              // [sample] prefix is the marker the schedule UI uses to render a
+              // visual "Sample" badge + dashed border — so brand-new owners can
+              // tell these apart from real shifts. Editing the note removes it.
+              notes: `[sample] ${block.name} shift — drag a teammate here to assign or delete me when you're ready.`,
             },
           });
           sampleShiftsCreated++;

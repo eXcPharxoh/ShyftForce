@@ -23,11 +23,12 @@ type FeatureRow = { key: string; label: string; planDefault: boolean };
 const INDUSTRIES = ["restaurant", "retail", "healthcare", "field_service", "office", "fitness", "security", "other"];
 
 export function OrgSettingsForm({
-  org, features, overrides,
+  org, features, overrides, activeMemberCount = 0,
 }: {
   org: Org;
   features: FeatureRow[];
   overrides: Record<string, boolean>;
+  activeMemberCount?: number;
 }) {
   const r = useRouter();
   const confirm = useConfirm();
@@ -83,7 +84,7 @@ export function OrgSettingsForm({
     const ok = await confirm({
       title: next ? `Suspend ${org.name}?` : `Restore ${org.name}?`,
       description: next
-        ? "Everyone in this org (except platform admins) will be locked out of the workspace until you restore it. Their data is untouched."
+        ? `${activeMemberCount} active member${activeMemberCount === 1 ? "" : "s"} will be locked out of the workspace until you restore it (their data stays intact). Platform admins are exempt.`
         : "This org's members will regain access to their workspace immediately.",
       tone: next ? "danger" : "default",
       confirmLabel: next ? "Suspend workspace" : "Restore access",

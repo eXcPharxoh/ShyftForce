@@ -23,7 +23,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
             <Logo size="md" />
             <div>
               <Wordmark className="text-base block leading-none" />
-              <div className="text-[10px] uppercase tracking-wider font-bold text-rose-500 mt-1">Platform admin</div>
+              <div className="text-[10px] uppercase tracking-wider font-bold text-rose-500 mt-1">Operator console</div>
             </div>
           </Link>
         </div>
@@ -55,7 +55,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
         )}
         <header className="bg-white dark:bg-ink-900 border-b border-ink-200 dark:border-ink-800 px-6 py-3 flex items-center justify-between">
           <div className="text-sm text-ink-500 dark:text-ink-400">
-            Signed in as <span className="font-semibold text-ink-900 dark:text-ink-100">{real.email}</span> · Platform admin
+            Signed in as <span className="font-semibold text-ink-900 dark:text-ink-100">{real.email}</span> · Operator
           </div>
           <Link href="/api/auth/signout" className="btn-ghost text-xs">
             <LogOut className="w-3.5 h-3.5" /> Sign out
