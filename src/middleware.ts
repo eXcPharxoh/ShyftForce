@@ -27,7 +27,7 @@ const APP_PATH_PREFIXES = [
   "/dashboard", "/schedule", "/attendance", "/time-off", "/hr", "/documents",
   "/messenger", "/billboard", "/compliance", "/reports", "/more", "/expenses",
   "/open-shifts", "/settings", "/incidents", "/checkpoints", "/clients", "/tips",
-  "/ewa", "/network", "/worker", "/onboarding", "/admin", "/log-book",
+  "/ewa", "/network", "/worker", "/onboarding", "/admin", "/log-book", "/welcome", "/suspended",
 ];
 
 const AUTH_PATHS = new Set([

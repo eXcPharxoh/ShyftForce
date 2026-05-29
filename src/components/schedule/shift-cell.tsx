@@ -23,12 +23,13 @@ export function colorForPosition(p: string | null | undefined) {
 }
 
 export function ShiftCell({
-  shift, members, canEdit, verticals,
+  shift, members, canEdit, verticals, positions,
 }: {
   shift: ShiftEditPayload;
   members: { id: string; name: string }[];
   canEdit: boolean;
   verticals?: VerticalOptions;
+  positions?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const isDraft = shift.status === "draft";
@@ -49,7 +50,7 @@ export function ShiftCell({
         <div className="opacity-80 truncate">{shift.position || shift.locationName}</div>
       </button>
       {open && (
-        <ShiftEditDialog shift={shift} members={members} verticals={verticals} onClose={() => setOpen(false)} />
+        <ShiftEditDialog shift={shift} members={members} verticals={verticals} positions={positions} onClose={() => setOpen(false)} />
       )}
     </>
   );

@@ -878,6 +878,10 @@ model Member {
   faceEnrolledAt DateTime?
   faceConsentAt  DateTime?
 
+  // When the employee finished the first-time onboarding wizard. null = they
+  // haven't yet; the (app) layout redirects them to /onboarding/employee.
+  onboardingAt   DateTime?
+
   // FIELD SERVICE: skill tier (1 = apprentice, 5 = master). Used by the
   // job-complexity matcher so a Level-1 tech doesn't get auto-offered a
   // Level-5 job they can't do. Null = unranked / not applicable.

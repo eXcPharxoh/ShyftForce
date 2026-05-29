@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Trash2, Save, Loader2, Send, Users, AlertOctagon, AlertTriangle, ShieldCheck, DollarSign } from "lucide-react";
+import { X, Trash2, Save, Loader2, Send, Users, AlertOctagon, AlertTriangle, ShieldCheck, DollarSign, Sparkles } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export type VerticalOptions = {
@@ -49,11 +49,13 @@ type Violation = { rule: string; ruleLabel: string; severity: "error" | "warning
 type Predictability = { triggered: boolean; bracketLabel?: string; noticeHours: number; hoursOwed: number; hourlyRate: number; amountOwedCents: number };
 
 export function ShiftEditDialog({
-  shift, members, verticals, onClose,
+  shift, members, verticals, positions, onClose,
 }: {
   shift: ShiftEditPayload;
   members: { id: string; name: string }[];
   verticals?: VerticalOptions;
+  // Org's existing positions for autocomplete — free text still works as fallback.
+  positions?: string[];
   onClose: () => void;
 }) {
   const r = useRouter();
@@ -78,6 +80,12 @@ export function ShiftEditDialog({
   // Live compliance check
   const [violations, setViolations] = useState<Violation[]>([]);
   const [predictability, setPredictability] = useState<Predictability | null>(null);
+
+  // Smart assignment suggestions (top 3 best-fit members for this shift).
+  // Skipped when the shift is already assigned to skip extra round-trips.
+  type Suggestion = { memberId: string; name: string; currentHours: number; hoursAfter: number; reason: string };
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
   const [checking, setChecking] = useState(false);
 
   useEffect(() => {
@@ -108,6 +116,26 @@ export function ShiftEditDialog({
     }, 350);
     return () => clearTimeout(t);
   }, [date, startTime, endTime, memberId, status, shift.id, shift.date, shift.startTime, shift.endTime, shift.memberId, shift.status]);
+
+  // Fetch best-fit suggestions on mount (only when this shift is still open —
+  // there's nothing to suggest if it's already assigned).
+  useEffect(() => {
+    if (memberId !== "open") return;
+    let cancelled = false;
+    setSuggestLoading(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/schedule/shift-suggestions", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shiftId: shift.id }),
+        });
+        if (!res.ok) return;
+        const d = await res.json();
+        if (!cancelled) setSuggestions(d.suggestions ?? []);
+      } finally { if (!cancelled) setSuggestLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [shift.id]); // intentionally only on shift.id — refetching on memberId churn is noisy
 
   const errors = violations.filter(v => v.severity === "error");
   const warnings = violations.filter(v => v.severity === "warning");
@@ -177,6 +205,33 @@ export function ShiftEditDialog({
         </header>
 
         <div className="p-5 space-y-3 overflow-y-auto scroll-thin">
+          {/* Best-fit suggestions — only when the shift is currently open. */}
+          {memberId === "open" && (suggestions.length > 0 || suggestLoading) && (
+            <div className="rounded-xl bg-brand-50/60 dark:bg-brand-500/[0.07] border border-brand-200 dark:border-brand-500/20 p-3">
+              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-brand-700 dark:text-brand-300 mb-2">
+                <Sparkles className="w-3 h-3" /> Suggested for this shift
+              </div>
+              {suggestLoading ? (
+                <div className="text-[12px] text-ink-500 dark:text-ink-400 flex items-center gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Finding best fit…
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.memberId}
+                      onClick={() => setMemberId(s.memberId)}
+                      className="text-left rounded-lg bg-white dark:bg-ink-800 border border-ink-200 dark:border-ink-700 hover:border-brand-400 dark:hover:border-brand-500/60 px-2.5 py-1.5 transition"
+                      title={s.reason}
+                    >
+                      <div className="text-[12.5px] font-medium text-ink-900 dark:text-ink-50">{s.name}</div>
+                      <div className="text-[10.5px] text-ink-500 dark:text-ink-400">{s.reason}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div>
             <label className="label">Assigned to</label>
             <select className="input" value={memberId} onChange={(e) => setMemberId(e.target.value as any)}>
@@ -202,7 +257,18 @@ export function ShiftEditDialog({
           </div>
           <div>
             <label className="label">Position</label>
-            <input className="input" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="e.g. Server, Security Officer…" />
+            <input
+              className="input"
+              list={`positions-${shift.id}`}
+              value={position}
+              onChange={(e) => setPosition(e.target.value)}
+              placeholder={positions && positions.length > 0 ? "Pick one or type your own" : "e.g. Server, Security Officer…"}
+            />
+            {positions && positions.length > 0 && (
+              <datalist id={`positions-${shift.id}`}>
+                {positions.map((p) => <option key={p} value={p} />)}
+              </datalist>
+            )}
           </div>
 
           {/* Vertical-specific fields — only render the ones relevant to the industry */}

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireUser, getRealSessionUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { Sidebar } from "@/components/sidebar";
@@ -35,9 +36,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     }),
     prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
     u.memberId
-      ? prisma.member.findUnique({ where: { id: u.memberId }, select: { locale: true } })
+      ? prisma.member.findUnique({ where: { id: u.memberId }, select: { locale: true, onboardingAt: true } })
       : Promise.resolve(null),
   ]);
+
+  // First-time employee → guided welcome wizard. Managers/admins skip this
+  // (they have the workspace wizard at /onboarding). Platform admins also skip.
+  if (u.role === "EMPLOYEE" && member && !member.onboardingAt && !showPlatformAdmin) {
+    redirect("/welcome");
+  }
 
   // Resolve effective locale: member preference → org default → "en"
   const locale = resolveLocale(member?.locale, org?.defaultLocale);

@@ -144,7 +144,9 @@ export async function applyForecastAsDraft(opts: ApplyDraftInput) {
         status: "draft",
         isOpen: true,
         memberId: null,
-        notes: `Forecast: ${(b.predictedRevenueCents / 100).toFixed(0)} predicted revenue`,
+        notes: b.predictedRevenueCents > 0
+          ? `Forecast: $${(b.predictedRevenueCents / 100).toFixed(0)} predicted revenue`
+          : null, // no real prediction → don't pollute the note with "0 predicted revenue"
       },
     });
     created++;

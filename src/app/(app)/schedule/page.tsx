@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { addDays, dateLabel, fmtMoney, initials, startOfWeek, timeLabel } from "@/lib/utils";
 import { ScheduleControls } from "@/components/schedule/schedule-controls";
 import { AutoScheduleButton } from "@/components/schedule/auto-schedule-button";
+import { AutoFillButton } from "@/components/schedule/auto-fill-button";
 import { ScheduleActions } from "@/components/schedule/schedule-actions";
 import { LiveLaborChip } from "@/components/schedule/live-labor-chip";
 import { PublishWeekButton } from "@/components/schedule/publish-week-button";
@@ -62,6 +63,12 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const isManager = u.role === "ADMIN" || u.role === "MANAGER";
 
   const memberById = new Map(members.map(m => [m.id, m]));
+  // Union of distinct positions across this org's shifts + members, used to
+  // autocomplete the shift editor's Position field instead of forcing free text.
+  const allPositions = Array.from(new Set<string>([
+    ...shifts.map(s => s.position).filter((p): p is string => !!p),
+    ...members.map(m => m.position).filter((p): p is string => !!p),
+  ])).sort();
   function shiftPayload(s: typeof shifts[number]) {
     return {
       id: s.id,
@@ -127,6 +134,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
               </Link>
               <TemplatesButton weekStart={weekStart.toISOString().slice(0,10)} />
               <ScheduleActions weekStart={weekStart.toISOString().slice(0,10)} />
+              <AutoFillButton weekStart={weekStart.toISOString().slice(0,10)} openShiftCount={openShiftsList.length} />
               <AutoScheduleButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />
               <PublishWeekButton weekStart={weekStart.toISOString().slice(0,10)} draftCount={drafts.length} />
             </>
@@ -187,8 +195,8 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           </thead>
           <tbody>
             {view === "position"
-              ? <PositionView shifts={shifts} memberById={memberById} days={days} weekStart={weekStart} canEdit={isManager} members={membersList} verticals={verticalOptions} payload={shiftPayload} colorForId={colorForId} />
-              : <EmployeeView shifts={shifts} members={members} days={days} weekStart={weekStart} canEdit={isManager} membersList={membersList} verticals={verticalOptions} payload={shiftPayload} />
+              ? <PositionView shifts={shifts} memberById={memberById} days={days} weekStart={weekStart} canEdit={isManager} members={membersList} verticals={verticalOptions} positions={allPositions} payload={shiftPayload} colorForId={colorForId} />
+              : <EmployeeView shifts={shifts} members={members} days={days} weekStart={weekStart} canEdit={isManager} membersList={membersList} verticals={verticalOptions} positions={allPositions} payload={shiftPayload} />
             }
 
             {/* Open shifts row (always shown if any) */}
@@ -214,6 +222,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                             canEdit={isManager}
                             members={membersList}
                             verticals={verticalOptions}
+                            positions={allPositions}
                             shift={shiftPayload(s)}
                           />
                         ))}
@@ -289,7 +298,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
    POSITION VIEW — design spec default
    ============================================================================ */
 function PositionView({
-  shifts, memberById, days, weekStart, canEdit, members, verticals, payload, colorForId,
+  shifts, memberById, days, weekStart, canEdit, members, verticals, positions, payload, colorForId,
 }: any) {
   // Group shifts by position
   const byPos = new Map<string, any[]>();
@@ -299,9 +308,9 @@ function PositionView({
     if (!byPos.has(pos)) byPos.set(pos, []);
     byPos.get(pos)!.push(s);
   }
-  const positions = Array.from(byPos.keys()).sort();
+  const positionKeys = Array.from(byPos.keys()).sort();
 
-  if (positions.length === 0) {
+  if (positionKeys.length === 0) {
     return (
       <tr><td colSpan={9} className="p-12 text-center text-ink-500 text-sm">No assigned shifts this week.</td></tr>
     );
@@ -309,7 +318,7 @@ function PositionView({
 
   return (
     <>
-      {positions.map((pos, pi) => {
+      {positionKeys.map((pos: string, pi: number) => {
         const posShifts = byPos.get(pos)!;
         const ph = posShifts.reduce((a, s) => a + (+s.endsAt - +s.startsAt) / 3600_000, 0);
         const tone = PALETTE[pi % PALETTE.length];
@@ -346,6 +355,7 @@ function PositionView({
                           canEdit={canEdit}
                           members={members}
                           verticals={verticals}
+                          positions={positions}
                           payload={payload(s)}
                         />
                       );
@@ -365,7 +375,7 @@ function PositionView({
 /* ============================================================================
    EMPLOYEE VIEW — back-compat
    ============================================================================ */
-function EmployeeView({ shifts, members, days, weekStart, canEdit, membersList, verticals, payload }: any) {
+function EmployeeView({ shifts, members, days, weekStart, canEdit, membersList, verticals, positions, payload }: any) {
   return (
     <>
       {members.map((m: any) => {
@@ -404,6 +414,7 @@ function EmployeeView({ shifts, members, days, weekStart, canEdit, membersList, 
                         canEdit={canEdit}
                         members={membersList}
                         verticals={verticals}
+                        positions={positions}
                         shift={payload(s)}
                       />
                     ))}
@@ -422,11 +433,11 @@ function EmployeeView({ shifts, members, days, weekStart, canEdit, membersList, 
 /* ============================================================================
    PositionShiftCell — gradient block by employee color with name + time
    ============================================================================ */
-function PositionShiftCell({ memberName, color, startTime, endTime, isDraft, canEdit, members, verticals, payload }: any) {
+function PositionShiftCell({ memberName, color, startTime, endTime, isDraft, canEdit, members, verticals, positions, payload }: any) {
   // Re-use the existing edit dialog via ShiftCell with custom styling
   return (
     <div className="relative">
-      <ShiftCell canEdit={canEdit} members={members} verticals={verticals} shift={payload} />
+      <ShiftCell canEdit={canEdit} members={members} verticals={verticals} positions={positions} shift={payload} />
     </div>
   );
 }
