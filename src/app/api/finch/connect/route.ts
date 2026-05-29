@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireManagerOrAdmin } from "@/lib/session";
+import { featureGuard } from "@/lib/feature-guard";
 
 // Returns the Finch Connect URL the manager should be redirected to.
 // After they pick a provider + auth, Finch redirects back to /api/finch/callback?code=...
 export async function GET(req: Request) {
   const u = await requireManagerOrAdmin();
+  const denied = await featureGuard(u.organizationId, "payroll_push");
+  if (denied) return denied;
   if (!process.env.FINCH_CLIENT_ID) {
     return NextResponse.json({ error: "FINCH_CLIENT_ID not configured. Get one at https://dashboard.tryfinch.com/" }, { status: 500 });
   }

@@ -21,6 +21,7 @@ import { Email, sendEmail } from "@/lib/email";
 import { notifySlack } from "@/lib/slack";
 import { permitLabel, permitCategory, REMINDER_DAYS } from "@/lib/permits/catalog";
 import { statusFor } from "@/lib/permits/service";
+import { appUrl } from "@/lib/app-url";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -184,7 +185,7 @@ async function handler(req: Request) {
       if (r.email) {
         await sendEmail({
           to: r.email, subject: c.subj,
-          html: simpleEmail({ title: c.subj, body: c.sms, ctaLabel: "Open permits", ctaUrl: "https://app.shyftforce.com/settings/permits", footer: p.renewalUrl ? `Renew at: ${p.renewalUrl}` : undefined }),
+          html: simpleEmail({ title: c.subj, body: c.sms, ctaLabel: "Open permits", ctaUrl: appUrl("/settings/permits"), footer: p.renewalUrl ? `Renew at: ${p.renewalUrl}` : undefined }),
         }).catch(() => {});
       }
     }));

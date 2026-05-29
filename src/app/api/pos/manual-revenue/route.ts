@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
+import { featureGuard } from "@/lib/feature-guard";
 import { audit } from "@/lib/audit";
 import { z } from "zod";
 
@@ -15,6 +16,8 @@ const Schema = z.object({
 
 export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
+  const denied = await featureGuard(u.organizationId, "pos_integrations");
+  if (denied) return denied;
   const parsed = Schema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
 

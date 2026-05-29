@@ -20,6 +20,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
+import { featureGuard } from "@/lib/feature-guard";
 import { audit } from "@/lib/audit";
 
 const QuerySchema = z.object({
@@ -31,6 +32,8 @@ const FLOOR_PERCENT = 8.0; // IRS Section 6053(c) allocation floor
 
 export async function GET(req: Request) {
   const u = await requireManagerOrAdmin();
+  const denied = await featureGuard(u.organizationId, "tip_management");
+  if (denied) return denied;
   const url = new URL(req.url);
   const parsed = QuerySchema.safeParse({
     year: url.searchParams.get("year"),

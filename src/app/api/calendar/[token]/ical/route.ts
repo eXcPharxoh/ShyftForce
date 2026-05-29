@@ -8,6 +8,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { buildIcs, type IcsEvent } from "@/lib/calendar/ics";
+import { appUrl } from "@/lib/app-url";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
     startsAt:    s.startsAt,
     endsAt:      s.endsAt,
     status:      "CONFIRMED",
-    url:         "https://app.shyftforce.com/schedule",
+    url:         appUrl("/schedule"),
   }));
 
   const body = buildIcs({

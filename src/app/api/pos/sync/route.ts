@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, requireManagerOrAdmin } from "@/lib/session";
+import { featureGuard } from "@/lib/feature-guard";
 import { syncOrg } from "@/lib/pos/sync";
 
 // POST /api/pos/sync — pulls fresh sales for every connected, non-manual provider
@@ -23,6 +24,8 @@ export async function POST(req: Request) {
   const u = await getSessionUser();
   if (!u) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (u.role !== "ADMIN" && u.role !== "MANAGER") return NextResponse.json({ error: "manager only" }, { status: 403 });
+  const denied = await featureGuard(u.organizationId, "pos_integrations");
+  if (denied) return denied;
 
   const result = await syncOrg({ organizationId: u.organizationId });
   return NextResponse.json(result);

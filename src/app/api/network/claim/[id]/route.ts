@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { featureGuard } from "@/lib/feature-guard";
 import { getOrCreateWorkerProfile, recomputeReputation } from "@/lib/network/profile";
 import { audit } from "@/lib/audit";
 
@@ -12,6 +13,8 @@ import { audit } from "@/lib/audit";
 // guest member record).
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
+  const denied = await featureGuard(u.organizationId, "worker_network");
+  if (denied) return denied;
   const { id } = await params;
   const profile = await getOrCreateWorkerProfile(u.id);
 

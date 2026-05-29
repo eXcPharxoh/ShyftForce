@@ -8,6 +8,7 @@ import { smsScheduleChange } from "@/lib/sms";
 import { emitWebhook } from "@/lib/webhooks/emit";
 import { memberHasExpiredBlockingPermit } from "@/lib/permits/service";
 import { checkRatioForShift } from "@/lib/healthcare/ratios";
+import { appUrl } from "@/lib/app-url";
 
 function combine(date: string, time: string): Date {
   const [y, mo, d] = date.split("-").map(Number);
@@ -186,7 +187,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         position: existing.position ?? "Shift",
         locationName: existing.location.name,
         startsAt: updated.startsAt,
-        url: "https://app.shyftforce.com/schedule",
+        url: appUrl("/schedule"),
       }).catch(() => {});
     }
   }

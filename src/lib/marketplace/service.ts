@@ -4,6 +4,7 @@ import { rankCandidates, WAVES, type RankedCandidate, type WavePlan } from "./ra
 import { smsShiftOffer } from "@/lib/sms";
 import { emitWebhook } from "@/lib/webhooks/emit";
 import { blockedMemberIds } from "@/lib/permits/service";
+import { appUrl } from "@/lib/app-url";
 
 export async function rankForShift(shiftId: string, organizationId: string, opts?: { excludeMemberIds?: string[] }) {
   const shift = await prisma.shift.findUnique({
@@ -112,7 +113,7 @@ export async function sendOffers(opts: {
         locationName: shift.location.name,
         startsAt: shift.startsAt,
         expiresAt,
-        offerUrl: "https://app.shyftforce.com/open-shifts",
+        offerUrl: appUrl("/open-shifts"),
       }).catch(() => {});
     }
   }

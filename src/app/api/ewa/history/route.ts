@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { featureGuard } from "@/lib/feature-guard";
 
 // GET /api/ewa/history?scope=mine|org
 export async function GET(req: Request) {
   const u = await requireUser();
+  const denied = await featureGuard(u.organizationId, "earned_wage_access");
+  if (denied) return denied;
   const url = new URL(req.url);
   const scope = url.searchParams.get("scope") ?? "mine";
   const isManager = u.role === "ADMIN" || u.role === "MANAGER";

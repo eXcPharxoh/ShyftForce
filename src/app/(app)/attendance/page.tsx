@@ -34,7 +34,13 @@ export default async function AttendancePage() {
       },
     }),
     prisma.member.findMany({ where: { organizationId: orgId, status: "active" }, include: { user: true, location: true } }),
-    prisma.attendanceLog.findMany({ where: { member: { organizationId: orgId } }, orderBy: { at: "asc" } }),
+    // Bounded to last 36h — enough to resolve current clock-in status (incl.
+    // overnight shifts) without scanning the org's entire history every page
+    // load. Uses the AttendanceLog(at) index.
+    prisma.attendanceLog.findMany({
+      where: { member: { organizationId: orgId }, at: { gte: new Date(Date.now() - 36 * 3600_000) } },
+      orderBy: { at: "asc" },
+    }),
     prisma.attendanceLog.findMany({
       where: { member: { organizationId: orgId } },
       orderBy: { at: "desc" }, take: 12,

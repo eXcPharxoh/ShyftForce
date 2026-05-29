@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireManagerOrAdmin } from "@/lib/session";
+import { featureGuard } from "@/lib/feature-guard";
 import { distributeTips, type DistributionRule } from "@/lib/tips/distribute";
 import { z } from "zod";
 
@@ -14,6 +15,8 @@ const Schema = z.object({
 // POST /api/tips/preview — same as POST /api/tips but doesn't persist
 export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
+  const denied = await featureGuard(u.organizationId, "tip_management");
+  if (denied) return denied;
   const parsed = Schema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 

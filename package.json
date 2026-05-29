@@ -10,6 +10,8 @@
     "lint": "next lint",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",
+    "migrate:status": "prisma migrate status",
+    "migrate:diff": "prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio"
   },

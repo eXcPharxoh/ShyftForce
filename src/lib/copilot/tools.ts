@@ -6,6 +6,7 @@ import { checkCompliance } from "@/lib/compliance/engine";
 import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 import { rankForShift, sendOffers } from "@/lib/marketplace/service";
 import { WAVES } from "@/lib/marketplace/ranker";
+import { appUrl } from "@/lib/app-url";
 
 // ---------- Schemas surfaced to Claude ----------
 export const TOOLS: Tool[] = [
@@ -739,7 +740,7 @@ export async function runTool(name: string, input: any, user: SessionUser) {
           subjects: input.subjects ?? [],
           grades:   input.grades ?? [],
           notes:    input.notes ?? null,
-          baseUrl:  process.env.NEXT_PUBLIC_APP_URL ?? "https://app.shyftforce.com",
+          baseUrl:  appUrl(),
         });
         return {
           ok: true, teacher: shift.member?.user.name,

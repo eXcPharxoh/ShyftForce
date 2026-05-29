@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
+import { featureGuard } from "@/lib/feature-guard";
 import { FinchAPI } from "@/lib/finch";
 import { audit } from "@/lib/audit";
 
@@ -8,6 +9,8 @@ import { audit } from "@/lib/audit";
 // members by email, and store externalEmployeeId. New workers are surfaced for review.
 export async function POST() {
   const u = await requireManagerOrAdmin();
+  const denied = await featureGuard(u.organizationId, "payroll_push");
+  if (denied) return denied;
   const org = await prisma.organization.findUnique({ where: { id: u.organizationId } });
   if (!org?.finchAccessToken) return NextResponse.json({ error: "Finch not connected" }, { status: 400 });
 

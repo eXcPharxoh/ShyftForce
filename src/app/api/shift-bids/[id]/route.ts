@@ -7,6 +7,7 @@ import { audit } from "@/lib/audit";
 import { smsScheduleChange } from "@/lib/sms";
 import { sendPush } from "@/lib/push";
 import { memberHasExpiredBlockingPermit } from "@/lib/permits/service";
+import { appUrl } from "@/lib/app-url";
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
@@ -75,7 +76,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       position: bid.shift.position ?? "Shift",
       locationName: bid.shift.location.name,
       startsAt: bid.shift.startsAt,
-      url: "https://app.shyftforce.com/schedule",
+      url: appUrl("/schedule"),
     }).catch(() => {});
   }
   sendPush(bid.member.userId, {
