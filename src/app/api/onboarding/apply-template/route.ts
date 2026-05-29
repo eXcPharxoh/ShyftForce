@@ -13,6 +13,19 @@ const Schema = z.object({
     timezone: z.string().optional(),
   }).optional(),
   seedSampleData: z.boolean().optional().default(true),
+  // Customizations from the editable Step 2 of onboarding. Each one is optional —
+  // missing values fall back to the industry template's defaults.
+  positions: z.array(z.string().min(1).max(60)).optional(),
+  shiftBlocks: z.array(z.object({
+    name: z.string().min(1).max(40),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/),
+  })).optional(),
+  geofenceMeters: z.number().int().min(10).max(2000).optional(),
+  compliance: z.object({
+    mealBreakRequiredAfterHours: z.number().min(0).max(24).optional(),
+    predictiveSchedulingDays: z.number().int().min(0).max(60).optional(),
+  }).optional(),
 });
 
 export async function POST(req: Request) {
@@ -24,17 +37,32 @@ export async function POST(req: Request) {
   const tpl = templateByKey(parsed.data.industry);
   if (!tpl) return NextResponse.json({ error: "Unknown template" }, { status: 400 });
 
-  // 1. Update org with industry + recommended compliance tweaks
+  // ---- Resolve effective values: user customizations win over template defaults.
+  const positions = parsed.data.positions ?? tpl.positions;
+  const shiftBlocks = parsed.data.shiftBlocks ?? tpl.shiftBlocks;
+  const geofenceMeters = parsed.data.geofenceMeters ?? tpl.defaultGeofenceMeters;
+  const complianceTweaks: Record<string, any> = { ...(tpl.recommendedComplianceTweaks ?? {}) };
+  if (parsed.data.compliance) {
+    if (parsed.data.compliance.mealBreakRequiredAfterHours !== undefined) {
+      complianceTweaks.mealBreakRequiredAfterHours = parsed.data.compliance.mealBreakRequiredAfterHours;
+    }
+    if (parsed.data.compliance.predictiveSchedulingDays !== undefined) {
+      complianceTweaks.predictiveSchedulingDays = parsed.data.compliance.predictiveSchedulingDays;
+    }
+  }
+
+  // 1. Update org with industry + (user-edited) compliance tweaks
   await prisma.organization.update({ where: { id: u.organizationId }, data: { industry: tpl.key } });
-  if (tpl.recommendedComplianceTweaks) {
+  if (Object.keys(complianceTweaks).length > 0) {
     await prisma.complianceSettings.upsert({
       where: { organizationId: u.organizationId },
-      update: tpl.recommendedComplianceTweaks,
-      create: { organizationId: u.organizationId, ...tpl.recommendedComplianceTweaks },
+      update: complianceTweaks,
+      create: { organizationId: u.organizationId, ...complianceTweaks },
     });
   }
 
-  // 2. Create first location if provided (or use existing)
+  // 2. Create first location if provided (or use existing). Apply the user's
+  //    chosen geofence radius — either to the new location or to the existing one.
   let firstLocation = await prisma.location.findFirst({
     where: { organizationId: u.organizationId },
     orderBy: { createdAt: "asc" },
@@ -44,8 +72,13 @@ export async function POST(req: Request) {
       data: {
         organizationId: u.organizationId,
         name: parsed.data.firstLocation.name,
-        geofenceRadiusMeters: tpl.defaultGeofenceMeters,
+        geofenceRadiusMeters: geofenceMeters,
       },
+    });
+  } else if (firstLocation && parsed.data.geofenceMeters !== undefined) {
+    firstLocation = await prisma.location.update({
+      where: { id: firstLocation.id },
+      data: { geofenceRadiusMeters: geofenceMeters },
     });
   }
 
@@ -97,14 +130,14 @@ export async function POST(req: Request) {
     const existingShifts = await prisma.shift.count({
       where: { locationId: firstLocation.id, startsAt: { gte: nextWeekStart, lt: addDays(nextWeekStart, 7) } },
     });
-    if (existingShifts === 0) {
+    if (existingShifts === 0 && shiftBlocks.length > 0 && positions.length > 0) {
       for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
         const day = addDays(nextWeekStart, dayOffset);
-        // Use the first 2-3 shift blocks per day (most templates have 3-4)
-        const blocksToUse = tpl.shiftBlocks.slice(0, Math.min(3, tpl.shiftBlocks.length));
+        // Use the first 2-3 shift blocks per day (most setups have 3-4)
+        const blocksToUse = shiftBlocks.slice(0, Math.min(3, shiftBlocks.length));
         for (let bi = 0; bi < blocksToUse.length; bi++) {
           const block = blocksToUse[bi];
-          const position = tpl.positions[bi % tpl.positions.length];
+          const position = positions[bi % positions.length];
           const [sh, sm] = block.startTime.split(":").map(Number);
           const [eh, em] = block.endTime.split(":").map(Number);
           const startsAt = new Date(day); startsAt.setHours(sh, sm, 0, 0);
@@ -206,13 +239,21 @@ export async function POST(req: Request) {
     }
   }
 
+  const customizedPositions = parsed.data.positions !== undefined;
+  const customizedShiftBlocks = parsed.data.shiftBlocks !== undefined;
+  const customizedGeofence = parsed.data.geofenceMeters !== undefined;
+  const customizedCompliance = parsed.data.compliance !== undefined;
+
   await audit({
     organizationId: u.organizationId, actorId: u.id,
     action: "org.update", entityType: "Organization", entityId: u.organizationId,
     metadata: {
       template: tpl.key,
-      positions: tpl.positions.length,
-      shiftBlocks: tpl.shiftBlocks.length,
+      positions: positions.length,
+      shiftBlocks: shiftBlocks.length,
+      geofenceMeters,
+      compliance: complianceTweaks,
+      customized: { positions: customizedPositions, shiftBlocks: customizedShiftBlocks, geofence: customizedGeofence, compliance: customizedCompliance },
       sampleShiftsCreated,
       sampleDayNotesCreated,
       verticalSeeds,
@@ -221,7 +262,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    template: { key: tpl.key, label: tpl.label, positions: tpl.positions, shiftBlocks: tpl.shiftBlocks },
+    template: { key: tpl.key, label: tpl.label, positions, shiftBlocks },
     sampleShiftsCreated,
     sampleDayNotesCreated,
     verticalSeeds,

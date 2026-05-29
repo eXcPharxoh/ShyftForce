@@ -1,31 +1,86 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Check, ChevronRight, ChevronLeft, Loader2, ArrowRight } from "lucide-react";
+import { Sparkles, Check, ChevronRight, ChevronLeft, Loader2, ArrowRight, X, Plus } from "lucide-react";
 import { INDUSTRY_TEMPLATES } from "@/lib/industry-templates";
 import { Confetti } from "./confetti";
+
+type ShiftBlock = { name: string; startTime: string; endTime: string };
 
 export function OnboardingWizard({ orgName, userName }: { orgName: string; userName: string }) {
   const r = useRouter();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [industry, setIndustry] = useState<string | null>(null);
   const [firstLocation, setFirstLocation] = useState("");
+
+  // Step-2 customization state. Seeded from the chosen industry template the
+  // first time the user lands on Step 2, but every value below is theirs to
+  // change — positions, shift blocks, geofence radius, and compliance thresholds.
+  const [positions, setPositions] = useState<string[]>([]);
+  const [newPosition, setNewPosition] = useState("");
+  const [shiftBlocks, setShiftBlocks] = useState<ShiftBlock[]>([]);
+  const [geofenceMeters, setGeofenceMeters] = useState<number>(50);
+  const [mealBreakHours, setMealBreakHours] = useState<number>(5);
+  const [predictiveSchedulingDays, setPredictiveSchedulingDays] = useState<number>(0);
+
   const [applying, setApplying] = useState(false);
   const [done, setDone] = useState(false);
+
+  const tpl = INDUSTRY_TEMPLATES.find((t) => t.key === industry);
+
+  // Re-seed defaults when the user picks (or changes) the industry. They can
+  // still freely edit afterward — this just pulls in sensible starting values.
+  useEffect(() => {
+    if (!tpl) return;
+    setPositions([...tpl.positions]);
+    setShiftBlocks(tpl.shiftBlocks.map((b) => ({ ...b })));
+    setGeofenceMeters(tpl.defaultGeofenceMeters);
+    setMealBreakHours(tpl.recommendedComplianceTweaks?.mealBreakRequiredAfterHours ?? 5);
+    setPredictiveSchedulingDays(tpl.recommendedComplianceTweaks?.predictiveSchedulingDays ?? 0);
+  }, [industry]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function addPosition() {
+    const t = newPosition.trim();
+    if (!t || positions.includes(t)) return;
+    setPositions([...positions, t]);
+    setNewPosition("");
+  }
+  function removePosition(p: string) {
+    setPositions(positions.filter((x) => x !== p));
+  }
+  function addShiftBlock() {
+    setShiftBlocks([...shiftBlocks, { name: "New block", startTime: "09:00", endTime: "17:00" }]);
+  }
+  function updateShiftBlock(i: number, patch: Partial<ShiftBlock>) {
+    setShiftBlocks(shiftBlocks.map((b, idx) => (idx === i ? { ...b, ...patch } : b)));
+  }
+  function removeShiftBlock(i: number) {
+    setShiftBlocks(shiftBlocks.filter((_, idx) => idx !== i));
+  }
 
   async function applyTemplate() {
     if (!industry) return;
     setApplying(true);
     await fetch("/api/onboarding/apply-template", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ industry, firstLocation: firstLocation.trim() ? { name: firstLocation.trim() } : undefined }),
+      body: JSON.stringify({
+        industry,
+        firstLocation: firstLocation.trim() ? { name: firstLocation.trim() } : undefined,
+        // User-customized values — the API uses these instead of the template
+        // defaults if provided.
+        positions,
+        shiftBlocks,
+        geofenceMeters,
+        compliance: {
+          mealBreakRequiredAfterHours: mealBreakHours,
+          predictiveSchedulingDays: predictiveSchedulingDays || undefined,
+        },
+      }),
     });
     setApplying(false);
     setDone(true);
     setStep(4);
   }
-
-  const tpl = INDUSTRY_TEMPLATES.find(t => t.key === industry);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -38,11 +93,11 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
           </div>
         </div>
         <h1 className="text-3xl font-bold tracking-tight-2">Welcome, {userName.split(" ")[0]}!</h1>
-        <p className="text-ink-500 dark:text-ink-400 mt-1">Let's get <b className="text-ink-900 dark:text-ink-100">{orgName}</b> set up in 60 seconds.</p>
+        <p className="text-ink-500 dark:text-ink-400 mt-1">Let&rsquo;s get <b className="text-ink-900 dark:text-ink-100">{orgName}</b> set up in 60 seconds.</p>
       </header>
 
       <div className="flex items-center gap-2 max-w-sm mx-auto mb-8">
-        {[1,2,3,4].map(n => (
+        {[1, 2, 3, 4].map((n) => (
           <div key={n} className="flex-1">
             <div className={`h-1.5 rounded-full transition-all duration-500 ${step >= n ? "bg-gradient-to-r from-brand-500 to-rose-500" : "bg-ink-200 dark:bg-ink-800"}`} />
             <div className={`text-[10px] font-semibold uppercase tracking-wider mt-1.5 text-center transition ${step >= n ? "text-brand-600 dark:text-brand-400" : "text-ink-400 dark:text-ink-600"}`}>
@@ -56,9 +111,9 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
         {step === 1 && (
           <section className="card p-6">
             <h2 className="font-bold text-lg mb-1">What kind of business?</h2>
-            <p className="text-sm text-ink-500 dark:text-ink-400 mb-5">We'll pre-configure positions, shift blocks, and compliance defaults.</p>
+            <p className="text-sm text-ink-500 dark:text-ink-400 mb-5">We&rsquo;ll pre-configure positions, shift blocks, and compliance defaults — and you&rsquo;ll customize them next.</p>
             <div className="grid grid-cols-2 gap-2.5">
-              {INDUSTRY_TEMPLATES.map(t => (
+              {INDUSTRY_TEMPLATES.map((t) => (
                 <button key={t.key} onClick={() => setIndustry(t.key)}
                   className={`text-left p-4 rounded-xl border-2 transition group ${industry === t.key ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10 dark:border-brand-500/60" : "border-ink-200 dark:border-ink-800 hover:border-brand-300 dark:hover:border-brand-500/40 hover:bg-ink-50 dark:hover:bg-ink-800/40"}`}>
                   <div className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">{t.emoji}</div>
@@ -72,30 +127,124 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
 
         {step === 2 && tpl && (
           <section className="card p-6">
-            <h2 className="font-bold text-lg mb-1">Looks great. Here's what {tpl.label} comes with:</h2>
-            <p className="text-sm text-ink-500 dark:text-ink-400 mb-5">All editable later in <b>HR → Members</b> and the Schedule.</p>
-            <div className="space-y-4">
+            <h2 className="font-bold text-lg mb-1">Make it yours</h2>
+            <p className="text-sm text-ink-500 dark:text-ink-400 mb-5">
+              We pre-filled what most {tpl.label.toLowerCase()} use. <b>Tweak anything below</b> — add or remove items, change times, set your numbers. You can revisit these in Settings later too.
+            </p>
+
+            <div className="space-y-6">
+              {/* POSITIONS */}
               <div>
-                <div className="text-[11px] uppercase text-ink-500 dark:text-ink-400 font-semibold tracking-wider mb-1.5">Positions ({tpl.positions.length})</div>
-                <div className="flex flex-wrap gap-1.5">{tpl.positions.map(p => <span key={p} className="badge-gray">{p}</span>)}</div>
+                <div className="text-[11px] uppercase text-ink-500 dark:text-ink-400 font-semibold tracking-wider mb-2">Positions <span className="text-ink-400 dark:text-ink-500">({positions.length})</span></div>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {positions.map((p) => (
+                    <span key={p} className="inline-flex items-center gap-1 rounded-full bg-ink-100 dark:bg-ink-800 text-ink-700 dark:text-ink-200 pl-2.5 pr-1.5 py-1 text-[12px] font-medium">
+                      {p}
+                      <button onClick={() => removePosition(p)} className="rounded-full p-0.5 hover:bg-rose-500/15 hover:text-rose-500 transition" aria-label={`Remove ${p}`}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {positions.length === 0 && (
+                    <span className="text-[12px] text-ink-400 dark:text-ink-500 italic">No positions yet — add one below.</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    className="input flex-1 text-sm py-1.5"
+                    placeholder="Add a position (e.g. Barista)"
+                    value={newPosition}
+                    onChange={(e) => setNewPosition(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPosition(); } }}
+                  />
+                  <button onClick={addPosition} disabled={!newPosition.trim()} className="btn-ghost px-2 disabled:opacity-40" aria-label="Add position">
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
+
+              {/* SHIFT BLOCKS */}
               <div>
-                <div className="text-[11px] uppercase text-ink-500 dark:text-ink-400 font-semibold tracking-wider mb-1.5">Shift blocks</div>
-                <div className="flex flex-wrap gap-1.5">{tpl.shiftBlocks.map(b => <span key={b.name} className="badge-orange">{b.name} {b.startTime}–{b.endTime}</span>)}</div>
+                <div className="text-[11px] uppercase text-ink-500 dark:text-ink-400 font-semibold tracking-wider mb-2">Shift blocks <span className="text-ink-400 dark:text-ink-500">({shiftBlocks.length})</span></div>
+                <div className="space-y-1.5">
+                  {shiftBlocks.map((b, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <input
+                        className="input flex-1 text-sm py-1.5"
+                        value={b.name}
+                        onChange={(e) => updateShiftBlock(i, { name: e.target.value })}
+                        placeholder="Block name"
+                      />
+                      <input
+                        type="time"
+                        className="input w-[112px] text-sm py-1.5"
+                        value={b.startTime}
+                        onChange={(e) => updateShiftBlock(i, { startTime: e.target.value })}
+                      />
+                      <span className="text-ink-400 text-xs">→</span>
+                      <input
+                        type="time"
+                        className="input w-[112px] text-sm py-1.5"
+                        value={b.endTime}
+                        onChange={(e) => updateShiftBlock(i, { endTime: e.target.value })}
+                      />
+                      <button onClick={() => removeShiftBlock(i)} className="btn-ghost px-2 text-ink-400 hover:text-rose-500 hover:bg-rose-500/10" aria-label="Remove block">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={addShiftBlock} className="btn-ghost text-xs mt-2 inline-flex items-center gap-1">
+                  <Plus className="w-3.5 h-3.5" /> Add shift block
+                </button>
               </div>
+
+              {/* GEOFENCE */}
               <div>
-                <div className="text-[11px] uppercase text-ink-500 dark:text-ink-400 font-semibold tracking-wider mb-1.5">Default geofence radius</div>
-                <div className="text-sm font-semibold">{tpl.defaultGeofenceMeters}m around each site</div>
+                <div className="text-[11px] uppercase text-ink-500 dark:text-ink-400 font-semibold tracking-wider mb-2">Default geofence radius</div>
+                <div className="flex items-center gap-2 text-sm">
+                  <input
+                    type="number"
+                    min={10} max={2000} step={5}
+                    className="input w-[90px] text-sm py-1.5"
+                    value={geofenceMeters}
+                    onChange={(e) => setGeofenceMeters(Math.max(10, parseInt(e.target.value) || 50))}
+                  />
+                  <span className="text-ink-700 dark:text-ink-300">meters around each site</span>
+                </div>
+                <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-1">Clock-ins outside this radius are flagged or rejected.</div>
               </div>
-              {tpl.recommendedComplianceTweaks && (
-                <div>
-                  <div className="text-[11px] uppercase text-ink-500 dark:text-ink-400 font-semibold tracking-wider mb-1.5">Compliance presets</div>
-                  <div className="text-sm">
-                    {tpl.recommendedComplianceTweaks.mealBreakRequiredAfterHours && <>Meal break required after <b>{tpl.recommendedComplianceTweaks.mealBreakRequiredAfterHours}h</b>. </>}
-                    {tpl.recommendedComplianceTweaks.predictiveSchedulingDays && <>Predictive scheduling: <b>{tpl.recommendedComplianceTweaks.predictiveSchedulingDays}</b> days notice.</>}
+
+              {/* COMPLIANCE */}
+              <div>
+                <div className="text-[11px] uppercase text-ink-500 dark:text-ink-400 font-semibold tracking-wider mb-2">Compliance presets</div>
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <span className="text-ink-700 dark:text-ink-300">Meal break required after</span>
+                    <input
+                      type="number"
+                      min={0} max={24} step={0.5}
+                      className="input w-[80px] text-sm py-1.5"
+                      value={mealBreakHours}
+                      onChange={(e) => setMealBreakHours(parseFloat(e.target.value) || 0)}
+                    />
+                    <span className="text-ink-700 dark:text-ink-300">hours</span>
+                    <span className="text-[11px] text-ink-500 dark:text-ink-400">(0 = no rule)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <span className="text-ink-700 dark:text-ink-300">Schedule notice (Fair Workweek)</span>
+                    <input
+                      type="number"
+                      min={0} max={60} step={1}
+                      className="input w-[80px] text-sm py-1.5"
+                      value={predictiveSchedulingDays}
+                      onChange={(e) => setPredictiveSchedulingDays(parseInt(e.target.value) || 0)}
+                    />
+                    <span className="text-ink-700 dark:text-ink-300">days notice</span>
+                    <span className="text-[11px] text-ink-500 dark:text-ink-400">(0 = off)</span>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </section>
         )}
@@ -117,7 +266,7 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center mx-auto mb-4 shadow-soft animate-scale-in">
                 <Check className="w-9 h-9" strokeWidth={3} />
               </div>
-              <h2 className="text-2xl font-bold tracking-tight-2">You're all set! 🎉</h2>
+              <h2 className="text-2xl font-bold tracking-tight-2">You&rsquo;re all set! 🎉</h2>
               <p className="text-sm text-ink-600 dark:text-ink-300 mt-2 max-w-md mx-auto">
                 Your workspace is ready. Try the <b>AI Co-pilot</b> (⌘K) to schedule shifts, or invite your team from <b>HR → Members</b>.
               </p>
@@ -136,7 +285,7 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
           <button onClick={() => setStep((s) => (s - 1) as any)} className="btn-ghost"><ChevronLeft className="w-4 h-4" /> Back</button>
         ) : <div />}
         {step === 1 && <button onClick={() => setStep(2)} disabled={!industry} className="btn-primary ml-auto">Next <ChevronRight className="w-4 h-4" /></button>}
-        {step === 2 && <button onClick={() => setStep(3)} className="btn-primary ml-auto">Looks good <ChevronRight className="w-4 h-4" /></button>}
+        {step === 2 && <button onClick={() => setStep(3)} className="btn-primary ml-auto">Save &amp; continue <ChevronRight className="w-4 h-4" /></button>}
         {step === 3 && (
           <button onClick={applyTemplate} disabled={applying} className="btn-primary ml-auto">
             {applying ? <><Loader2 className="w-4 h-4 animate-spin" /> Setting up…</> : <>Finish setup <Check className="w-4 h-4" /></>}
