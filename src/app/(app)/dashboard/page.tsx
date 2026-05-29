@@ -7,6 +7,7 @@ import { TurnoverWidget } from "@/components/dashboard/turnover-widget";
 import { PermitExpiryWidget } from "@/components/dashboard/permit-expiry-widget";
 import { GettingStarted } from "@/components/dashboard/getting-started";
 import { LocationsPunchMap } from "@/components/geo/locations-punch-map";
+import { PendingOnboardingWidget } from "@/components/dashboard/pending-onboarding-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -229,6 +230,9 @@ export default async function Dashboard() {
       {isManager && (
         <LocationsPunchMap orgId={u.organizationId} sinceHours={24} subtitle="Sites, geofences, and today's clock-ins" />
       )}
+
+      {/* Nudge for invited teammates who haven't gone through /welcome yet. */}
+      {isManager && <PendingOnboardingWidget orgId={u.organizationId} />}
 
       {/* Manager-only HR widgets */}
       {isManager && <TurnoverWidget organizationId={u.organizationId} />}

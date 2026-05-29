@@ -91,7 +91,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
         {/* Mobile-only primary navigation (sidebar is hidden < lg). */}
-        <BottomNav />
+        <BottomNav pendingOffers={pendingOffers} />
       </div>
 
       {/* Trial-expired hard gate (managers only) — full-screen modal blocks

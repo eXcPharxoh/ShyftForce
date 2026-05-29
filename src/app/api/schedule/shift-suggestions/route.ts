@@ -58,27 +58,34 @@ export async function POST(req: Request) {
   const shiftHours = (endMs - startMs) / 3600_000;
 
   type Suggestion = { memberId: string; name: string; currentHours: number; hoursAfter: number; reason: string };
-  const eligible: Suggestion[] = [];
+  // Same tiered position logic as auto-fill: exact match wins, position-less
+  // fallback is allowed but ranked lower so we never suggest a Dishwasher for
+  // a Bartender shift over an actual Bartender.
+  const eligible: (Suggestion & { exactMatch: boolean })[] = [];
   for (const m of members) {
     if (shift.position && m.position && m.position !== shift.position) continue;
     const ranges = rangesByMember.get(m.id) ?? [];
     if (ranges.some((r) => r.start < endMs && r.end > startMs)) continue;
-    // Honor PTO + availability rules — suggesting someone we KNOW can't work
-    // would be worse than no suggestion.
     if (disqualifyingReason(m.id, shift.startsAt, shift.endsAt, eligibility)) continue;
     const current = hoursByMember.get(m.id) ?? 0;
     if (current + shiftHours > MAX_HOURS) continue;
+    const exactMatch = !!shift.position && m.position === shift.position;
     eligible.push({
       memberId: m.id,
       name: m.user.name,
       currentHours: current,
       hoursAfter: current + shiftHours,
-      reason: shift.position && m.position === shift.position
+      reason: exactMatch
         ? `Position match · ${current.toFixed(1)}h this week`
         : `${current.toFixed(1)}h this week`,
+      exactMatch,
     });
   }
 
-  eligible.sort((a, b) => a.currentHours - b.currentHours || a.name.localeCompare(b.name));
+  eligible.sort((a, b) =>
+    (b.exactMatch ? 1 : 0) - (a.exactMatch ? 1 : 0) ||
+    a.currentHours - b.currentHours ||
+    a.name.localeCompare(b.name),
+  );
   return NextResponse.json({ suggestions: eligible.slice(0, 3), totalEligible: eligible.length });
 }

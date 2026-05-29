@@ -98,9 +98,17 @@ export async function POST(req: Request) {
     // Find eligible members. Order of checks: position → overlap → time-off →
     // availability → max-hours. Whichever filter rejected them is tracked so
     // the preview can show *why* nobody was eligible.
-    const eligible: { m: typeof members[number]; current: number }[] = [];
+    //
+    // Position handling has THREE tiers so we don't randomly drop a Bartender
+    // shift on a Dishwasher just because their member.position field is empty:
+    //   exactMatch  → m.position === sh.position (preferred)
+    //   noMemberPos → shift has a position, member has none (fallback)
+    //   noShiftPos  → shift has no position (any active member)
+    type Candidate = { m: typeof members[number]; current: number; exactMatch: boolean };
+    const eligible: Candidate[] = [];
     const exclusions: string[] = []; // for the skipped-reason summary
     for (const m of members) {
+      // Hard-skip only when BOTH have a position and they don't match.
       if (sh.position && m.position && sh.position !== m.position) continue;
       const ranges = rangesByMember.get(m.id) ?? [];
       if (ranges.some((r) => r.start < endMs && r.end > startMs)) continue;
@@ -108,7 +116,8 @@ export async function POST(req: Request) {
       if (blocked) { exclusions.push(`${m.user.name} (${blocked})`); continue; }
       const current = hoursByMember.get(m.id) ?? 0;
       if (current + hours > maxHours) { exclusions.push(`${m.user.name} (over ${maxHours}h)`); continue; }
-      eligible.push({ m, current });
+      const exactMatch = !!sh.position && m.position === sh.position;
+      eligible.push({ m, current, exactMatch });
     }
 
     if (eligible.length === 0) {
@@ -123,8 +132,12 @@ export async function POST(req: Request) {
       continue;
     }
 
-    // Lowest current hours first; ties broken by name for determinism.
-    eligible.sort((a, b) => a.current - b.current || a.m.user.name.localeCompare(b.m.user.name));
+    // Prefer exact position match. Within each tier, fewest current hours wins.
+    eligible.sort((a, b) =>
+      (b.exactMatch ? 1 : 0) - (a.exactMatch ? 1 : 0) ||
+      a.current - b.current ||
+      a.m.user.name.localeCompare(b.m.user.name),
+    );
     const winner = eligible[0];
 
     assignments.push({

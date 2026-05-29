@@ -361,6 +361,9 @@ export function ShiftEditDialog({
             {!checking && violations.length === 0 && !predictability?.triggered && memberId !== "open" && (
               <div className="text-[11px] text-emerald-700 dark:text-emerald-400">All clear — no violations or predictability pay triggered.</div>
             )}
+            {!checking && memberId === "open" && violations.length === 0 && !predictability?.triggered && (
+              <div className="text-[11px] text-ink-500 dark:text-ink-400">Assign someone above to run the compliance check.</div>
+            )}
             {predictability?.triggered && (
               <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-2.5 mb-2">
                 <div className="flex items-start gap-2">

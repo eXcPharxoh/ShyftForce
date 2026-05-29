@@ -21,9 +21,10 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
       deferredPrompt = e;
       // Session-dismissed? Don't reappear this session.
       if (sessionStorage.getItem("shyftforce-install-dismissed-session")) return;
-      // Long-dismissed? Don't reappear for 7 days.
+      // Long-dismissed? Respect the chosen duration (X = 7 days, "Later" = 3 days).
       const dismissedAt = parseInt(localStorage.getItem("shyftforce-install-dismissed") || "0", 10);
-      if (dismissedAt && Date.now() - dismissedAt < 7 * 86400 * 1000) return;
+      const dismissedDays = parseInt(localStorage.getItem("shyftforce-install-dismissed-days") || "7", 10);
+      if (dismissedAt && Date.now() - dismissedAt < dismissedDays * 86400 * 1000) return;
       // Delay so it doesn't slam the first paint
       setTimeout(() => setShowInstall(true), 5000);
     };
@@ -54,7 +55,10 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   }
 
   function dismiss(persistent = false) {
-    if (persistent) localStorage.setItem("shyftforce-install-dismissed", String(Date.now()));
+    // Both options persist now — X for 7 days, "Later" for 3 — so the prompt
+    // stops nagging users who don't want it on every page load.
+    localStorage.setItem("shyftforce-install-dismissed", String(Date.now()));
+    localStorage.setItem("shyftforce-install-dismissed-days", persistent ? "7" : "3");
     sessionStorage.setItem("shyftforce-install-dismissed-session", "1");
     setShowInstall(false);
   }

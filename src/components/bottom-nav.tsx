@@ -10,6 +10,9 @@ import { useT } from "@/lib/i18n/provider";
  * Hidden on lg+ (the sidebar takes over there). Five universal tabs that work
  * for every industry and role: Home · Schedule · Clock · Time Off · More.
  * Without this, mobile users had no nav at all except the hidden ⌘K palette.
+ *
+ * The Schedule tab carries a notification dot when the user has pending
+ * shift offers — otherwise mobile employees never know they have one.
  */
 const TABS = [
   { href: "/dashboard",  icon: Home,           key: "nav.dashboard", fallback: "Home" },
@@ -19,7 +22,7 @@ const TABS = [
   { href: "/more",       icon: MoreHorizontal, key: "nav.more",      fallback: "More" },
 ] as const;
 
-export function BottomNav() {
+export function BottomNav({ pendingOffers = 0 }: { pendingOffers?: number }) {
   const pathname = usePathname();
   const t = useT();
 
@@ -32,16 +35,27 @@ export function BottomNav() {
       <div className="grid grid-cols-5">
         {TABS.map(({ href, icon: Icon, key, fallback }) => {
           const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
+          const showBadge = href === "/schedule" && pendingOffers > 0;
           return (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
+                "relative flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
                 active ? "text-brand-300" : "text-ink-400 hover:text-ink-100",
               )}
             >
-              <Icon className={cn("w-[18px] h-[18px]", active ? "text-brand-300" : "text-ink-400")} />
+              <div className="relative">
+                <Icon className={cn("w-[18px] h-[18px]", active ? "text-brand-300" : "text-ink-400")} />
+                {showBadge && (
+                  <span
+                    className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center leading-none"
+                    aria-label={`${pendingOffers} pending shift offer${pendingOffers === 1 ? "" : "s"}`}
+                  >
+                    {pendingOffers > 9 ? "9+" : pendingOffers}
+                  </span>
+                )}
+              </div>
               <span className="leading-none truncate max-w-full px-1">{t(key) || fallback}</span>
             </Link>
           );
