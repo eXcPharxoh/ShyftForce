@@ -53,6 +53,12 @@ model Organization {
   //   "block" = reject the punch on mismatch
   faceVerification String @default("off")
 
+  // Owner-enforced workspace security policies. When true, the (app) layout
+  // redirects members who haven't satisfied the requirement so they fix it
+  // before doing anything else.
+  require2fa             Boolean @default(false)
+  requireEmailVerified   Boolean @default(false)
+
   // Payroll integration (Finch)
   finchAccessToken String? // encrypted in production
   finchProviderId  String? // e.g. "adp_workforce_now", "gusto", "paychex"
@@ -159,7 +165,8 @@ model PredictabilityPayEvent {
   shiftStartsAt   DateTime
   noticeHours     Float // hours of notice given before shift
   hoursOwed       Float
-  hourlyRate      Float
+  hourlyRate      Float // @deprecated dollars — keep until all readers use hourlyRateCents
+  hourlyRateCents Int? // canonical cents value (read this when present)
   amountOwedCents Int
   reason          String?
   resolvedAt      DateTime?
@@ -497,8 +504,10 @@ model Location {
   id                   String   @id @default(uuid())
   organizationId       String
   name                 String
-  weeklyBudget         Float?
-  projectedRevenue     Float?
+  weeklyBudget         Float? // @deprecated dollars
+  weeklyBudgetCents    Int? // canonical cents
+  projectedRevenue     Float? // @deprecated dollars
+  projectedRevenueCents Int? // canonical cents
   latitude             Float?
   longitude            Float?
   geofenceRadiusMeters Int      @default(100)
@@ -837,7 +846,8 @@ model Member {
   locationId     String?
   role           String    @default("EMPLOYEE")
   position       String?
-  hourlyRate     Float?
+  hourlyRate     Float? // @deprecated dollars — read hourlyRateCents instead
+  hourlyRateCents Int? // canonical cents
   hireDate       DateTime  @default(now())
   birthday       DateTime?
   status         String    @default("active")
@@ -1090,7 +1100,8 @@ model TimeOffRequest {
 model ExpenseRequest {
   id        String   @id @default(uuid())
   memberId  String
-  amount    Float
+  amount    Float // @deprecated dollars — read amountCents instead
+  amountCents Int? // canonical cents
   currency  String   @default("USD")
   category  String?
   notes     String?

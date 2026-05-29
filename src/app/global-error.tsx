@@ -1,4 +1,6 @@
 "use client";
+import { useEffect } from "react";
+import { captureException } from "@/lib/observability";
 
 /**
  * Last-resort error boundary that catches failures in the ROOT layout itself
@@ -6,6 +8,10 @@
  * render its own <html>/<body> and rely on inline styles, not global CSS.
  */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    captureException(error, { boundary: "global", digest: error.digest });
+  }, [error]);
+
   return (
     <html lang="en">
       <body

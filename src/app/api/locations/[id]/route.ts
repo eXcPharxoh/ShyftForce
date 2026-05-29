@@ -37,7 +37,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   try {
-    const r = await prisma.location.update({ where: { id }, data: parsed.data });
+    // Dual-write the legacy Float money columns and their cents twins.
+    const data: any = { ...parsed.data };
+    if (parsed.data.weeklyBudget !== undefined) {
+      data.weeklyBudgetCents = parsed.data.weeklyBudget == null ? null : Math.round(parsed.data.weeklyBudget * 100);
+    }
+    if (parsed.data.projectedRevenue !== undefined) {
+      data.projectedRevenueCents = parsed.data.projectedRevenue == null ? null : Math.round(parsed.data.projectedRevenue * 100);
+    }
+    const r = await prisma.location.update({ where: { id }, data });
     await audit({
       organizationId: u.organizationId, actorId: u.id,
       action: "org.update", entityType: "Location", entityId: id,

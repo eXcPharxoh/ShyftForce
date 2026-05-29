@@ -11,6 +11,7 @@ import {
   Shield, Users, MapPin, CalendarDays, CreditCard, UserCog, Lock, FileText,
   Plug, Bell, Plane, CalendarX, Briefcase, Check, X, ArrowRight, Crown, AlertTriangle,
 } from "lucide-react";
+import { SecurityToggles } from "@/components/admin/security-toggles";
 
 export const dynamic = "force-dynamic";
 
@@ -153,6 +154,9 @@ export default async function AdminConsolePage() {
           </Link>
         </section>
       </div>
+
+      {/* Workspace security policies (owner-only toggles) */}
+      <SecurityToggles />
 
       {/* Plan features */}
       <section className="card p-5">

@@ -142,6 +142,7 @@ export async function POST(req: Request) {
                 locationId: loc?.id,
                 phone: r.phone ?? null,
                 hourlyRate: num(r.hourlyRate),
+                hourlyRateCents: num(r.hourlyRate) == null ? null : Math.round(num(r.hourlyRate)! * 100),
                 hireDate: date(r.hireDate) ?? new Date(),
                 birthday: date(r.birthday),
                 emergencyContactName:  r.emergencyContactName  ?? null,

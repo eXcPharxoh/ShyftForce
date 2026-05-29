@@ -20,7 +20,9 @@ export async function POST(req: Request) {
     const r = await prisma.expenseRequest.create({
       data: {
         memberId: u.memberId,
-        amount:   parsed.data.amount,
+        // Dual-write while readers transition from amount → amountCents.
+        amount:      parsed.data.amount,
+        amountCents: Math.round(parsed.data.amount * 100),
         category: parsed.data.category ?? null,
         notes:    parsed.data.notes ?? null,
         currency: parsed.data.currency,

@@ -7,6 +7,7 @@ import { Topbar } from "@/components/topbar";
 import { ImpersonationBanner } from "@/components/platform/impersonation-banner";
 import { TrialBanner } from "@/components/trial-banner";
 import { TrialExpiredGate } from "@/components/trial-expired-gate";
+import { VerifyEmailBanner } from "@/components/verify-email-banner";
 import { isPlatformAdminEmail } from "@/lib/platform/admin";
 import { isTrialActive } from "@/lib/stripe";
 import { initials } from "@/lib/utils";
@@ -32,6 +33,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         defaultLocale: true,
         suspendedAt: true,
         suspendedReason: true,
+        require2fa: true,
+        requireEmailVerified: true,
       },
     }),
     prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
@@ -45,6 +48,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (u.role === "EMPLOYEE" && member && !member.onboardingAt && !showPlatformAdmin) {
     redirect("/welcome");
   }
+
+  // Workspace-enforced security policies. Platform admins are exempt so they
+  // can still operate even on workspaces with strict toggles on.
+  const meUser = !showPlatformAdmin && u.memberId
+    ? await prisma.user.findUnique({
+        where: { id: u.id },
+        select: { totpEnabled: true, emailVerified: true },
+      })
+    : null;
+  if (!showPlatformAdmin && meUser) {
+    if (org?.require2fa && !meUser.totpEnabled) {
+      redirect("/security/2fa");
+    }
+    if (org?.requireEmailVerified && !meUser.emailVerified) {
+      redirect("/verify-email?required=1");
+    }
+  }
+  // Soft reminder for unverified emails when the workspace doesn't hard-require.
+  const showVerifyEmailBanner = !showPlatformAdmin && meUser && !meUser.emailVerified && !org?.requireEmailVerified;
 
   // Resolve effective locale: member preference → org default → "en"
   const locale = resolveLocale(member?.locale, org?.defaultLocale);
@@ -85,6 +107,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <ImpersonationBanner adminEmail={u.impersonatedByEmail} targetName={u.name} targetEmail={u.email} />
         )}
         {onTrial && <TrialBanner daysLeft={daysLeft} />}
+        {showVerifyEmailBanner && <VerifyEmailBanner email={u.email} />}
         <Topbar name={u.name} role={u.role} image={u.image} showPlatformAdmin={showPlatformAdmin} />
         {/* pb-24 on mobile keeps content clear of the bottom nav; lg restores normal spacing. */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-7 pb-24 lg:pb-7 max-w-[1480px] w-full mx-auto">

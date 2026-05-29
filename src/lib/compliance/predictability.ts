@@ -59,7 +59,9 @@ export async function recordPredictabilityIfOwed(input: PredictabilityCalcInput)
       shiftStartsAt: input.shiftStartsAt,
       noticeHours: result.noticeHours,
       hoursOwed: result.hoursOwed,
+      // Dual-write so the canonical cents column has a value too.
       hourlyRate: input.hourlyRate,
+      hourlyRateCents: Math.round(input.hourlyRate * 100),
       amountOwedCents: result.amountOwedCents,
       reason: input.reason ?? null,
     },

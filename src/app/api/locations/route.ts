@@ -62,8 +62,11 @@ export async function POST(req: Request) {
         latitude: parsed.data.latitude ?? null,
         longitude: parsed.data.longitude ?? null,
         geofenceRadiusMeters: parsed.data.geofenceRadiusMeters,
-        weeklyBudget: parsed.data.weeklyBudget ?? null,
-        projectedRevenue: parsed.data.projectedRevenue ?? null,
+        // Dual-write: dollars (legacy) + cents (canonical).
+        weeklyBudget:          parsed.data.weeklyBudget ?? null,
+        weeklyBudgetCents:     parsed.data.weeklyBudget == null ? null : Math.round(parsed.data.weeklyBudget * 100),
+        projectedRevenue:      parsed.data.projectedRevenue ?? null,
+        projectedRevenueCents: parsed.data.projectedRevenue == null ? null : Math.round(parsed.data.projectedRevenue * 100),
         clientId: parsed.data.clientId ?? null,
       },
     });

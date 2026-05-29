@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import { captureException } from "@/lib/observability";
 
 /**
  * Route-level error boundary. Catches errors thrown while rendering any page
@@ -8,7 +9,7 @@ import { useEffect } from "react";
  */
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error("[app error boundary]", error);
+    captureException(error, { boundary: "route", digest: error.digest });
   }, [error]);
 
   return (
