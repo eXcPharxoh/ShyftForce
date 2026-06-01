@@ -48,7 +48,7 @@ type Coverage = {
 export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
   if (!process.env.SHYFTFORCE_AI_KEY) {
-    return NextResponse.json({ error: "SHYFTFORCE_AI_KEY not set in .env" }, { status: 500 });
+    return NextResponse.json({ error: "AI Auto-Scheduler isn't configured on this workspace yet." }, { status: 503 });
   }
 
   const body = await req.json() as {

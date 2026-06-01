@@ -59,7 +59,7 @@ Format your final answer as conversational text (you may use light **bold** and 
 export async function POST(req: Request) {
   const user = await requireUser();
   if (!process.env.SHYFTFORCE_AI_KEY) {
-    return NextResponse.json({ error: "SHYFTFORCE_AI_KEY not set in .env" }, { status: 500 });
+    return NextResponse.json({ error: "AI Co-pilot isn't configured on this workspace yet." }, { status: 503 });
   }
 
   const parsed = PayloadSchema.safeParse(await req.json().catch(() => ({})));

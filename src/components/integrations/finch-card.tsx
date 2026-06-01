@@ -16,7 +16,20 @@ const PROVIDER_LABELS: Record<string, string> = {
   wave:              "Wave",
 };
 
-export function FinchConnectCard({ connected, provider, connectedAt }: { connected: boolean; provider?: string | null; connectedAt?: string }) {
+export function FinchConnectCard({
+  connected,
+  provider,
+  connectedAt,
+  apiConfigured = true,
+}: {
+  connected: boolean;
+  provider?: string | null;
+  connectedAt?: string;
+  /** When false, FINCH_CLIENT_ID isn't set on the server. We render the card
+   *  with a disabled state + clear "Setup required" copy instead of letting
+   *  customers click Connect and hit a 503. */
+  apiConfigured?: boolean;
+}) {
   const r = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<{ workersFound: number; matched: number; unmatched: any[] } | null>(null);
@@ -74,8 +87,8 @@ export function FinchConnectCard({ connected, provider, connectedAt }: { connect
 
           <div className="mt-5 flex flex-wrap gap-2">
             {!connected && (
-              <button onClick={connect} disabled={!!loading} className="btn-primary">
-                {loading === "connect" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />} Connect payroll
+              <button onClick={connect} disabled={!!loading || !apiConfigured} className="btn-primary" title={!apiConfigured ? "FINCH_CLIENT_ID not set on this workspace" : undefined}>
+                {loading === "connect" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />} Connect payroll{!apiConfigured ? " (unavailable)" : ""}
               </button>
             )}
             {connected && (

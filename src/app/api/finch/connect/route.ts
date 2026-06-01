@@ -9,7 +9,9 @@ export async function GET(req: Request) {
   const denied = await featureGuard(u.organizationId, "payroll_push");
   if (denied) return denied;
   if (!process.env.FINCH_CLIENT_ID) {
-    return NextResponse.json({ error: "FINCH_CLIENT_ID not configured. Get one at https://dashboard.tryfinch.com/" }, { status: 500 });
+    // 503: this is a config gap, not a code crash. Lets the UI render a
+    // friendly "not configured" message instead of a generic "Failed" error.
+    return NextResponse.json({ error: "Payroll connect isn't wired up on this workspace yet (FINCH_CLIENT_ID not set). Email support if you need this." }, { status: 503 });
   }
   const origin = (process.env.NEXTAUTH_URL ?? new URL(req.url).origin).replace(/\/$/, "");
   const redirectUri = process.env.FINCH_REDIRECT_URI ?? `${origin}/api/finch/callback`;

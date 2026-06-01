@@ -6,6 +6,8 @@
 
 import { prisma } from "@/lib/prisma";
 
+let warnedProdNoTwilio = false;
+
 type SmsCategory = "shift_offer" | "schedule_change" | "time_off" | "alert" | "test";
 
 type SendArgs = {
@@ -82,8 +84,14 @@ export async function sendSms(args: SendArgs): Promise<SendResult> {
   const token = org?.twilioAuthToken   ?? process.env.TWILIO_AUTH_TOKEN;
   const from  = org?.twilioFromNumber  ?? process.env.TWILIO_FROM_NUMBER;
 
-  // Dev / unconfigured fallback — log + return ok
+  // Dev / unconfigured fallback — log + return ok. Same caveat as email:
+  // in production this silently drops messages on the floor. Warn loudly the
+  // first time per cold start so the gap shows up in dashboards.
   if (!sid || !token || !from) {
+    if (process.env.NODE_ENV === "production" && !warnedProdNoTwilio) {
+      warnedProdNoTwilio = true;
+      console.error("[sms] ⚠️  TWILIO credentials are not set in production. SMS messages are being logged to console only — recipients will never see them. Set TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER in Vercel.");
+    }
     console.log(`📱 [SMS → ${phone}] (${args.category}) ${args.body}`);
     await logSms({ ...args, status: "sent", error: "console_fallback" });
     return { ok: true, skipped: "no twilio credentials configured (logged to console)" };

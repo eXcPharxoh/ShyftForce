@@ -7,8 +7,17 @@ const APP_URL     = process.env.NEXTAUTH_URL ?? "http://localhost:3210";
 
 export type SendArgs = { to: string; subject: string; html: string; text?: string };
 
+let warnedProdNoKey = false;
 export async function sendEmail({ to, subject, html, text }: SendArgs): Promise<{ ok: boolean; provider: "resend" | "console"; error?: string }> {
   if (!RESEND_KEY) {
+    // In dev this is fine — you can read the email from the console. In prod
+    // it's a SILENT LIE: the caller thinks the email went out and the user
+    // never receives it (most common case: stuck on /verify-email forever).
+    // Log loudly the first time per cold start so it's surfaced in dashboards.
+    if (process.env.NODE_ENV === "production" && !warnedProdNoKey) {
+      warnedProdNoKey = true;
+      console.error("[email] ⚠️  RESEND_API_KEY is not set in production. Emails are being logged to console only — recipients will never see them. Set RESEND_API_KEY in Vercel.");
+    }
     console.log(`\n📧 [EMAIL → ${to}] ${subject}\n${stripTags(html)}\n`);
     return { ok: true, provider: "console" };
   }

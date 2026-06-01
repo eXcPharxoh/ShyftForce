@@ -140,7 +140,11 @@ export default async function BillingPage() {
 
         {isManager && plan !== "enterprise" && (
           <div className="mt-5 pt-5 border-t border-brand-200/60 dark:border-brand-500/20">
-            <BillingActions hasSubscription={!!org.stripeSubscriptionId} currentPlan={plan as any} />
+            <BillingActions
+              hasSubscription={!!org.stripeSubscriptionId}
+              currentPlan={plan as any}
+              stripeConfigured={!!process.env.STRIPE_SECRET_KEY}
+            />
           </div>
         )}
       </section>

@@ -9,7 +9,9 @@ export async function POST(req: Request) {
   if (!check) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if ("denied" in check) return NextResponse.json({ error: "You don't have billing permission." }, { status: 403 });
   const u = check.user;
-  if (!process.env.STRIPE_SECRET_KEY) return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return NextResponse.json({ error: "Subscriptions aren't live on this workspace yet." }, { status: 503 });
+  }
   const org = await prisma.organization.findUnique({ where: { id: u.organizationId } });
   if (!org?.stripeCustomerId) return NextResponse.json({ error: "No billing account yet — start a subscription first." }, { status: 400 });
 

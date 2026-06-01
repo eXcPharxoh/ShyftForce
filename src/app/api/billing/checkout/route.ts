@@ -17,7 +17,9 @@ export async function POST(req: Request) {
   if ("denied" in check) return NextResponse.json({ error: "You don't have billing permission." }, { status: 403 });
   const u = check.user;
   if (!process.env.STRIPE_SECRET_KEY) {
-    return NextResponse.json({ error: "Stripe not configured. Set STRIPE_SECRET_KEY in .env." }, { status: 500 });
+    // 503: the route is fine, the upstream dependency isn't wired. Distinguishes
+    // a config gap from a real server crash in dashboards + telemetry.
+    return NextResponse.json({ error: "Subscriptions aren't live on this workspace yet. Contact sales@shyftforce.com to be invoiced directly." }, { status: 503 });
   }
 
   const parsed = Schema.safeParse(await req.json().catch(() => ({})));

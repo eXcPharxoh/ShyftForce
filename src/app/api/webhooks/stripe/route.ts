@@ -7,7 +7,8 @@ import { audit } from "@/lib/audit";
 // Local dev: use `stripe listen --forward-to localhost:3210/api/webhooks/stripe`
 export async function POST(req: Request) {
   if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
-    return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
+    // 503: config gap, not a crash. Stripe will retry per its webhook spec.
+    return NextResponse.json({ error: "Stripe not configured on this deploy" }, { status: 503 });
   }
   const sig = req.headers.get("stripe-signature");
   if (!sig) return NextResponse.json({ error: "missing signature" }, { status: 400 });

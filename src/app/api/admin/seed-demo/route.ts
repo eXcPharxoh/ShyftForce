@@ -19,7 +19,7 @@ async function handler(req: Request) {
   const force  = url.searchParams.get("force") === "1";
 
   if (!process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "CRON_SECRET not set on this deploy" }, { status: 500 });
+    return NextResponse.json({ error: "CRON_SECRET not set on this deploy" }, { status: 503 });
   }
   if (!secret || secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "unauthorized — pass ?secret=<CRON_SECRET>" }, { status: 401 });

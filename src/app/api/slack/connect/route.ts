@@ -18,6 +18,9 @@ export async function GET() {
   try {
     return NextResponse.redirect(slackAuthorizeUrl({ state }));
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Slack not configured" }, { status: 500 });
+    // slackAuthorizeUrl throws when SLACK_CLIENT_ID isn't set — that's a config
+    // gap, not a crash. 503 keeps it out of error-rate alerts and gives the UI
+    // a clear signal to render "not configured" instead of "Failed".
+    return NextResponse.json({ error: e?.message ?? "Slack OAuth not configured on this workspace" }, { status: 503 });
   }
 }

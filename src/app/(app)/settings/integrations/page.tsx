@@ -40,6 +40,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         connected={!!org?.finchAccessToken}
         provider={org?.finchProviderId}
         connectedAt={org?.finchConnectedAt?.toISOString()}
+        apiConfigured={!!process.env.FINCH_CLIENT_ID}
       />
 
       {/* Slack — real OAuth-backed integration (chat.postMessage + channels:read).
