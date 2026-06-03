@@ -10,6 +10,7 @@ import { ComplianceSettingsButton } from "@/components/compliance/settings-butto
 import { JurisdictionPicker } from "@/components/compliance/jurisdiction-picker";
 import { PredictabilityLedger } from "@/components/compliance/predictability-ledger";
 import { PageHeader } from "@/components/ui/page-header";
+import { AskAiHint } from "@/components/ui/ask-ai-hint";
 
 export const dynamic = "force-dynamic";
 
@@ -149,7 +150,13 @@ export default async function CompliancePage() {
       )}
 
       <section className="card p-4">
-        <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5"><SettingsIcon className="w-4 h-4" /> Active rules</h3>
+        <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+          <h3 className="text-sm font-semibold flex items-center gap-1.5"><SettingsIcon className="w-4 h-4" /> Active rules</h3>
+          <AskAiHint
+            prompt="Help me understand my compliance rules. Explain what each one means in plain English and tell me which ones I should turn on for my business."
+            label="Explain these in plain English"
+          />
+        </div>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
           <RuleSetting label="Jurisdiction"                value={currentJurisdiction.label} severity="block" />
           <RuleSetting label="Max weekly hours"            value={`${settings.maxWeeklyHours}h`} severity="block" />
@@ -158,8 +165,8 @@ export default async function CompliancePage() {
           <RuleSetting label="Meal break required after"   value={`${settings.mealBreakRequiredAfterHours}h`} severity="block" />
           <RuleSetting label="Rest break required every"   value={settings.restBreakRequiredAfterHours > 0 ? `${settings.restBreakRequiredAfterHours}h` : "off"} severity="warn" />
           <RuleSetting label="Max consecutive days"        value={settings.maxConsecutiveDays} severity="warn" />
-          <RuleSetting label="Advance notice required"     value={settings.predictiveSchedulingDays > 0 ? `≥${settings.predictiveSchedulingDays}d ahead` : "off"} severity={settings.predictiveSchedulingDays > 0 ? "block" : "off"} />
-          <RuleSetting label="Late-change penalty pay"     value={settings.predictabilityPayEnabled ? "on" : "off"} severity={settings.predictabilityPayEnabled ? "warn" : "off"} />
+          <RuleSetting label="Advance notice required" value={settings.predictiveSchedulingDays > 0 ? `≥${settings.predictiveSchedulingDays}d ahead` : "off"} severity={settings.predictiveSchedulingDays > 0 ? "block" : "off"} />
+          <RuleSetting label="Late-change penalty pay" value={settings.predictabilityPayEnabled ? "on" : "off"} severity={settings.predictabilityPayEnabled ? "warn" : "off"} />
           <RuleSetting label="Minor age threshold"         value={`under ${settings.minorAgeThreshold}`} severity="block" />
           <RuleSetting label="Minor max daily / weekly"    value={`${settings.minorMaxDailyHours}h / ${settings.minorMaxWeeklyHours}h`} severity="block" />
           <RuleSetting label="Minor work hours window"     value={`${settings.minorEarliestStartHour}:00–${settings.minorLatestEndHour}:00`} severity="block" />

@@ -1,6 +1,7 @@
 import { requireManagerOrAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
+import { AskAiHint } from "@/components/ui/ask-ai-hint";
 import { ensureDefaultPolicies } from "@/lib/pto/service";
 import { PolicyRow } from "@/components/pto/policy-row";
 import { Plane } from "lucide-react";
@@ -20,7 +21,12 @@ export default async function PtoSettingsPage() {
         icon={Plane}
         title="Time-off policies"
         subtitle="Set how each PTO category accrues. Existing balances aren't reset by edits."
-      />
+      >
+        <AskAiHint
+          prompt="Help me set up time-off policies. I'm not sure what accrual method to pick or how many annual hours to give. Walk me through it for my business."
+          label="Stuck? Let the assistant pick sane defaults"
+        />
+      </PageHeader>
 
       <section className="card overflow-hidden">
         <header className="px-5 py-3 border-b border-ink-100 dark:border-ink-800">

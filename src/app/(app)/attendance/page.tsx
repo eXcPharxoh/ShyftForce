@@ -275,14 +275,14 @@ export default async function AttendancePage() {
           </div>
         </header>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[560px]">
             <thead className="bg-ink-50/60 text-[11px] uppercase text-ink-600">
               <tr>
                 <th className="text-left px-4 py-2">Employee</th>
                 <th className="text-left px-4 py-2">Date</th>
-                <th className="text-left px-4 py-2">Location</th>
+                <th className="text-left px-4 py-2 hidden md:table-cell">Location</th>
                 <th className="text-right px-4 py-2">Hours</th>
-                <th className="text-right px-4 py-2">Cost</th>
+                <th className="text-right px-4 py-2 hidden sm:table-cell">Cost</th>
                 <th className="text-center px-4 py-2">Status</th>
                 <th className="px-4 py-2"></th>
               </tr>
@@ -299,9 +299,9 @@ export default async function AttendancePage() {
                     </div>
                   </td>
                   <td className="px-4 py-2 text-ink-600">{dateLabel(e.date)}</td>
-                  <td className="px-4 py-2 text-ink-600">{e.member.location?.name}</td>
+                  <td className="px-4 py-2 text-ink-600 hidden md:table-cell">{e.member.location?.name}</td>
                   <td className="px-4 py-2 text-right tabular-nums">{e.hours.toFixed(1)}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">{fmtMoney(e.hours * (e.member.hourlyRate ?? 0))}</td>
+                  <td className="px-4 py-2 text-right tabular-nums hidden sm:table-cell">{fmtMoney(e.hours * (e.member.hourlyRate ?? 0))}</td>
                   <td className="px-4 py-2 text-center">
                     {e.flagged ? <span className="badge bg-rose-50 text-rose-700">Flagged</span>
                       : e.approved ? <span className="badge bg-emerald-50 text-emerald-700">Approved</span>

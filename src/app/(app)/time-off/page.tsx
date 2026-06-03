@@ -5,6 +5,7 @@ import { TimeOffActions } from "@/components/time-off/time-off-actions";
 import { TimeOffForm } from "@/components/time-off/time-off-form";
 import { PageHeader } from "@/components/ui/page-header";
 import { PtoBalanceCard } from "@/components/pto/balance-card";
+import { AskAiHint } from "@/components/ui/ask-ai-hint";
 import { snapshotForMember, snapshotForMembers } from "@/lib/pto/service";
 import { Moon } from "lucide-react";
 
@@ -104,7 +105,21 @@ export default async function TimeOffPage() {
                     <StatusBadge status={r.status} />
                   </li>
                 ))}
-                {requests.filter(r => r.member.userId === u.id).length === 0 && <Empty text="No requests yet. Submit one on the right." />}
+                {requests.filter(r => r.member.userId === u.id).length === 0 && (
+                  <div className="py-6 text-center">
+                    <div className="text-2xl mb-2">🏖️</div>
+                    <div className="font-semibold text-sm text-ink-900 dark:text-ink-100">No time-off requests yet</div>
+                    <p className="text-[12px] text-ink-500 dark:text-ink-400 mt-1 max-w-sm mx-auto">
+                      Need a day off? Use the form on the right to ask. Your manager gets notified and decides.
+                    </p>
+                    <div className="mt-3">
+                      <AskAiHint
+                        prompt="Help me request time off — I need a day or two off and don't know how to fill out the form."
+                        label="Or just ask the assistant to do it for you"
+                      />
+                    </div>
+                  </div>
+                )}
               </ul>
             </Section>
           )}
