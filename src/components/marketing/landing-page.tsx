@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, Play, Check, ChevronRight, MapPin, ShieldCheck, Camera } from "lucide-react";
+import { ArrowRight, Play, Check, ChevronRight, MapPin, ShieldCheck, Camera, Minus, Plus, X } from "lucide-react";
 import { Bolt, Wordmark } from "@/components/ui/logo";
 import { GeoMap } from "@/components/geo/geo-map";
 
@@ -30,9 +30,12 @@ export function LandingPage() {
       <IndustriesSwitcher />
       <DeepDives />
       <Pricing />
+      <ComparisonTable />
       <Customers />
+      <FAQ />
       <FinalCTA />
       <MarketingFooter />
+      <MobileStickyCTA />
     </main>
   );
 }
@@ -150,34 +153,47 @@ function Hero() {
 
         <Reveal delay={100}>
           <h1 className="h-hero max-w-[1100px] mx-auto">
-            <span className="grad-text">The workforce platform</span>
+            <span className="grad-text">Run your team </span>
             <br />
-            <span className="grad-text">that </span>
-            <span className="grad-text-accent font-normal">runs itself.</span>
+            <span className="grad-text">on </span>
+            <span className="grad-text-accent font-normal">autopilot.</span>
           </h1>
         </Reveal>
 
         <Reveal delay={250}>
-          <p className="text-[19px] leading-[1.5] text-ink-300 max-w-[680px] mx-auto mt-8 font-normal">
-            AI scheduling, geofenced clock-in, real-time compliance, and a smart open-shift marketplace.
-            One platform for restaurants, retail, security, healthcare, and field services — set up in 5 minutes.
+          <p className="text-[19px] leading-[1.5] text-ink-300 max-w-[720px] mx-auto mt-8 font-normal">
+            Get back <b className="text-ink-50">8 hours a week</b>. AI builds the schedule. Geofenced clock-in stops time theft. Compliance catches violations before they hit payroll. One app for your whole operation — set up in 5 minutes.
           </p>
         </Reveal>
 
         <Reveal delay={400}>
           <div className="flex flex-wrap gap-3 justify-center mt-10">
             <Link href="/signup" className="btn-primary">
-              Start 7-day free trial <ArrowRight className="w-4 h-4 arrow" />
+              Get started free <ArrowRight className="w-4 h-4 arrow" />
             </Link>
             <a href="#features" className="btn-ghost">
-              <Play className="w-3 h-3 fill-current" /> Watch the 90-sec tour
+              <Play className="w-3 h-3 fill-current" /> See it in action
             </a>
           </div>
           <div className="mt-5 text-xs text-ink-500 flex flex-wrap justify-center gap-x-5 gap-y-1">
-            <span><Check className="w-3 h-3 inline-block text-success mr-1" />No credit card</span>
-            <span><Check className="w-3 h-3 inline-block text-success mr-1" />Set up in 5 minutes</span>
-            <span><Check className="w-3 h-3 inline-block text-success mr-1" />Cancel anytime</span>
+            <span><Check className="w-3 h-3 inline-block text-success mr-1" />No credit card required</span>
+            <span><Check className="w-3 h-3 inline-block text-success mr-1" />5-minute setup</span>
+            <span><Check className="w-3 h-3 inline-block text-success mr-1" />Free forever for up to 5 employees</span>
           </div>
+        </Reveal>
+
+        <Reveal delay={500}>
+          <a href="#customers" className="inline-flex items-center gap-3 mt-7 px-3.5 py-2 rounded-full bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] transition group">
+            <div className="flex -space-x-1.5">
+              <div className="w-6 h-6 rounded-full ring-2 ring-ink-950" style={{ background: "linear-gradient(135deg,#a78bff,#6aa2ff)" }} />
+              <div className="w-6 h-6 rounded-full ring-2 ring-ink-950" style={{ background: "linear-gradient(135deg,#4ee0c5,#6aa2ff)" }} />
+              <div className="w-6 h-6 rounded-full ring-2 ring-ink-950" style={{ background: "linear-gradient(135deg,#f5b544,#a78bff)" }} />
+            </div>
+            <div className="text-[12px] text-ink-300">
+              <b className="text-ink-50">12+ industries</b> · restaurants, retail, security, healthcare & more
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-ink-500 group-hover:text-brand-300 transition" />
+          </a>
         </Reveal>
 
         <Reveal delay={600}>
@@ -1209,6 +1225,31 @@ function Pricing() {
             </div>
           </div>
         </Reveal>
+
+        {/* Risk-reversal band */}
+        <Reveal delay={500}>
+          <div className="mt-12 card-pop p-7 md:p-9 max-w-[920px] mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-5 md:gap-7 items-center">
+              <div className="shrink-0">
+                <div className="w-14 h-14 rounded-2xl bg-success/15 border border-success/30 flex items-center justify-center">
+                  <ShieldCheck className="w-7 h-7 text-success" />
+                </div>
+              </div>
+              <div>
+                <div className="font-display text-[22px] md:text-[24px] grad-text leading-tight">No-risk promise.</div>
+                <div className="text-[14px] text-ink-300 mt-1.5 leading-relaxed">
+                  Try every feature for 7 days, no card required. Stay free forever for teams of 5 or less.
+                  Cancel any time from settings — instant, no email-to-cancel nonsense. Full data export on the way out.
+                </div>
+              </div>
+              <div className="shrink-0 md:text-right">
+                <Link href="/signup" className="btn-primary">
+                  Get started <ArrowRight className="w-4 h-4 arrow" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -1296,6 +1337,238 @@ function FinalCTA() {
         </Reveal>
       </div>
     </section>
+  );
+}
+
+/* ============================================================================
+   COMPARISON TABLE — "how we stack up" matrix vs the named competitors
+   ============================================================================ */
+function ComparisonTable() {
+  const cols = [
+    { key: "us",        label: "shyftforce", brand: true,  price: "$29 base + $4/seat" },
+    { key: "sling",     label: "Sling",      brand: false, price: "$4/seat" },
+    { key: "wiw",       label: "When I Work", brand: false, price: "~$4/seat" },
+    { key: "deputy",    label: "Deputy",     brand: false, price: "~$4.5/seat" },
+  ];
+  type Cell = "yes" | "partial" | "no" | string;
+  const rows: { feature: string; sub?: string; values: Record<string, Cell> }[] = [
+    { feature: "Schedule + clock-in",       values: { us: "yes", sling: "yes",     wiw: "yes",  deputy: "yes" } },
+    { feature: "AI-generated schedules",    sub: "Type intent, get a week.",
+      values: { us: "yes", sling: "no",      wiw: "no",   deputy: "partial" } },
+    { feature: "Open-shift marketplace",    sub: "First-respond-wins auto-offers.",
+      values: { us: "yes", sling: "partial", wiw: "partial", deputy: "partial" } },
+    { feature: "Geofenced clock-in + selfie", sub: "GPS + face verification, no buddy punching.",
+      values: { us: "yes", sling: "partial", wiw: "yes",  deputy: "yes" } },
+    { feature: "Real-time compliance engine", sub: "6 rule families, jurisdiction presets.",
+      values: { us: "yes", sling: "no",      wiw: "no",   deputy: "partial" } },
+    { feature: "Predictability pay (Fair Workweek)",
+      values: { us: "yes", sling: "no",      wiw: "no",   deputy: "no" } },
+    { feature: "AI-assisted help (in-app)",  sub: "Ask in plain English, get answers + actions.",
+      values: { us: "yes", sling: "no",      wiw: "no",   deputy: "no" } },
+    { feature: "Free tier",                  values: { us: "Up to 5", sling: "no", wiw: "no", deputy: "no" } },
+    { feature: "Credit card to start trial", values: { us: "no", sling: "yes", wiw: "yes", deputy: "yes" } },
+    { feature: "Industry templates that pre-fill 80%",
+      values: { us: "yes", sling: "partial", wiw: "no", deputy: "partial" } },
+  ];
+
+  function Cell({ v }: { v: Cell }) {
+    if (v === "yes") return <Check className="w-4 h-4 text-success mx-auto" />;
+    if (v === "no")  return <X className="w-4 h-4 text-ink-600 mx-auto" />;
+    if (v === "partial") return <Minus className="w-4 h-4 text-warn mx-auto" />;
+    return <span className="text-[12px] text-ink-300">{v}</span>;
+  }
+
+  return (
+    <section id="compare" className="section-pad relative">
+      <div className="container">
+        <Reveal>
+          <div className="text-center mb-12">
+            <div className="eyebrow mb-4"><Bolt size={14} /> How we compare</div>
+            <h2 className="h-section-display max-w-[800px] mx-auto">
+              <span className="grad-text">Why teams switch </span>
+              <span className="grad-text-accent font-normal">from the old guard.</span>
+            </h2>
+            <p className="mt-5 text-[15px] text-ink-400 max-w-[560px] mx-auto">
+              Side-by-side honest comparison. Pricing is per-seat at 20 employees, monthly.
+            </p>
+          </div>
+        </Reveal>
+
+        <Reveal delay={100}>
+          <div className="card-pop overflow-x-auto">
+            <table className="w-full text-sm min-w-[680px]">
+              <thead>
+                <tr className="border-b border-white/[0.08]">
+                  <th className="text-left px-5 py-4 text-[12px] font-mono uppercase tracking-wider text-ink-500">Feature</th>
+                  {cols.map(c => (
+                    <th key={c.key} className={`px-3 py-4 ${c.brand ? "bg-brand-500/[0.06]" : ""}`}>
+                      <div className={`text-[14px] font-semibold ${c.brand ? "grad-text-accent" : "text-ink-300"}`}>{c.label}</div>
+                      <div className="text-[11px] text-ink-500 font-mono mt-0.5">{c.price}</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i} className="border-b border-white/[0.04] last:border-0">
+                    <td className="px-5 py-3">
+                      <div className="text-[13px] text-ink-200">{r.feature}</div>
+                      {r.sub && <div className="text-[11px] text-ink-500 mt-0.5">{r.sub}</div>}
+                    </td>
+                    {cols.map(c => (
+                      <td key={c.key} className={`px-3 py-3 text-center ${c.brand ? "bg-brand-500/[0.04]" : ""}`}>
+                        <Cell v={r.values[c.key]} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Reveal>
+
+        <Reveal delay={200}>
+          <div className="mt-6 text-center text-[12px] text-ink-500">
+            Last updated June 2026 from public pricing pages. Competitor names are trademarks of their respective owners.
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================================
+   FAQ — objection handling, accordion style
+   ============================================================================ */
+function FAQ() {
+  const items: { q: string; a: string }[] = [
+    {
+      q: "How long does setup actually take?",
+      a: "Most managers are productive in under 10 minutes. Pick your industry on signup → we pre-fill positions, shift templates, default compliance rules, sample shifts, and PTO categories. Add one location and invite your team → you're scheduling. The AI Co-pilot can do even more for you in plain English.",
+    },
+    {
+      q: "Do I need a credit card to try?",
+      a: "Nope. The 7-day Business trial unlocks everything, no card required. After that you can stay on the Free plan (up to 5 employees + 1 location) forever — or upgrade.",
+    },
+    {
+      q: "What if I just have a few employees? Is this overkill?",
+      a: "The Free plan covers up to 5 employees and 1 location, and you get the AI Co-pilot, mobile app, basic compliance, and the open-shift marketplace. Most 3-5 person teams stay free forever. The paid plans add multi-location, the full compliance engine, and the open-shift auto-offer engine.",
+    },
+    {
+      q: "Can I import my existing team and schedule?",
+      a: "Yes. CSV import for members, shifts, and locations — drop a spreadsheet, we map the columns, you confirm. Coming from Sling / When I Work / Deputy? Export from there, import here. Or hand the assistant your CSV and it does it for you.",
+    },
+    {
+      q: "Does it work for my industry?",
+      a: "Likely yes. Templates ship for restaurants, retail, grocery, security, healthcare, field service, office, fitness, construction, hospitality, and education. Each one configures the right positions, shift blocks, and compliance presets for your vertical. Generic workforce works too if your industry isn't listed.",
+    },
+    {
+      q: "How does the geofenced clock-in actually work?",
+      a: "When someone taps Clock In, their phone shares GPS. We measure their distance from the location's address and only allow the punch if they're inside the radius you set. Add face verification on top to stop buddy-punching entirely. No paid maps service — works offline-friendly.",
+    },
+    {
+      q: "Is my team's data secure?",
+      a: "Yes. Encrypted in transit + at rest. 2FA optional per workspace (with a force-enroll toggle for the whole org). GDPR + CCPA + PIPEDA right-to-portability built in — your data is yours, full export available anytime. SOC 2 is on the roadmap for Business+ accounts.",
+    },
+    {
+      q: "What happens to my data if I cancel?",
+      a: "Full JSON export available from /settings/security. After cancellation we retain data for 30 days in case you change your mind, then delete. Wage and timesheet records are retained where labor law requires (typically 3-7 years depending on jurisdiction).",
+    },
+    {
+      q: "Do you handle Fair Workweek / predictability pay?",
+      a: "Yes. The compliance engine checks every draft schedule against six rule families (max weekly hours, daily hours, min rest gap, meal breaks, consecutive days, predictive scheduling). NYC, Seattle, Oregon, Chicago, and Philadelphia presets ship out of the box. Custom thresholds per org.",
+    },
+    {
+      q: "Can my team use it on their phones?",
+      a: "Yes — it's a PWA. They install once from their phone's browser ('Add to Home Screen') and it works like a native app: push notifications, offline shift view, photo clock-in. iOS 16.4+, Android Chrome, and desktop browsers all supported.",
+    },
+  ];
+
+  const [open, setOpen] = useState<number | null>(0);
+
+  return (
+    <section id="faq" className="section-pad relative">
+      <div className="container max-w-[820px]">
+        <Reveal>
+          <div className="text-center mb-12">
+            <div className="eyebrow mb-4"><Bolt size={14} /> FAQ</div>
+            <h2 className="h-section-display">
+              <span className="grad-text">The questions everyone asks </span>
+              <span className="grad-text-accent font-normal">before signing up.</span>
+            </h2>
+          </div>
+        </Reveal>
+
+        <Reveal delay={100}>
+          <div className="space-y-2">
+            {items.map((item, i) => {
+              const isOpen = open === i;
+              return (
+                <div key={i} className="card overflow-hidden">
+                  <button
+                    onClick={() => setOpen(isOpen ? null : i)}
+                    className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-white/[0.02] transition"
+                    aria-expanded={isOpen}
+                  >
+                    <span className="font-semibold text-[15px] text-ink-50">{item.q}</span>
+                    <span className={`shrink-0 w-7 h-7 rounded-md flex items-center justify-center border border-white/[0.08] transition ${
+                      isOpen ? "bg-brand-500/15 text-brand-300 border-brand-500/30 rotate-45" : "text-ink-400"
+                    }`}>
+                      <Plus className="w-3.5 h-3.5" />
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-5 pb-4 text-[14px] text-ink-300 leading-relaxed border-t border-white/[0.04] pt-3 animate-fade-in">
+                      {item.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Reveal>
+
+        <Reveal delay={200}>
+          <div className="text-center mt-10 text-[14px] text-ink-400">
+            Still have a question? <a href="mailto:hi@shyftforce.com" className="text-brand-300 underline hover:text-brand-200">Email us</a> — we read every one.
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================================
+   MOBILE STICKY CTA — pinned bar on mobile so the primary action is always
+   visible during scroll. Auto-hides above sm:.
+   ============================================================================ */
+function MobileStickyCTA() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    function onScroll() {
+      // Only appear after the user has scrolled past the hero
+      setVisible(window.scrollY > 600);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return (
+    <div
+      className={`sm:hidden fixed bottom-0 inset-x-0 z-50 transition-transform duration-300 ${
+        visible ? "translate-y-0" : "translate-y-full"
+      }`}
+    >
+      <div className="bg-ink-950/95 backdrop-blur-xl border-t border-white/[0.08] px-4 py-3 flex items-center gap-2 shadow-2xl">
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] font-semibold text-ink-50 truncate">Start free — no card</div>
+          <div className="text-[10px] text-ink-500 truncate">5-min setup · cancel anytime</div>
+        </div>
+        <Link href="/signup" className="btn-primary btn-sm shrink-0">
+          Get started <ArrowRight className="w-3 h-3 arrow" />
+        </Link>
+      </div>
+    </div>
   );
 }
 
