@@ -2,6 +2,7 @@ import { requireManagerOrAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { AskAiHint } from "@/components/ui/ask-ai-hint";
 import { PERMISSION_CATALOG } from "@/lib/permissions";
 import { ShieldHalf, Users } from "lucide-react";
 
@@ -22,7 +23,12 @@ export default async function CustomRolesPage() {
         icon={ShieldHalf}
         title="Roles & permissions"
         subtitle={`${roles.length} custom role${roles.length === 1 ? "" : "s"} · the three built-in roles (Admin / Manager / Employee) always apply on top.`}
-      />
+      >
+        <AskAiHint
+          prompt="Help me design custom roles for my workforce. I have ideas like 'shift lead' or 'trainer' but I don't know which permissions to grant. Walk me through it."
+          label="Ask the assistant to design a role"
+        />
+      </PageHeader>
 
       {/* Built-in roles primer */}
       <section className="card p-5 bg-ink-50/40 dark:bg-ink-900/40">

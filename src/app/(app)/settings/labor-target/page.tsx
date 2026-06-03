@@ -1,6 +1,7 @@
 import { requireManagerOrAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
+import { AskAiHint } from "@/components/ui/ask-ai-hint";
 import { LaborTargetClient } from "@/components/settings/labor-target-client";
 import { Target } from "lucide-react";
 
@@ -19,7 +20,12 @@ export default async function LaborTargetPage() {
         icon={Target}
         title="Labor % target & alerts"
         subtitle="Set the labor-cost-to-revenue % you want to hit. We text the manager if actuals creep past target during open hours."
-      />
+      >
+        <AskAiHint
+          prompt="Help me set a reasonable labor cost target for my business. What % should I aim for and what alerts should I turn on?"
+          label="What's a good target for my business?"
+        />
+      </PageHeader>
       <section className="card p-5">
         <h3 className="text-sm font-semibold mb-1">How it works</h3>
         <ul className="text-xs text-ink-500 dark:text-ink-400 space-y-0.5 list-disc list-inside">
