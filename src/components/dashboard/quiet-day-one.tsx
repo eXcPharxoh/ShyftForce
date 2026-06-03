@@ -43,10 +43,13 @@ export function QuietDayOne({
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, ctrlKey: true, bubbles: true }));
   }
 
+  // All three steps now point at /setup — the inline wizard completes each
+  // step in one place instead of dropping the user into the full app for
+  // each one. Less context-switching, more clarity.
   const steps = [
-    { key: "loc",   label: "Add a location",   blurb: "Where your team clocks in.", href: "/settings/locations", icon: MapPin,      done: hasLocation },
-    { key: "team",  label: "Invite your team", blurb: "Send invites by email.",     href: "/hr/members",         icon: Users,       done: hasTeam },
-    { key: "shift", label: "Drop a shift",     blurb: "First one on the calendar.", href: "/schedule",           icon: CalendarPlus, done: hasShift },
+    { key: "loc",   label: "Add a location",   blurb: "Where your team clocks in.", href: "/setup", icon: MapPin,      done: hasLocation },
+    { key: "team",  label: "Invite your team", blurb: "Send invites by email.",     href: "/setup", icon: Users,       done: hasTeam },
+    { key: "shift", label: "Drop a shift",     blurb: "First one on the calendar.", href: "/setup", icon: CalendarPlus, done: hasShift },
   ];
   const nextStep = steps.find(s => !s.done) ?? steps[steps.length - 1];
 

@@ -34,13 +34,17 @@ export default async function MembersPage() {
       </PageHeader>
 
       <section className="card overflow-hidden">
-        <table className="w-full text-sm">
+        {/* overflow-x-auto on the wrapper so the table scrolls horizontally on
+            narrow viewports instead of overflowing the page. min-w-[560px] on
+            the table keeps the columns from collapsing into mush. */}
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[560px]">
           <thead className="bg-ink-50/60 dark:bg-ink-800/60 text-[11px] uppercase text-ink-600 dark:text-ink-400 font-semibold tracking-wider">
             <tr>
               <th className="text-left px-4 py-2.5">Name</th>
               <th className="text-left px-4 py-2.5">Position</th>
-              <th className="text-left px-4 py-2.5">Location</th>
-              <th className="text-left px-4 py-2.5">Hired</th>
+              <th className="text-left px-4 py-2.5 hidden sm:table-cell">Location</th>
+              <th className="text-left px-4 py-2.5 hidden md:table-cell">Hired</th>
               <th className="text-right px-4 py-2.5">Rate</th>
               <th className="text-center px-4 py-2.5">Role</th>
             </tr>
@@ -60,8 +64,8 @@ export default async function MembersPage() {
                   </Link>
                 </td>
                 <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300">{m.position ?? "—"}</td>
-                <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300">{m.location?.name ?? "—"}</td>
-                <td className="px-4 py-2.5 text-ink-600 dark:text-ink-400">{dateLabel(m.hireDate)}</td>
+                <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300 hidden sm:table-cell">{m.location?.name ?? "—"}</td>
+                <td className="px-4 py-2.5 text-ink-600 dark:text-ink-400 hidden md:table-cell">{dateLabel(m.hireDate)}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums text-ink-900 dark:text-ink-100">{fmtMoney(m.hourlyRate ?? 0)}/h</td>
                 <td className="px-4 py-2.5 text-center">
                   {m.role === "ADMIN" && <span className="badge-orange">Admin</span>}
@@ -72,6 +76,7 @@ export default async function MembersPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   );
