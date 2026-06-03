@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 import { moreNavFor, verticalFor } from "@/lib/verticals/config";
 
 export default async function MorePage() {
   const u = await requireUser();
   const vertical = verticalFor(u.organizationIndustry);
-  const items = moreNavFor(u.organizationIndustry, u.role);
+  // Read uxMode so /more obeys the same simple/pro filter the sidebar does —
+  // simple mode hides developer + compliance items here too.
+  const org = await prisma.organization.findUnique({
+    where: { id: u.organizationId }, select: { uxMode: true },
+  });
+  const uxMode = (org?.uxMode as "simple" | "pro" | undefined) ?? "pro";
+  const items = moreNavFor(u.organizationIndustry, u.role, uxMode);
 
   // Plain-language groups, ordered by how often a typical business reaches for
   // them. Everything the app can do (minus the pinned core) lives here, so

@@ -12,6 +12,7 @@ import {
   Plug, Bell, Plane, CalendarX, Briefcase, Check, X, ArrowRight, Crown, AlertTriangle,
 } from "lucide-react";
 import { SecurityToggles } from "@/components/admin/security-toggles";
+import { UxModeToggle } from "@/components/admin/ux-mode-toggle";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function AdminConsolePage() {
       select: {
         name: true, plan: true, trialEndsAt: true, subscriptionStatus: true,
         createdAt: true, suspendedAt: true, featureOverrides: true,
-        stripeCustomerId: true, industry: true,
+        stripeCustomerId: true, industry: true, uxMode: true,
       },
     }),
     prisma.member.groupBy({
@@ -157,6 +158,9 @@ export default async function AdminConsolePage() {
 
       {/* Workspace security policies (owner-only toggles) */}
       <SecurityToggles />
+
+      {/* Simple vs Pro mode — what the app shows by default */}
+      <UxModeToggle initial={(org.uxMode as "simple" | "pro" | undefined) ?? "pro"} />
 
       {/* Plan features */}
       <section className="card p-5">

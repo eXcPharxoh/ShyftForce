@@ -636,10 +636,50 @@ const MAX_SIDEBAR_HEROES = 3;
 
 type Role = "ADMIN" | "MANAGER" | "EMPLOYEE";
 
+export type UxMode = "simple" | "pro";
+
+/**
+ * In "simple" UX mode we hide developer-y / power-user features that
+ * intimidate small-business owners. Nothing destructive — the routes still
+ * work if visited directly, they're just not in the nav. The org owner can
+ * flip back to "pro" mode any time from /admin.
+ *
+ * Things kept VISIBLE in simple mode (deliberately small set):
+ *   - The universal scheduling loop (always)
+ *   - Their team (/hr/members), documents, messenger
+ *   - Industry-specific killer features (tips for restaurants, permits for
+ *     security, etc.) — the things that justified picking ShyftForce
+ *   - The basics of Settings: locations, integrations, billing, notifications
+ *
+ * Hidden in simple mode (the long tail):
+ */
+const SIMPLE_MODE_HIDDEN_HREFS: ReadonlySet<string> = new Set([
+  // Compliance engine — full of jargon (predictability pay, rest gaps, minor
+  // labor rules) that small biz owners don't engage with day-to-day
+  "/compliance",
+  // Audit log, custom roles, security policy — power-user / multi-admin needs
+  "/settings/audit", "/settings/custom-roles", "/settings/security",
+  // Developer-facing
+  "/settings/api-keys", "/settings/webhooks",
+  // Manager log book, hiring pipeline, surveys — bigger team features
+  "/log-book", "/hr/jobs", "/hr/reviews", "/hr/surveys", "/training",
+  // Marketplace / cross-org worker network — early-stage feature
+  "/worker/profile", "/network", "/network/available",
+  // Reports beyond the basics
+  "/reports/shrink", "/reports/room-turn-time", "/reports/safety-acks",
+  "/reports/class-attendance", "/reports/pt-payout", "/reports/vm-completion",
+  "/reports/form-8027",
+]);
+
 /** Every module visible to this vertical + role (not hidden, role-permitted). */
-function visibleModules(industry: string | null | undefined, role: Role): NavItem[] {
+function visibleModules(industry: string | null | undefined, role: Role, uxMode: UxMode = "pro"): NavItem[] {
   const v = verticalFor(industry);
-  return v.modules.filter((m) => !m.hidden && (m.role !== "manager" || role !== "EMPLOYEE"));
+  return v.modules.filter((m) => {
+    if (m.hidden) return false;
+    if (m.role === "manager" && role === "EMPLOYEE") return false;
+    if (uxMode === "simple" && SIMPLE_MODE_HIDDEN_HREFS.has(m.href)) return false;
+    return true;
+  });
 }
 
 /**
@@ -647,8 +687,8 @@ function visibleModules(industry: string | null | undefined, role: Role): NavIte
  * by up to MAX_SIDEBAR_HEROES of this vertical's flagship tools. Overflow heroes
  * are NOT lost — they appear in /more via moreNavFor().
  */
-export function primaryNavFor(industry: string | null | undefined, role: Role): NavItem[] {
-  const vis = visibleModules(industry, role);
+export function primaryNavFor(industry: string | null | undefined, role: Role, uxMode: UxMode = "pro"): NavItem[] {
+  const vis = visibleModules(industry, role, uxMode);
   const core = CORE_HREFS
     .map((href) => vis.find((m) => m.href === href))
     .filter((m): m is NavItem => Boolean(m));
@@ -664,9 +704,9 @@ export function primaryNavFor(industry: string | null | undefined, role: Role): 
  * pinned core (which always lives in the sidebar / bottom bar). This is the
  * single source of truth for "everything the app can do" — grouped by the page.
  */
-export function moreNavFor(industry: string | null | undefined, role: Role): NavItem[] {
+export function moreNavFor(industry: string | null | undefined, role: Role, uxMode: UxMode = "pro"): NavItem[] {
   const coreSet = new Set<string>(CORE_HREFS);
-  return visibleModules(industry, role).filter((m) => !coreSet.has(m.href));
+  return visibleModules(industry, role, uxMode).filter((m) => !coreSet.has(m.href));
 }
 
 /** @deprecated kept for compatibility — use moreNavFor (complete directory). */

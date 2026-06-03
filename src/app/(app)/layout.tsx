@@ -35,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         suspendedReason: true,
         require2fa: true,
         requireEmailVerified: true,
+        uxMode: true,
       },
     }),
     prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
@@ -101,6 +102,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         userName={u.name}
         userInitials={initials(u.name)}
         userRole={u.role}
+        uxMode={(org?.uxMode as "simple" | "pro" | undefined) ?? "pro"}
       />
       <div className="flex-1 min-w-0 flex flex-col">
         {u.impersonatedByEmail && (

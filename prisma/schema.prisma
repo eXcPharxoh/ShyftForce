@@ -59,6 +59,14 @@ model Organization {
   require2fa             Boolean @default(false)
   requireEmailVerified   Boolean @default(false)
 
+  // UX mode — picks which features are visible in the sidebar + /more.
+  //   "simple" = friendly mode for small business owners. Hides advanced
+  //             items: compliance engine, custom roles, API keys, webhooks,
+  //             audit log, vertical-specific power tools. Shows the essentials.
+  //   "pro"    = full app (current behavior). Default for existing orgs so
+  //             nothing changes for them on the upgrade.
+  uxMode                 String  @default("pro") // "simple" | "pro"
+
   // Payroll integration (Finch)
   finchAccessToken String? // encrypted in production
   finchProviderId  String? // e.g. "adp_workforce_now", "gusto", "paychex"

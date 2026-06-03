@@ -9,6 +9,7 @@ import { GettingStarted } from "@/components/dashboard/getting-started";
 import { LocationsPunchMap } from "@/components/geo/locations-punch-map";
 import { PendingOnboardingWidget } from "@/components/dashboard/pending-onboarding-widget";
 import { QuietDayOne } from "@/components/dashboard/quiet-day-one";
+import { EmployeeHome } from "@/components/dashboard/employee-home";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,62 @@ export default async function Dashboard() {
   // Greeting based on local time
   const h = now.getHours();
   const greeting = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+
+  // ─── Employee branch ───────────────────────────────────────────────────────
+  // Non-managers don't need labor cost, compliance %, the punch map, or any of
+  // the operational widgets. They get a focused view of their next shift, any
+  // urgent coverage offers, and quick links to clock in / time off / messages.
+  // Render early so we skip the heavy manager-aggregation queries entirely.
+  if (u.role === "EMPLOYEE" && u.memberId) {
+    const inTwoWeeks = addDays(now, 14);
+    const [myUpcoming, myOffers, myPendingTimeOff] = await Promise.all([
+      prisma.shift.findMany({
+        where: { memberId: u.memberId, startsAt: { gte: now, lt: inTwoWeeks } },
+        orderBy: { startsAt: "asc" },
+        take: 6,
+        include: { location: { select: { name: true } } },
+      }),
+      prisma.openShiftOffer.findMany({
+        where: { memberId: u.memberId, status: "pending", expiresAt: { gt: now } },
+        orderBy: { expiresAt: "asc" },
+        take: 5,
+        include: { shift: { include: { location: { select: { name: true } } } } },
+      }),
+      prisma.timeOffRequest.count({
+        where: { memberId: u.memberId, status: "pending" },
+      }),
+    ]);
+    return (
+      <EmployeeHome
+        name={u.name}
+        greeting={greeting}
+        nextShift={myUpcoming[0] ? {
+          id: myUpcoming[0].id,
+          startsAt: myUpcoming[0].startsAt.toISOString(),
+          endsAt: myUpcoming[0].endsAt.toISOString(),
+          position: myUpcoming[0].position ?? null,
+          locationName: myUpcoming[0].location?.name ?? null,
+        } : null}
+        upcomingShifts={myUpcoming.map(s => ({
+          id: s.id,
+          startsAt: s.startsAt.toISOString(),
+          endsAt: s.endsAt.toISOString(),
+          position: s.position ?? null,
+          locationName: s.location?.name ?? null,
+        }))}
+        pendingOffers={myOffers.filter(o => o.shift).map(o => ({
+          id: o.id,
+          shiftStartsAt: o.shift!.startsAt.toISOString(),
+          shiftEndsAt:   o.shift!.endsAt.toISOString(),
+          shiftPosition: o.shift!.position ?? null,
+          locationName:  o.shift!.location?.name ?? null,
+          expiresAt:     o.expiresAt.toISOString(),
+        }))}
+        pendingTimeOffCount={myPendingTimeOff}
+      />
+    );
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   const [
     locations,

@@ -7,7 +7,7 @@ import {
   Users, MessageSquare,
   MoreHorizontal, BarChart3, Settings, ChevronDown, Sparkles, Shield,
 } from "lucide-react";
-import { primaryNavFor, verticalFor } from "@/lib/verticals/config";
+import { primaryNavFor, verticalFor, type UxMode } from "@/lib/verticals/config";
 import { useT } from "@/lib/i18n/provider";
 
 /**
@@ -15,7 +15,7 @@ import { useT } from "@/lib/i18n/provider";
  * Per design_handoff_shyftforce: org switcher header, 3 nav sections
  * (Workspace / People / Setup), user-row footer with avatar + settings cog.
  */
-export function Sidebar({ orgName, industry, role, pendingOffers = 0, userName, userInitials, userRole }: {
+export function Sidebar({ orgName, industry, role, pendingOffers = 0, userName, userInitials, userRole, uxMode = "pro" }: {
   orgName: string;
   industry: string | null;
   role: "ADMIN" | "MANAGER" | "EMPLOYEE";
@@ -23,11 +23,13 @@ export function Sidebar({ orgName, industry, role, pendingOffers = 0, userName, 
   userName?: string;
   userInitials?: string;
   userRole?: string;
+  /** "simple" hides developer + compliance items from the sidebar; "pro" shows everything. */
+  uxMode?: UxMode;
 }) {
   const pathname = usePathname();
   const t = useT();
   const vertical = verticalFor(industry);
-  const primary = primaryNavFor(industry, role);
+  const primary = primaryNavFor(industry, role, uxMode);
 
   // Map module hrefs to i18n keys where we have translations; fall back to
   // the config's own label otherwise.
