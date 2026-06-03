@@ -2,6 +2,7 @@ import { requireManagerOrAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { LocationSettingsRow } from "@/components/locations/location-settings-row";
 import { LocationCreateForm } from "@/components/locations/location-create-form";
+import { ImportLocationsButton } from "@/components/locations/import-locations-button";
 import { GeofenceMap } from "@/components/ui/geofence-map";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Building2 } from "lucide-react";
@@ -22,6 +23,7 @@ export default async function LocationSettingsPage() {
         title="Locations & clock-in areas"
         subtitle="Set the address and the allowed clock-in radius for each site. Stops people from punching in from home."
       >
+        <ImportLocationsButton />
         <LocationCreateForm />
       </PageHeader>
 
