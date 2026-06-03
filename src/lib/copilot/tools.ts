@@ -383,6 +383,42 @@ export const TOOLS: Tool[] = [
       required: ["memberName", "tier"],
     },
   },
+  {
+    name: "create_pto_policy",
+    description: "Create a new time-off policy (PTO category). Admin/Manager only. Use when the owner asks to add a leave bucket (vacation, sick, bereavement, personal, etc.).",
+    input_schema: {
+      type: "object",
+      properties: {
+        name:          { type: "string", description: "Display name shown to employees (e.g. 'Vacation', 'Sick time')" },
+        category:      { type: "string", enum: ["vacation", "sick", "personal", "bereavement", "unpaid"] },
+        annualHours:   { type: "number", description: "Hours granted per year. 0 = unlimited/not tracked." },
+        accrualMethod: { type: "string", enum: ["annual_lump_sum", "per_pay_period", "per_hour_worked", "unlimited"], description: "How balance accumulates." },
+      },
+      required: ["name", "category", "annualHours"],
+    },
+  },
+  {
+    name: "create_custom_role",
+    description: "Create a custom role with a set of permissions. Admin only. Use when the owner describes a role like 'shift lead' or 'trainer' and wants the right permissions assigned.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name:        { type: "string", description: "Role name shown when assigning to members." },
+        description: { type: "string" },
+        permissions: {
+          type: "array",
+          items: { type: "string" },
+          description: "Permission keys from the catalog (e.g. schedule.write, timesheets.approve, members.invite). Use list_permission_catalog first if unsure.",
+        },
+      },
+      required: ["name", "permissions"],
+    },
+  },
+  {
+    name: "list_permission_catalog",
+    description: "List every available permission key with its human label and group. Use before create_custom_role so you know which keys exist.",
+    input_schema: { type: "object", properties: {} },
+  },
 ];
 
 // ---------- Helpers ----------
@@ -999,6 +1035,58 @@ export async function runTool(name: string, input: any, user: SessionUser) {
       if (input.tier < 1 || input.tier > 5) return { error: "Tier must be 1-5" };
       await prisma.member.update({ where: { id: m.id }, data: { skillTier: input.tier } });
       return { ok: true, member: m.user.name, tier: input.tier };
+    }
+
+    case "create_pto_policy": {
+      if (!isManager(user)) return forbid();
+      const allowedCategories = new Set(["vacation", "sick", "personal", "bereavement", "unpaid"]);
+      if (!allowedCategories.has(input.category)) {
+        return { error: `Category must be one of: ${[...allowedCategories].join(", ")}` };
+      }
+      const accrual = input.accrualMethod ?? "annual_lump_sum";
+      const policy = await prisma.ptoPolicy.create({
+        data: {
+          organizationId: orgId,
+          name: String(input.name).trim(),
+          category: input.category,
+          annualHours: Number(input.annualHours) || 0,
+          accrualMethod: accrual,
+        },
+      });
+      return { ok: true, id: policy.id, name: policy.name, category: policy.category, note: "Time-off policy created. Members start accruing on their next pay period." };
+    }
+
+    case "create_custom_role": {
+      if (user.role !== "ADMIN") return forbid("Only Admins can create custom roles.");
+      // Load the catalog inline so the AI's permission list is validated against
+      // the same source the UI uses — typos return a clear error rather than
+      // silently creating a role with broken permissions.
+      const { PERMISSION_CATALOG } = await import("@/lib/permissions");
+      const valid = new Set(PERMISSION_CATALOG.map(p => p.key));
+      const requested: string[] = Array.isArray(input.permissions) ? input.permissions : [];
+      const bad = requested.filter(p => !valid.has(p as any));
+      if (bad.length > 0) {
+        return { error: `Unknown permission keys: ${bad.join(", ")}. Use list_permission_catalog to see valid keys.` };
+      }
+      try {
+        const role = await prisma.customRole.create({
+          data: {
+            organizationId: orgId,
+            name: String(input.name).trim(),
+            description: input.description ?? null,
+            permissions: JSON.stringify(requested),
+          },
+        });
+        return { ok: true, id: role.id, name: role.name, permissionCount: requested.length, note: "Custom role created. Assign it to members from /settings/custom-roles." };
+      } catch (e: any) {
+        if (e?.code === "P2002") return { error: "A role with that name already exists." };
+        return { error: "Failed to create role." };
+      }
+    }
+
+    case "list_permission_catalog": {
+      const { PERMISSION_CATALOG } = await import("@/lib/permissions");
+      return { permissions: PERMISSION_CATALOG };
     }
 
     default:
