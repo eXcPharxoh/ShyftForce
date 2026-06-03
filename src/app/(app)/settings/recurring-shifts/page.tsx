@@ -48,14 +48,15 @@ export default async function RecurringShiftsPage() {
             description="Add one for an employee who has a regular weekly shift. Then apply it to any week from the Schedule page."
           />
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[680px]">
             <thead className="bg-ink-50/60 dark:bg-ink-800/60 text-[11px] uppercase font-semibold tracking-wider text-ink-500 dark:text-ink-400">
               <tr>
                 <th className="text-left px-4 py-2.5">Member</th>
                 <th className="text-left px-4 py-2.5">Day</th>
                 <th className="text-left px-4 py-2.5">Time</th>
-                <th className="text-left px-4 py-2.5">Location · Position</th>
-                <th className="text-left px-4 py-2.5">Effective</th>
+                <th className="text-left px-4 py-2.5 hidden md:table-cell">Location · Position</th>
+                <th className="text-left px-4 py-2.5 hidden lg:table-cell">Effective</th>
                 <th className="text-center px-4 py-2.5">Status</th>
                 <th className="text-right px-4 py-2.5"></th>
               </tr>
@@ -66,8 +67,8 @@ export default async function RecurringShiftsPage() {
                   <td className="px-4 py-2.5 font-medium text-ink-900 dark:text-ink-100">{r.member.user.name}</td>
                   <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300">{DOW[r.dayOfWeek]}</td>
                   <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300 tabular-nums">{r.startTime} – {r.endTime}</td>
-                  <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300">{locById.get(r.locationId) ?? "—"}{r.position ? ` · ${r.position}` : ""}</td>
-                  <td className="px-4 py-2.5 text-[11px] text-ink-500 dark:text-ink-400">
+                  <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300 hidden md:table-cell">{locById.get(r.locationId) ?? "—"}{r.position ? ` · ${r.position}` : ""}</td>
+                  <td className="px-4 py-2.5 text-[11px] text-ink-500 dark:text-ink-400 hidden lg:table-cell">
                     from {r.effectiveFrom.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     {r.effectiveUntil && <> · until {r.effectiveUntil.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</>}
                   </td>
@@ -90,6 +91,7 @@ export default async function RecurringShiftsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </div>

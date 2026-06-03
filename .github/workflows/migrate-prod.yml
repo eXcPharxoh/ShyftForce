@@ -32,13 +32,34 @@ jobs:
           cache: "npm"
       - name: Install deps
         run: npm ci --no-audit --no-fund
-      - name: Show migration status
+      - name: Apply pending migrations (with cold-start retry)
+        # Neon Free tier auto-suspends the compute after ~5 min idle. When
+        # GH Actions runs migrate, the first connection has to wake the
+        # compute and Prisma's default TCP timeout (~5s) sometimes fires
+        # first, returning P1001 "Can't reach database server". Retrying
+        # the whole `migrate deploy` a few times with backoff handles the
+        # wake-up cleanly. After the first successful connection the
+        # compute stays warm for subsequent ops.
         env:
           DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
           DIRECT_URL:   ${{ secrets.PROD_DIRECT_URL }}
-        run: npx prisma migrate status
-      - name: Apply pending migrations
-        env:
-          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
-          DIRECT_URL:   ${{ secrets.PROD_DIRECT_URL }}
-        run: npx prisma migrate deploy
+        run: |
+          set +e
+          for i in 1 2 3 4 5; do
+            echo "::group::Attempt $i — prisma migrate status"
+            npx prisma migrate status
+            status_exit=$?
+            echo "::endgroup::"
+            echo "::group::Attempt $i — prisma migrate deploy"
+            npx prisma migrate deploy
+            deploy_exit=$?
+            echo "::endgroup::"
+            if [ $deploy_exit -eq 0 ]; then
+              echo "✅ Migration succeeded on attempt $i"
+              exit 0
+            fi
+            echo "⚠️  Attempt $i failed (status=$status_exit deploy=$deploy_exit). Sleeping 10s..."
+            sleep 10
+          done
+          echo "❌ All 5 attempts exhausted. Check Neon compute state + URL format."
+          exit 1

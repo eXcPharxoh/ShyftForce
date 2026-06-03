@@ -10,6 +10,7 @@ import { PublishWeekButton } from "@/components/schedule/publish-week-button";
 import { TemplatesButton } from "@/components/schedule/templates-button";
 import { ShiftCell } from "@/components/schedule/shift-cell";
 import { AiPromptBanner } from "@/components/schedule/ai-prompt-banner";
+import { ImportShiftsButton } from "@/components/schedule/import-shifts-button";
 import { ChevronLeft, ChevronRight, Flame, Printer } from "lucide-react";
 import Link from "next/link";
 
@@ -159,6 +160,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                 <Printer className="w-3.5 h-3.5" /> Print / PDF
               </Link>
               <TemplatesButton weekStart={weekStart.toISOString().slice(0,10)} />
+              <ImportShiftsButton />
               <ScheduleActions weekStart={weekStart.toISOString().slice(0,10)} />
               <AutoFillButton weekStart={weekStart.toISOString().slice(0,10)} openShiftCount={openShiftsList.length} />
               <AutoScheduleButton locations={locations.map(l => ({ id: l.id, name: l.name }))} aiConfigured={!!process.env.SHYFTFORCE_AI_KEY} />
