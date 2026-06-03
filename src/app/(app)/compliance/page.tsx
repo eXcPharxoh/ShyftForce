@@ -158,8 +158,8 @@ export default async function CompliancePage() {
           <RuleSetting label="Meal break required after"   value={`${settings.mealBreakRequiredAfterHours}h`} severity="block" />
           <RuleSetting label="Rest break required every"   value={settings.restBreakRequiredAfterHours > 0 ? `${settings.restBreakRequiredAfterHours}h` : "off"} severity="warn" />
           <RuleSetting label="Max consecutive days"        value={settings.maxConsecutiveDays} severity="warn" />
-          <RuleSetting label="Predictive scheduling"       value={settings.predictiveSchedulingDays > 0 ? `≥${settings.predictiveSchedulingDays}d ahead` : "off"} severity={settings.predictiveSchedulingDays > 0 ? "block" : "off"} />
-          <RuleSetting label="Predictability pay"          value={settings.predictabilityPayEnabled ? "on" : "off"} severity={settings.predictabilityPayEnabled ? "warn" : "off"} />
+          <RuleSetting label="Advance notice required"     value={settings.predictiveSchedulingDays > 0 ? `≥${settings.predictiveSchedulingDays}d ahead` : "off"} severity={settings.predictiveSchedulingDays > 0 ? "block" : "off"} />
+          <RuleSetting label="Late-change penalty pay"     value={settings.predictabilityPayEnabled ? "on" : "off"} severity={settings.predictabilityPayEnabled ? "warn" : "off"} />
           <RuleSetting label="Minor age threshold"         value={`under ${settings.minorAgeThreshold}`} severity="block" />
           <RuleSetting label="Minor max daily / weekly"    value={`${settings.minorMaxDailyHours}h / ${settings.minorMaxWeeklyHours}h`} severity="block" />
           <RuleSetting label="Minor work hours window"     value={`${settings.minorEarliestStartHour}:00–${settings.minorLatestEndHour}:00`} severity="block" />

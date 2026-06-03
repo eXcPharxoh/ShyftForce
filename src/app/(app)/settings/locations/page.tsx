@@ -19,8 +19,8 @@ export default async function LocationSettingsPage() {
       <PageHeader
         eyebrow="Workspace"
         icon={Building2}
-        title="Locations & geofences"
-        subtitle="Set GPS coordinates and geofence radius for each site. Affects clock-in verification."
+        title="Locations & clock-in areas"
+        subtitle="Set the address and the allowed clock-in radius for each site. Stops people from punching in from home."
       >
         <LocationCreateForm />
       </PageHeader>
@@ -31,7 +31,7 @@ export default async function LocationSettingsPage() {
             icon={Building2}
             tone="brand"
             title="No locations yet"
-            description='Add your first site to get GPS-verified clock-ins, geofence enforcement, and per-location budgets. Click "Add location" above.'
+            description='Add your first site to get GPS-verified clock-ins, an allowed clock-in area, and per-location budgets. Click "Add location" above.'
           />
         ) : (
           <ul className="divide-y divide-ink-100 dark:divide-ink-800">
@@ -46,11 +46,11 @@ export default async function LocationSettingsPage() {
         )}
       </section>
 
-      {/* Visual preview of every location's geofence */}
+      {/* Visual preview of every location's clock-in area */}
       {locations.filter(l => l.latitude != null && l.longitude != null).length > 0 && (
         <section>
           <div className="text-[10px] uppercase tracking-wider font-medium text-brand-500 font-mono mb-2">
-            Geofence preview
+            Clock-in area preview
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {locations
@@ -77,8 +77,8 @@ export default async function LocationSettingsPage() {
         <ul className="space-y-1">
           <li>• Find coordinates fast: open Google Maps → right-click your site → click the lat/lng to copy.</li>
           <li>• Typical radius: 50m for a single building, 100m for a campus, 500m+ for outdoor sites.</li>
-          <li>• Clock-ins outside the geofence are still recorded but flagged as <b>outside</b> for manager review.</li>
-          <li>• <b>How geofencing works:</b> the employee's browser requests GPS via <code>navigator.geolocation</code> when they tap Clock In. The server computes haversine distance from your set point, then compares to the radius. We don't ping a paid maps API — works offline-friendly, no API keys needed.</li>
+          <li>• Clock-ins outside the allowed area are still recorded but flagged as <b>outside</b> for manager review.</li>
+          <li>• <b>How it works:</b> when an employee taps Clock In, their phone asks for permission to share GPS. We measure how far they are from this address, and only let them clock in if they're inside the radius you set. No paid maps service — works offline-friendly.</li>
         </ul>
       </div>
     </div>

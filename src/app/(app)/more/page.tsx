@@ -70,11 +70,31 @@ export default async function MorePage() {
       ].includes(m.href)),
     },
     {
-      label: "Settings",
+      // The everyday-manager settings. Things you set up once when you launch
+      // and occasionally revisit. Kept short on purpose — only the items most
+      // managers actually open.
+      label: "Setup",
       items: items.filter((m) => [
-        "/compliance", "/settings/billing", "/settings/locations", "/settings/integrations",
-        "/settings/audit", "/settings/notifications", "/settings/security", "/settings/permits",
-        "/settings/webhooks", "/settings/api-keys", "/settings/kiosks", "/settings/custom-roles",
+        "/settings/locations", "/settings/integrations", "/settings/billing",
+        "/settings/notifications", "/settings/permits", "/settings/kiosks",
+      ].includes(m.href)),
+    },
+    {
+      // Workspace-wide policy: security, access control, compliance review.
+      // Less often touched but important. Separating from "Setup" so the
+      // everyday stuff isn't drowned in compliance jargon.
+      label: "Security & rules",
+      items: items.filter((m) => [
+        "/settings/security", "/settings/custom-roles", "/compliance", "/settings/audit",
+      ].includes(m.href)),
+    },
+    {
+      // Developer-only items. Hidden behind a separate header so non-technical
+      // owners don't see "API keys" and "Webhooks" alongside "Locations" and
+      // get confused about whether they need to deal with those.
+      label: "Developer (advanced)",
+      items: items.filter((m) => [
+        "/settings/api-keys", "/settings/webhooks",
       ].includes(m.href)),
     },
   ];

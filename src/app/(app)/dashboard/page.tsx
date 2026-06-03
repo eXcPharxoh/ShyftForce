@@ -8,6 +8,7 @@ import { PermitExpiryWidget } from "@/components/dashboard/permit-expiry-widget"
 import { GettingStarted } from "@/components/dashboard/getting-started";
 import { LocationsPunchMap } from "@/components/geo/locations-punch-map";
 import { PendingOnboardingWidget } from "@/components/dashboard/pending-onboarding-widget";
+import { QuietDayOne } from "@/components/dashboard/quiet-day-one";
 
 export const dynamic = "force-dynamic";
 
@@ -201,6 +202,29 @@ export default async function Dashboard() {
   const weekOt = Math.max(0, weekHours - members.length * 40);
 
   const isManager = u.role === "ADMIN" || u.role === "MANAGER";
+
+  // Day-1 mode: workspace has essentially nothing in it yet. Show a quiet,
+  // focused "get started" view instead of the firehose dashboard so new managers
+  // aren't drowned in 9 widgets that all say "—" or "no data". The full
+  // dashboard takes over the moment any meaningful data exists. Employees
+  // skip this — they don't set up the workspace.
+  const hasLocation = locations.length > 0;
+  const hasTeam     = members.length > 1; // owner + at least one other
+  const hasShift    = weekShifts.length > 0 || todayShifts.length > 0;
+  const showQuietDayOne = isManager && (!hasLocation || !hasTeam || !hasShift);
+
+  if (showQuietDayOne) {
+    return (
+      <div className="space-y-6">
+        <QuietDayOne
+          name={u.name}
+          hasLocation={hasLocation}
+          hasTeam={hasTeam}
+          hasShift={hasShift}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

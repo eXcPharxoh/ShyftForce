@@ -9,6 +9,7 @@ import Link from "next/link";
 import { CopilotPanel } from "@/components/copilot/copilot-panel";
 import { CmdKPalette } from "@/components/cmdk/cmdk-palette";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
+import { HelpButton } from "@/components/help-button";
 import { Bolt } from "@/components/ui/logo";
 
 /**
@@ -57,16 +58,20 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
   return (
     <>
       <header className="h-14 sticky top-0 z-30 flex items-center px-6 gap-3 border-b border-white/[0.06] bg-ink-950/80 backdrop-blur-xl">
-        {/* ⌘K palette trigger — center pinned */}
+        {/* ⌘K palette trigger — promoted as the primary entry point.
+            Non-technical users can type intent in plain English ("schedule
+            Joe for Friday") instead of hunting through menus. The gradient
+            sparkle icon + wider footprint signals it's the smart action.
+            ⌘K still works globally for keyboard users. */}
         <button
           onClick={() => setCmdkOpen(true)}
-          className="group flex-1 max-w-[460px] mx-auto flex items-center gap-2.5 px-3.5 h-9 rounded-md
-                     border border-white/[0.12] bg-white/[0.03] backdrop-blur-md
-                     hover:bg-white/[0.06] hover:border-white/[0.2]
-                     transition text-left"
+          className="group flex-1 max-w-[640px] mx-auto flex items-center gap-3 px-4 h-10 rounded-lg
+                     border border-brand-500/25 bg-gradient-to-r from-brand-500/[0.06] to-purple-500/[0.06]
+                     hover:from-brand-500/[0.12] hover:to-purple-500/[0.12] hover:border-brand-500/40
+                     transition text-left shadow-soft"
         >
-          <Bolt size={14} />
-          <span className="text-[13px] text-ink-300 flex-1 truncate group-hover:text-ink-50">
+          <Sparkles className="w-4 h-4 text-brand-300 shrink-0" />
+          <span className="text-[13px] text-ink-200 flex-1 truncate group-hover:text-ink-50 font-medium">
             {t("copilot.ask")}
           </span>
           <kbd className="kbd">⌘K</kbd>
@@ -77,6 +82,7 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
           <Clock className="w-3.5 h-3.5" /> {t("action.clock_in").split(" ")[0]}
         </Link>
 
+        <HelpButton />
         <NotificationsBell />
 
         <div className="relative" ref={menuRef}>

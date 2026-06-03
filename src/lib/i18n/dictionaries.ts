@@ -147,7 +147,7 @@ const EN: Dict = {
 
   // ─── Co-pilot ─────────────────────────────────────────────────────────
   "copilot.title":         "Co-pilot",
-  "copilot.ask":           "Ask Co-pilot or search…",
+  "copilot.ask":           "Tell me what you want to do — “schedule Joe for Friday”",
   "copilot.search":        "Search anything",
   "copilot.suggestions":   "Co-pilot suggests",
   "copilot.things_to_look":"3 things to look at today",
@@ -352,7 +352,7 @@ const ES: Dict = {
 
   // Co-pilot
   "copilot.title":         "Co-pilot",
-  "copilot.ask":           "Pregunta al Co-pilot o busca…",
+  "copilot.ask":           "Dime qué quieres hacer — “programa a Joe el viernes”",
   "copilot.search":        "Buscar lo que sea",
   "copilot.suggestions":   "Co-pilot sugiere",
   "copilot.things_to_look":"3 cosas para revisar hoy",
@@ -557,7 +557,7 @@ const FR: Dict = {
 
   // Co-pilot
   "copilot.title":         "Co-pilot",
-  "copilot.ask":           "Demande au Co-pilot ou recherche…",
+  "copilot.ask":           "Dites-moi ce que vous voulez faire — « planifie Joe vendredi »",
   "copilot.search":        "Tout chercher",
   "copilot.suggestions":   "Suggestions du Co-pilot",
   "copilot.things_to_look":"3 choses à surveiller aujourd'hui",
