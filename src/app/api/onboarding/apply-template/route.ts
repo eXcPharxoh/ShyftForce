@@ -172,6 +172,51 @@ export async function POST(req: Request) {
     }
   }
 
+  // 4b. Default PTO categories — almost every workforce needs at least
+  //     vacation + sick. Some industries get a third "personal" bucket.
+  //     Only seeded if the org has zero policies yet (idempotent).
+  let ptoPoliciesCreated = 0;
+  const existingPto = await prisma.ptoPolicy.count({ where: { organizationId: u.organizationId } });
+  if (existingPto === 0) {
+    const ptoForIndustry = ptoPoliciesForIndustry(tpl.key);
+    await prisma.ptoPolicy.createMany({
+      data: ptoForIndustry.map(p => ({
+        organizationId: u.organizationId,
+        category: p.category,
+        name: p.name,
+        annualHours: p.annualHours,
+        accrualMethod: p.accrualMethod,
+      })),
+    });
+    ptoPoliciesCreated = ptoForIndustry.length;
+  }
+
+  // 4c. Seasonal time-off blackouts — for industries with predictable peak
+  //     periods where employees often can't take time off. The default mode
+  //     is "soft" (requires manager override) so it nudges but doesn't block.
+  let blackoutsCreated = 0;
+  const existingBlackouts = await prisma.timeOffBlackout.count({ where: { organizationId: u.organizationId } });
+  if (existingBlackouts === 0) {
+    const blackoutsForIndustry = seasonalBlackoutsForIndustry(tpl.key);
+    if (blackoutsForIndustry.length > 0) {
+      const thisYear = new Date().getFullYear();
+      // If we're already past most of the year, seed next year so the dates
+      // are still actionable for the customer (no stale "blackout that already
+      // ended" entries cluttering the UI on day 1).
+      const seedYear = new Date().getMonth() >= 10 ? thisYear + 1 : thisYear;
+      await prisma.timeOffBlackout.createMany({
+        data: blackoutsForIndustry.map(b => ({
+          organizationId: u.organizationId,
+          name: b.name,
+          startsOn: parseMonthDay(b.startsOn, seedYear),
+          endsOn: parseMonthDay(b.endsOn, seedYear),
+          mode: b.mode,
+        })),
+      });
+      blackoutsCreated = blackoutsForIndustry.length;
+    }
+  }
+
   // 5. Vertical-specific default seeds (only seeded once per industry)
   let verticalSeeds = 0;
   if (tpl.key === "construction") {
@@ -277,5 +322,86 @@ export async function POST(req: Request) {
     sampleShiftsCreated,
     sampleDayNotesCreated,
     verticalSeeds,
+    ptoPoliciesCreated,
+    blackoutsCreated,
   });
+}
+
+// ─── Industry-specific PTO + blackout defaults ───────────────────────────────
+// Hard-coded here (not in industry-templates.ts) because they're a one-shot
+// seed and the template file should stay focused on the visible nav/labels.
+
+type PtoSeed = {
+  category: "vacation" | "sick" | "personal" | "bereavement" | "unpaid";
+  name: string;
+  annualHours: number; // 0 = not tracked / unlimited
+  accrualMethod: "annual_lump_sum" | "per_pay_period" | "per_hour_worked" | "unlimited";
+};
+
+function ptoPoliciesForIndustry(industry: string): PtoSeed[] {
+  // Vacation + Sick is the universal baseline. Per-industry tweaks below add
+  // a third or fourth category where the vertical commonly needs it.
+  const baseline: PtoSeed[] = [
+    { category: "vacation", name: "Vacation",  annualHours: 80, accrualMethod: "annual_lump_sum" },
+    { category: "sick",     name: "Sick time", annualHours: 40, accrualMethod: "per_hour_worked" },
+  ];
+  if (industry === "healthcare" || industry === "office") {
+    // Healthcare + office tend to formalize bereavement + personal days
+    baseline.push({ category: "bereavement", name: "Bereavement", annualHours: 24, accrualMethod: "annual_lump_sum" });
+    baseline.push({ category: "personal",    name: "Personal",    annualHours: 16, accrualMethod: "annual_lump_sum" });
+  }
+  if (industry === "construction" || industry === "field_service") {
+    // Trades + field service commonly have unpaid for weather/travel days
+    baseline.push({ category: "unpaid", name: "Unpaid time off", annualHours: 0, accrualMethod: "unlimited" });
+  }
+  return baseline;
+}
+
+type BlackoutSeed = {
+  name: string;
+  startsOn: string; // "MM-DD"
+  endsOn: string;   // "MM-DD"
+  mode: "hard" | "soft" | "warn";
+};
+
+function seasonalBlackoutsForIndustry(industry: string): BlackoutSeed[] {
+  // Industries with predictable peak periods get one or two soft blackouts.
+  // "soft" = requires manager override, not a hard block. Owner can change.
+  switch (industry) {
+    case "retail":
+    case "grocery":
+      return [
+        { name: "Black Friday weekend",       startsOn: "11-25", endsOn: "11-30", mode: "soft" },
+        { name: "Holiday shopping season",    startsOn: "12-15", endsOn: "12-26", mode: "soft" },
+      ];
+    case "restaurant":
+    case "hospitality":
+      return [
+        { name: "Valentine's Day rush",       startsOn: "02-13", endsOn: "02-15", mode: "soft" },
+        { name: "Mother's Day weekend",       startsOn: "05-09", endsOn: "05-12", mode: "soft" },
+        { name: "New Year's Eve service",     startsOn: "12-30", endsOn: "01-02", mode: "soft" },
+      ];
+    case "fitness":
+      return [
+        { name: "January resolution rush",    startsOn: "01-02", endsOn: "01-31", mode: "warn" },
+      ];
+    case "education":
+      return [
+        { name: "State testing window",       startsOn: "04-15", endsOn: "05-15", mode: "soft" },
+        { name: "Graduation week",            startsOn: "06-01", endsOn: "06-15", mode: "soft" },
+      ];
+    case "healthcare":
+      return [
+        // Flu season — staffing is critical, time off coordination matters
+        { name: "Flu season peak",            startsOn: "12-15", endsOn: "02-15", mode: "warn" },
+      ];
+    default:
+      return [];
+  }
+}
+
+function parseMonthDay(mmdd: string, year: number): Date {
+  const [m, d] = mmdd.split("-").map(Number);
+  // Use noon UTC to avoid timezone-edge weirdness when stored as DATE-only
+  return new Date(Date.UTC(year, m - 1, d, 12, 0, 0));
 }

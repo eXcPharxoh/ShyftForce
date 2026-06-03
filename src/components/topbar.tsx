@@ -31,6 +31,18 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        // Components elsewhere in the app can stash a pre-filled prompt in
+        // sessionStorage and then dispatch a synthetic ⌘K to open the
+        // Co-pilot already pointed at the user's intent (e.g. the schedule
+        // page's "Draft my week" banner). This is a zero-prop integration —
+        // any future caller can opt in just by writing the key.
+        const stashed = sessionStorage.getItem("copilot:initialPrompt");
+        if (stashed) {
+          sessionStorage.removeItem("copilot:initialPrompt");
+          setCmdkOpen(false);
+          openCopilotWithPrompt(stashed);
+          return;
+        }
         // If Co-pilot chat is open, ⌘K closes it. Otherwise toggle palette.
         if (copilotOpen) setCopilotOpen(false);
         else setCmdkOpen(v => !v);

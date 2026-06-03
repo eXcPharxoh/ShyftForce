@@ -9,6 +9,7 @@ import { LiveLaborChip } from "@/components/schedule/live-labor-chip";
 import { PublishWeekButton } from "@/components/schedule/publish-week-button";
 import { TemplatesButton } from "@/components/schedule/templates-button";
 import { ShiftCell } from "@/components/schedule/shift-cell";
+import { AiPromptBanner } from "@/components/schedule/ai-prompt-banner";
 import { ChevronLeft, ChevronRight, Flame, Printer } from "lucide-react";
 import Link from "next/link";
 
@@ -130,6 +131,10 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-5">
+      {/* AI-first scheduling: a chat prompt sits ABOVE the grid so managers
+          who don't want to think in cells can just type intent. The grid
+          stays the canonical UI for refining; this just adds an on-ramp. */}
+      {isManager && <AiPromptBanner aiConfigured={!!process.env.SHYFTFORCE_AI_KEY} />}
       <header className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-brand-500 mb-1">Schedule</div>

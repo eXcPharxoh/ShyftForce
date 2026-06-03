@@ -99,6 +99,37 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
         <p className="text-ink-500 dark:text-ink-400 mt-1">Let&rsquo;s get <b className="text-ink-900 dark:text-ink-100">{orgName}</b> set up in 60 seconds.</p>
       </header>
 
+      {/* Conversational alternative — for users who'd rather describe their
+          business in plain English than click through forms. Routes to the
+          Co-pilot with a pre-filled setup prompt; the Co-pilot's tools can
+          create locations, invite members, build the schedule, etc. */}
+      <button
+        onClick={() => {
+          sessionStorage.setItem(
+            "copilot:initialPrompt",
+            `Help me set up my workspace. I'll describe my business and you ask me what you need to know — then create the locations, positions, shift templates, and initial schedule for me. Start by asking what kind of business I run.`
+          );
+          window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, ctrlKey: true, bubbles: true }));
+        }}
+        className="w-full mb-6 card p-4 hover:border-brand-500/40 transition flex items-center gap-3 text-left bg-gradient-to-r from-brand-500/[0.06] to-purple-500/[0.06] border-brand-500/25"
+      >
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-500 text-white flex items-center justify-center shrink-0 shadow-soft">
+          <Sparkles className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-brand-400 mb-0.5">
+            Faster way
+          </div>
+          <div className="font-semibold text-sm text-ink-900 dark:text-ink-100">
+            Just talk to the assistant
+          </div>
+          <div className="text-[12px] text-ink-500 mt-0.5">
+            Describe your business in plain English. It&rsquo;ll ask what it needs to know and configure everything for you.
+          </div>
+        </div>
+        <ArrowRight className="w-5 h-5 text-brand-400 shrink-0" />
+      </button>
+
       <div className="flex items-center gap-2 max-w-sm mx-auto mb-8">
         {[1, 2, 3, 4].map((n) => (
           <div key={n} className="flex-1">
