@@ -78,8 +78,13 @@ export function TemplatesButton({ weekStart }: { weekStart: string }) {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="btn-outline h-9 text-xs">
-        <Layers className="w-3.5 h-3.5" /> Templates
+      <button
+        onClick={() => setOpen(true)}
+        className="btn-ghost btn-sm"
+        title="Templates — save or apply a saved week"
+        aria-label="Templates"
+      >
+        <Layers className="w-3.5 h-3.5" />
       </button>
 
       {open && (

@@ -1,7 +1,6 @@
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { addDays, dateLabel, fmtMoney, initials, startOfWeek, timeLabel } from "@/lib/utils";
-import { ScheduleControls } from "@/components/schedule/schedule-controls";
+import { addDays, dateLabel, fmtMoney, initials, startOfWeek } from "@/lib/utils";
 import { AutoScheduleButton } from "@/components/schedule/auto-schedule-button";
 import { AutoFillButton } from "@/components/schedule/auto-fill-button";
 import { ScheduleActions } from "@/components/schedule/schedule-actions";
@@ -11,7 +10,7 @@ import { TemplatesButton } from "@/components/schedule/templates-button";
 import { ShiftCell } from "@/components/schedule/shift-cell";
 import { AiPromptBanner } from "@/components/schedule/ai-prompt-banner";
 import { ImportShiftsButton } from "@/components/schedule/import-shifts-button";
-import { ChevronLeft, ChevronRight, Flame, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flame } from "lucide-react";
 import Link from "next/link";
 
 const PALETTE = ["#6aa2ff", "#4ee0c5", "#f5b544", "#f17a8e", "#a78bff", "#8db9ff"];
@@ -136,32 +135,69 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           who don't want to think in cells can just type intent. The grid
           stays the canonical UI for refining; this just adds an on-ramp. */}
       {isManager && <AiPromptBanner aiConfigured={!!process.env.SHYFTFORCE_AI_KEY} />}
+
+      {/* Single, tight toolbar — Agendrix-style. Page identity on the
+          left (title + tiny date range), navigation in the middle,
+          actions on the right grouped: secondary icons → primary CTAs.
+          No subtext duplicating counts; the grid shows them. */}
       <header className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-brand-500 mb-1">Schedule</div>
-          <h1 className="h-page">Week of {weekStart.toLocaleDateString("en-US", { month: "long", day: "numeric" })}</h1>
-          <p className="text-[13px] text-ink-300 mt-0.5">
-            {dateLabel(weekStart)} → {dateLabel(addDays(weekEnd, -1))} · {shifts.length} shifts · {totalHours.toFixed(0)}h
-          </p>
+          <h1 className="h-page leading-tight">
+            {dateLabel(weekStart)} – {dateLabel(addDays(weekEnd, -1))}
+          </h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href={`/schedule?w=${weekOffset - 1}&v=${view}`} className="btn-ghost btn-sm"><ChevronLeft className="w-3.5 h-3.5" /></Link>
-          <Link href={`/schedule?v=${view}`} className="btn-ghost btn-sm">Today</Link>
-          <Link href={`/schedule?w=${weekOffset + 1}&v=${view}`} className="btn-ghost btn-sm"><ChevronRight className="w-3.5 h-3.5" /></Link>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Date nav cluster */}
+          <div className="inline-flex items-center bg-white/[0.03] border border-white/[0.06] rounded-md p-0.5">
+            <Link href={`/schedule?w=${weekOffset - 1}&v=${view}`} className="px-2 py-1 rounded-sm text-ink-300 hover:text-ink-50 hover:bg-white/[0.04] transition" aria-label="Previous week">
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </Link>
+            <Link href={`/schedule?v=${view}`} className="px-2.5 py-1 rounded-sm text-[12px] font-medium text-ink-300 hover:text-ink-50 hover:bg-white/[0.04] transition">
+              Today
+            </Link>
+            <Link href={`/schedule?w=${weekOffset + 1}&v=${view}`} className="px-2 py-1 rounded-sm text-ink-300 hover:text-ink-50 hover:bg-white/[0.04] transition" aria-label="Next week">
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* View pill — moved into the toolbar so it doesn't claim its own
+              row below. Two views only; "By position" is the default. */}
+          <div className="inline-flex items-center bg-white/[0.03] border border-white/[0.06] rounded-md p-0.5">
+            {[
+              { v: "position", l: "Position" },
+              { v: "employee", l: "Employee" },
+            ].map(t => (
+              <Link
+                key={t.v}
+                href={`/schedule?w=${weekOffset}&v=${t.v}`}
+                className={`px-2.5 py-1 rounded-sm text-[12px] font-medium transition ${
+                  view === t.v ? "bg-brand-500/12 text-brand-300" : "text-ink-300 hover:text-ink-50"
+                }`}
+              >
+                {t.l}
+              </Link>
+            ))}
+          </div>
+
           {isManager && (
             <>
               <LiveLaborChip window="this_week" />
-              <Link
-                href={`/schedule/print?w=${weekStart.toISOString().slice(0,10)}&view=position`}
-                target="_blank"
-                className="btn-ghost btn-sm"
-                title="Print or save as PDF"
-              >
-                <Printer className="w-3.5 h-3.5" /> Print / PDF
-              </Link>
-              <TemplatesButton weekStart={weekStart.toISOString().slice(0,10)} />
-              <ImportShiftsButton />
-              <ScheduleActions weekStart={weekStart.toISOString().slice(0,10)} />
+
+              {/* Secondary actions: icon-only so they don't fight for
+                  attention with the primary CTAs on the right. Tooltips
+                  give the label on hover. ScheduleActions has its own
+                  overflow menu that already absorbs Print + Copy + Apply
+                  recurring + Coverage + Forecast. */}
+              <div className="inline-flex items-center gap-1">
+                <TemplatesButton weekStart={weekStart.toISOString().slice(0,10)} />
+                <ImportShiftsButton />
+                <ScheduleActions weekStart={weekStart.toISOString().slice(0,10)} />
+              </div>
+
+              {/* Primary actions — the money path. Always rightmost so
+                  Publish is the visual end-of-line for the manager. */}
               <AutoFillButton weekStart={weekStart.toISOString().slice(0,10)} openShiftCount={openShiftsList.length} />
               <AutoScheduleButton locations={locations.map(l => ({ id: l.id, name: l.name }))} aiConfigured={!!process.env.SHYFTFORCE_AI_KEY} />
               <PublishWeekButton weekStart={weekStart.toISOString().slice(0,10)} draftCount={drafts.length} />
@@ -170,25 +206,19 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
         </div>
       </header>
 
-      {/* View switcher */}
-      <div className="flex items-center gap-2">
-        <div className="inline-flex p-1 bg-white/[0.03] border border-white/[0.06] rounded-md">
-          {[
-            { v: "position", l: "By position" },
-            { v: "employee", l: "By employee" },
-          ].map(t => (
-            <Link
-              key={t.v}
-              href={`/schedule?w=${weekOffset}&v=${t.v}`}
-              className={`px-3 py-1.5 rounded-sm text-[12px] font-medium transition ${
-                view === t.v ? "bg-brand-500/12 text-brand-300" : "text-ink-300 hover:text-ink-50"
-              }`}
-            >
-              {t.l}
-            </Link>
-          ))}
-        </div>
-        <ScheduleControls locations={locations} totalShifts={shifts.length} openShifts={openShiftsList.length} drafts={drafts.length} />
+      {/* At-a-glance status strip — replaces the redundant subtext line
+          AND the old ScheduleControls bar (which had hard-coded fake
+          positions). Just the counts that actually matter, no filtering
+          UI we haven't wired yet. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
+        <span className="text-ink-400"><b className="text-ink-50 tabular-nums">{shifts.length}</b> shifts</span>
+        <span className="text-ink-400"><b className="text-ink-50 tabular-nums">{totalHours.toFixed(0)}h</b> scheduled</span>
+        {openShiftsList.length > 0 && (
+          <span className="text-warn"><b className="tabular-nums">{openShiftsList.length}</b> open</span>
+        )}
+        {drafts.length > 0 && (
+          <span className="text-amber-300 dark:text-amber-300"><b className="tabular-nums">{drafts.length}</b> draft{drafts.length === 1 ? "" : "s"}</span>
+        )}
       </div>
 
       {/* Banner for the sample shifts we seeded during onboarding so a new owner
@@ -234,19 +264,17 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
             </tr>
           </thead>
           <tbody>
-            {view === "position"
-              ? <PositionView shifts={shifts} memberById={memberById} days={days} weekStart={weekStart} canEdit={isManager} members={membersList} verticals={verticalOptions} positions={allPositions} payload={shiftPayload} colorForId={colorForId} />
-              : <EmployeeView shifts={shifts} members={members} days={days} weekStart={weekStart} canEdit={isManager} membersList={membersList} verticals={verticalOptions} positions={allPositions} payload={shiftPayload} />
-            }
-
-            {/* Open shifts row (always shown if any) */}
+            {/* OPEN SHIFTS — pinned to the top of the grid (Agendrix
+                pattern). Managers care most about unfilled coverage;
+                putting it last buried the work. The position/employee
+                rows include their non-open shifts only. */}
             {openShiftsList.length > 0 && (
-              <tr className="border-t border-white/[0.06] bg-warn/5">
-                <td className="p-3">
+              <tr className="border-b border-warn/20 bg-warn/[0.04]">
+                <td className="p-3 sticky left-0 bg-warn/[0.04]">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-warn/15 text-warn flex items-center justify-center text-[10px] font-bold">!</div>
+                    <div className="w-7 h-7 rounded-full bg-warn/15 text-warn flex items-center justify-center text-[11px] font-bold">!</div>
                     <div>
-                      <div className="text-[13px] font-medium text-warn">Open shifts</div>
+                      <div className="text-[13px] font-semibold text-warn">Open shifts</div>
                       <div className="text-[10px] text-ink-500">{openShiftsList.length} unfilled</div>
                     </div>
                   </div>
@@ -273,6 +301,11 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                 <td className="p-3 text-right text-warn font-mono text-[12px]">—</td>
               </tr>
             )}
+
+            {view === "position"
+              ? <PositionView shifts={shifts.filter(s => !s.isOpen)} memberById={memberById} days={days} weekStart={weekStart} canEdit={isManager} members={membersList} verticals={verticalOptions} positions={allPositions} payload={shiftPayload} colorForId={colorForId} />
+              : <EmployeeView shifts={shifts.filter(s => !s.isOpen)} members={members} days={days} weekStart={weekStart} canEdit={isManager} membersList={membersList} verticals={verticalOptions} positions={allPositions} payload={shiftPayload} />
+            }
 
             {/* Totals row */}
             <tr className="border-t-2 border-white/[0.12] bg-white/[0.02]">
@@ -339,42 +372,17 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <section className="card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[13px] font-semibold">Open Shifts ({openShiftsList.length})</h3>
-            <Link href="/open-shifts" className="text-[12px] text-brand-300 hover:underline">All →</Link>
-          </div>
-          <ul className="space-y-2">
-            {openShiftsList.length === 0 && <li className="text-[12px] text-ink-500">None this week.</li>}
-            {openShiftsList.slice(0, 6).map(s => (
-              <li key={s.id} className="flex items-center justify-between p-2.5 rounded-md bg-white/[0.02] border border-white/[0.04]">
-                <div className="min-w-0">
-                  <div className="text-[13px] font-medium">{s.position ?? "Open shift"}</div>
-                  <div className="text-[11px] text-ink-500">{s.location.name} · {dateLabel(s.startsAt)} {timeLabel(s.startsAt)}–{timeLabel(s.endsAt)}</div>
-                </div>
-                <Link href="/open-shifts" className="btn-ghost btn-sm">Assign</Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="card p-4">
-          <h3 className="text-[13px] font-semibold mb-3">Unpublished Drafts ({drafts.length})</h3>
-          <ul className="space-y-2">
-            {drafts.length === 0 && <li className="text-[12px] text-ink-500">All shifts are published.</li>}
-            {drafts.slice(0, 6).map(s => (
-              <li key={s.id} className="flex items-center justify-between p-2.5 rounded-md bg-warn/8 border border-warn/20">
-                <div className="min-w-0">
-                  <div className="text-[13px] font-medium">{s.member?.user.name ?? "Unassigned"} · {s.position}</div>
-                  <div className="text-[11px] text-ink-500">{s.location.name} · {dateLabel(s.startsAt)} {timeLabel(s.startsAt)}–{timeLabel(s.endsAt)}</div>
-                </div>
-                <span className="status status-warn">Draft</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
+      {/* Footer link to the dedicated Open Shifts page for managers who
+          want to triage in a list view rather than the grid. Replaces
+          the two duplicate cards that used to render Open Shifts +
+          Drafts here — both are already visible in the grid above. */}
+      {isManager && openShiftsList.length > 0 && (
+        <div className="text-center pt-2">
+          <Link href="/open-shifts" className="text-[12px] text-brand-300 hover:text-brand-200 hover:underline transition">
+            Open shifts list view →
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

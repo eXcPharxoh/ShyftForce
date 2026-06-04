@@ -86,8 +86,13 @@ export function ImportShiftsButton() {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="btn-ghost btn-sm">
-        <Upload className="w-3.5 h-3.5" /> Import CSV
+      <button
+        onClick={() => setOpen(true)}
+        className="btn-ghost btn-sm"
+        title="Import shifts from a CSV"
+        aria-label="Import shifts from CSV"
+      >
+        <Upload className="w-3.5 h-3.5" />
       </button>
 
       {open && (
