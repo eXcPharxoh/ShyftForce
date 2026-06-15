@@ -58,12 +58,16 @@ export function EwaSettingsForm({ initial }: { initial: Settings }) {
           <label className="label">Provider</label>
           <select className="input" value={s.providerName} onChange={(e) => setS({ ...s, providerName: e.target.value })}>
             <option value="internal_ledger">Internal ledger (deduct from next payroll)</option>
-            <option value="branch">Branch</option>
-            <option value="tapcheck">Tapcheck</option>
-            <option value="dailypay">DailyPay</option>
-            <option value="stripe_treasury">Stripe Treasury (instant debit)</option>
           </select>
-          <div className="text-[11px] text-ink-500 mt-1">Non-ledger providers require API keys configured in env.</div>
+          {/* Only the internal-ledger provider is fully wired. Branch /
+              Tapcheck / DailyPay / Stripe Treasury exist as scaffolds at
+              the lib layer but don't execute real transfers yet — surfacing
+              them in this dropdown would let an admin select a payout
+              method that then fails on every withdrawal request. Hiding
+              until the live integration ships. */}
+          <div className="text-[11px] text-ink-500 mt-1">
+            Real-money providers (Branch, Tapcheck, DailyPay, Stripe Treasury) are launching soon. Until then, requests record as an IOU against the next paycheck.
+          </div>
         </div>
 
         <div>

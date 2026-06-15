@@ -117,7 +117,7 @@ function Nav() {
             { l: "Industries", h: "#industries" },
             { l: "Pricing",    h: "#pricing" },
             { l: "Customers",  h: "#customers" },
-            { l: "Changelog",  h: "#" },
+            { l: "FAQ",        h: "#faq" },
           ].map(item => (
             <a key={item.l} href={item.h} className="text-[13.5px] text-ink-300 hover:text-ink-50 px-3.5 py-2 rounded-full hover:bg-white/[0.04] transition-all">
               {item.l}
@@ -1576,11 +1576,35 @@ function MobileStickyCTA() {
    FOOTER
    ============================================================================ */
 function MarketingFooter() {
+  /**
+   * Only links that go somewhere real. Anchors point at on-page sections;
+   * /legal/* exist as pages; mailto is a working contact. Stripping the
+   * filler ("Changelog / Careers / Blog / SOC 2 / Twitter") that previously
+   * sat as dead `href="#"` links — those are credibility killers on a
+   * landing page where a prospect is still deciding to trust us.
+   */
   const cols = [
-    { title: "Product", links: ["Features", "AI Co-pilot", "Auto-Scheduler", "Open-Shift Marketplace", "Compliance", "Mobile app", "Changelog"] },
-    { title: "Company", links: ["About", "Careers", "Blog", "Customers", "Press", "Brand kit"] },
-    { title: "Legal",   links: ["Terms", "Privacy", "DPA", "Security", "SOC 2", "Sub-processors"] },
-    { title: "Connect", links: ["Twitter", "LinkedIn", "GitHub", "Slack community", "support@shyftforce.com"] },
+    { title: "Product", links: [
+      { label: "Features",        href: "#features" },
+      { label: "How it compares", href: "#compare" },
+      { label: "Pricing",         href: "#pricing" },
+      { label: "FAQ",             href: "#faq" },
+    ]},
+    { title: "Customers", links: [
+      { label: "Industries we serve", href: "#industries" },
+      { label: "Customer stories",    href: "#customers" },
+      { label: "Sign in",             href: "/login" },
+      { label: "Start free",          href: "/signup" },
+    ]},
+    { title: "Legal", links: [
+      { label: "Terms of service",   href: "/legal/terms" },
+      { label: "Privacy policy",     href: "/legal/privacy" },
+      { label: "Data processing",    href: "/legal/dpa" },
+    ]},
+    { title: "Contact", links: [
+      { label: "support@shyftforce.com", href: "mailto:support@shyftforce.com" },
+      { label: "Sales inquiries",        href: "mailto:sales@shyftforce.com" },
+    ]},
   ];
   return (
     <footer className="border-t border-white/[0.06] pt-20 pb-10">
@@ -1604,7 +1628,9 @@ function MarketingFooter() {
               <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-brand-500 mb-3">{c.title}</div>
               <ul className="space-y-2">
                 {c.links.map(l => (
-                  <li key={l}><a href="#" className="text-[13px] text-ink-300 hover:text-ink-50 transition">{l}</a></li>
+                  <li key={l.href}>
+                    <a href={l.href} className="text-[13px] text-ink-300 hover:text-ink-50 transition">{l.label}</a>
+                  </li>
                 ))}
               </ul>
             </div>

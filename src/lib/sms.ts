@@ -84,15 +84,22 @@ export async function sendSms(args: SendArgs): Promise<SendResult> {
   const token = org?.twilioAuthToken   ?? process.env.TWILIO_AUTH_TOKEN;
   const from  = org?.twilioFromNumber  ?? process.env.TWILIO_FROM_NUMBER;
 
-  // Dev / unconfigured fallback — log + return ok. Same caveat as email:
-  // in production this silently drops messages on the floor. Warn loudly the
-  // first time per cold start so the gap shows up in dashboards.
+  // Dev path: log to console + return ok so flows still complete locally.
+  // Prod path: return ok=false so callers know the SMS didn't go out. Prior
+  // behavior swallowed messages and lied "ok" to the caller — a manager
+  // assigning a shift would think the employee got an SMS offer that never
+  // arrived. We also tag the audit row with status=failed so it shows up
+  // in the SMS log instead of pretending it sent.
   if (!sid || !token || !from) {
-    if (process.env.NODE_ENV === "production" && !warnedProdNoTwilio) {
-      warnedProdNoTwilio = true;
-      console.error("[sms] ⚠️  TWILIO credentials are not set in production. SMS messages are being logged to console only — recipients will never see them. Set TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER in Vercel.");
-    }
     console.log(`📱 [SMS → ${phone}] (${args.category}) ${args.body}`);
+    if (process.env.NODE_ENV === "production") {
+      if (!warnedProdNoTwilio) {
+        warnedProdNoTwilio = true;
+        console.error("[sms] ⚠️  TWILIO credentials are not set in production. Outbound SMS is disabled. Set TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER in Vercel.");
+      }
+      await logSms({ ...args, status: "failed", error: "twilio_not_configured" });
+      return { ok: false, error: "SMS service is not configured. Please contact support." };
+    }
     await logSms({ ...args, status: "sent", error: "console_fallback" });
     return { ok: true, skipped: "no twilio credentials configured (logged to console)" };
   }

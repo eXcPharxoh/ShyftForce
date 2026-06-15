@@ -10,15 +10,19 @@ export type SendArgs = { to: string; subject: string; html: string; text?: strin
 let warnedProdNoKey = false;
 export async function sendEmail({ to, subject, html, text }: SendArgs): Promise<{ ok: boolean; provider: "resend" | "console"; error?: string }> {
   if (!RESEND_KEY) {
-    // In dev this is fine — you can read the email from the console. In prod
-    // it's a SILENT LIE: the caller thinks the email went out and the user
-    // never receives it (most common case: stuck on /verify-email forever).
-    // Log loudly the first time per cold start so it's surfaced in dashboards.
-    if (process.env.NODE_ENV === "production" && !warnedProdNoKey) {
-      warnedProdNoKey = true;
-      console.error("[email] ⚠️  RESEND_API_KEY is not set in production. Emails are being logged to console only — recipients will never see them. Set RESEND_API_KEY in Vercel.");
-    }
+    // Dev path: log to console + return ok so flows still complete locally.
+    // Prod path: return ok=false so callers can surface a real error to the
+    // user instead of stranding them on /verify-email forever. The prior
+    // "ok=true on silent log" in production was a credibility bomb — users
+    // would believe their verification email was on its way and bounce.
     console.log(`\n📧 [EMAIL → ${to}] ${subject}\n${stripTags(html)}\n`);
+    if (process.env.NODE_ENV === "production") {
+      if (!warnedProdNoKey) {
+        warnedProdNoKey = true;
+        console.error("[email] ⚠️  RESEND_API_KEY is not set in production. Outbound mail is disabled. Set RESEND_API_KEY in Vercel.");
+      }
+      return { ok: false, provider: "console", error: "Email service is not configured. Please contact support." };
+    }
     return { ok: true, provider: "console" };
   }
   try {

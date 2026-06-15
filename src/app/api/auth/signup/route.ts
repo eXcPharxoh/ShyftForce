@@ -72,16 +72,28 @@ export async function POST(req: Request) {
   // Seed default PTO policies for new org
   await ensureDefaultPolicies(result.org.id);
 
-  // Send verification email
+  // Send verification email. We do NOT swallow the result: if outbound mail
+  // is unconfigured in production, the user account would otherwise be
+  // stranded — created in the DB but unverifiable — and they'd assume the
+  // app is broken. Surface the failure to the client so the signup form
+  // can render a real error instead of bouncing them to /verify-email
+  // where the email never arrives.
   const token = randomBytes(32).toString("hex");
   await prisma.emailVerification.create({
     data: { userId: result.user.id, token, expiresAt: new Date(Date.now() + 24*3600*1000) },
   });
-  await sendEmail({
+  const mail = await sendEmail({
     to: result.user.email,
     subject: "Verify your shyftforce email",
     html: Email.verify({ name: result.user.name, token }),
   });
+  if (!mail.ok) {
+    console.error("[signup] verification email failed to send:", mail.error);
+    return NextResponse.json({
+      error: "Your account was created, but we couldn't send the verification email. Please contact support@shyftforce.com — we'll verify you manually.",
+      partial: true,
+    }, { status: 502 });
+  }
 
   await audit({
     organizationId: result.org.id, actorId: result.user.id,

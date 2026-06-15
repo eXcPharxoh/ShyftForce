@@ -32,7 +32,15 @@ export default async function PosSettingsPage() {
         subtitle="Pull live sales for live labor% tracking and send-home recommendations."
       >
         <SyncButton />
-        <ConnectForm providers={[...SUPPORTED_PROVIDERS]} locations={locations.map(l => ({ id: l.id, name: l.name }))} />
+        {/* Hide stub providers (Toast/Square/Clover) from the UI until
+            their adapters land a real OAuth + sync. The API still
+            accepts them so we can quietly test them per-org, but a
+            paying customer shouldn't see a half-built option they'll
+            try and bounce off. Manual entry is always available. */}
+        <ConnectForm
+          providers={SUPPORTED_PROVIDERS.filter(p => p.status !== "stub")}
+          locations={locations.map(l => ({ id: l.id, name: l.name }))}
+        />
       </PageHeader>
 
       <section className="card overflow-hidden">
@@ -41,7 +49,7 @@ export default async function PosSettingsPage() {
         </header>
         {connections.length === 0 ? (
           <div className="p-8 text-center text-sm text-ink-500 dark:text-ink-400">
-            No POS connected yet. Use <span className="font-semibold">Connect POS</span> above to add Toast, Square, or manual entry.
+            No POS connected yet. Use <span className="font-semibold">Connect POS</span> above to add manual revenue entry — Toast, Square, and Clover integrations are launching soon.
           </div>
         ) : (
           <ul className="divide-y divide-ink-100 dark:divide-ink-800">

@@ -109,7 +109,20 @@ export default async function ReviewsPage() {
                     </div>
                   )}
                 </div>
-                <span className="text-[11px] text-ink-500 dark:text-ink-400 italic">Detail view coming soon</span>
+                {/* The drill-down view isn't built yet; we render the
+                    review summary inline (who-reviewed-who, type, rating,
+                    cycle, dates) which is what a manager actually needs
+                    to triage. Skipping the trailing "coming soon" — it
+                    read as a broken promise on every row. */}
+                <span className={`badge text-[10px] shrink-0 ${
+                  r.acknowledgedAt
+                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                    : r.submittedAt
+                      ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                      : "bg-ink-100 text-ink-600 dark:bg-ink-800 dark:text-ink-400"
+                }`}>
+                  {r.acknowledgedAt ? "Acknowledged" : r.submittedAt ? "Submitted" : "Draft"}
+                </span>
               </div>
             </li>
           ))}

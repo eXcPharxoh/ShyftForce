@@ -55,8 +55,6 @@ export default async function PtoSettingsPage() {
         <h3 className="h-section text-brand-900 dark:text-brand-200">How accrual works</h3>
         <ul className="mt-2 space-y-1.5 text-sm text-brand-800 dark:text-brand-300/90 leading-relaxed">
           <li><b>Annual lump sum</b> — full annual hours credited each January 1 (pro-rated for new hires by months remaining)</li>
-          <li><b>Per pay period</b> — annual hours / 26 credited each pay period (coming soon)</li>
-          <li><b>Per hour worked</b> — annual hours / 2080 credited per hour clocked in (coming soon)</li>
           <li><b>Unlimited</b> — no balance tracked. Requests still recorded for visibility.</li>
           <li>Set <code>annual hours = 0</code> on any category to stop tracking it (treated as unlimited).</li>
         </ul>
