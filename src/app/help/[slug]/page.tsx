@@ -126,8 +126,18 @@ async function loadArticle(slug: string) {
     case "inviting-your-team":              return import("@/components/help/articles/inviting-your-team");
     case "publishing-a-schedule":           return import("@/components/help/articles/publishing-a-schedule");
     case "open-shifts-marketplace":         return import("@/components/help/articles/open-shifts-marketplace");
+    case "using-the-ai-assistant":          return import("@/components/help/articles/using-the-ai-assistant");
     case "install-mobile-app":              return import("@/components/help/articles/install-mobile-app");
     case "clocking-in-and-out":             return import("@/components/help/articles/clocking-in-and-out");
+    case "how-pto-accrual-works":           return import("@/components/help/articles/how-pto-accrual-works");
+    case "requesting-time-off":             return import("@/components/help/articles/requesting-time-off");
+    case "approving-time-off":              return import("@/components/help/articles/approving-time-off");
+    case "time-off-blackouts":              return import("@/components/help/articles/time-off-blackouts");
+    case "fair-workweek-explained":         return import("@/components/help/articles/fair-workweek-explained");
+    case "overtime-and-breaks":             return import("@/components/help/articles/overtime-and-breaks");
+    case "connecting-payroll-finch":        return import("@/components/help/articles/connecting-payroll-finch");
+    case "connecting-your-register-pos":    return import("@/components/help/articles/connecting-your-register-pos");
+    case "changing-your-plan":              return import("@/components/help/articles/changing-your-plan");
     case "two-step-verification":           return import("@/components/help/articles/two-step-verification");
     case "downloading-your-data":           return import("@/components/help/articles/downloading-your-data");
     case "verification-email-not-arriving": return import("@/components/help/articles/verification-email-not-arriving");

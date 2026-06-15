@@ -97,6 +97,101 @@ export const ARTICLES: HelpArticle[] = [
     estReadMinutes: 4,
     relatedRoutes: ["/open-shifts", "/schedule/coverage"],
   },
+  {
+    slug: "using-the-ai-assistant",
+    title: "Using the AI assistant (⌘K)",
+    summary: "The assistant doesn't just answer questions — it can build a schedule, send messages, create roles. What to ask, what it can do.",
+    category: "scheduling",
+    audience: "manager",
+    tags: ["ai", "assistant", "copilot", "automation", "chat"],
+    estReadMinutes: 4,
+  },
+
+  // Time off ----------------------------------------------------------
+  {
+    slug: "how-pto-accrual-works",
+    title: "How PTO and time-off categories work",
+    summary: "Annual lump sum, unlimited, custom categories. What we ship by default and how to tailor it to your business.",
+    category: "time-off",
+    audience: "manager",
+    tags: ["pto", "vacation", "sick", "accrual", "policies"],
+    estReadMinutes: 3,
+    relatedRoutes: ["/settings/pto"],
+  },
+  {
+    slug: "requesting-time-off",
+    title: "Requesting time off",
+    summary: "Submit a request from your phone in 30 seconds. What happens after you submit, and how to cancel.",
+    category: "time-off",
+    audience: "employee",
+    tags: ["time off", "vacation", "sick day", "request", "pto"],
+    estReadMinutes: 2,
+    relatedRoutes: ["/time-off"],
+  },
+  {
+    slug: "approving-time-off",
+    title: "Approving (or declining) time-off requests",
+    summary: "The decision-in-one-minute workflow, conflict handling, and bulk approval.",
+    category: "time-off",
+    audience: "manager",
+    tags: ["time off", "approve", "decline", "request", "pto"],
+    estReadMinutes: 3,
+    relatedRoutes: ["/time-off"],
+  },
+  {
+    slug: "time-off-blackouts",
+    title: "Setting time-off blackout periods",
+    summary: "Black Friday, holidays, peak season — tell us when you don't want to lose people. We warn you instead of blocking.",
+    category: "time-off",
+    audience: "manager",
+    tags: ["blackout", "blackouts", "holiday", "peak", "black friday"],
+    estReadMinutes: 2,
+    relatedRoutes: ["/settings/time-off-blackouts"],
+  },
+
+  // Compliance --------------------------------------------------------
+  {
+    slug: "fair-workweek-explained",
+    title: "Fair Workweek and predictability pay",
+    summary: "If you publish a schedule with less than 14 days notice in NYC, Seattle, Oregon, Chicago, Philadelphia, or LA — you may owe extra. Here's what triggers it.",
+    category: "compliance",
+    audience: "manager",
+    tags: ["fair workweek", "predictability pay", "predictive scheduling", "nyc", "seattle", "oregon", "chicago", "philadelphia"],
+    estReadMinutes: 4,
+    relatedRoutes: ["/compliance"],
+  },
+  {
+    slug: "overtime-and-breaks",
+    title: "Overtime and meal breaks",
+    summary: "Federal 40-hour rule, daily-overtime states like California, and the wildly different state break requirements.",
+    category: "compliance",
+    audience: "manager",
+    tags: ["overtime", "ot", "breaks", "meal break", "rest break", "flsa", "california"],
+    estReadMinutes: 4,
+    relatedRoutes: ["/compliance"],
+  },
+
+  // Integrations ------------------------------------------------------
+  {
+    slug: "connecting-payroll-finch",
+    title: "Connecting your payroll (Gusto, ADP, Paychex, and 60+ more)",
+    summary: "Stop copy-pasting timesheets at end-of-period. We sync to your payroll system via Finch.",
+    category: "integrations",
+    audience: "manager",
+    tags: ["payroll", "finch", "gusto", "adp", "paychex", "quickbooks", "rippling"],
+    estReadMinutes: 3,
+    relatedRoutes: ["/settings/integrations"],
+  },
+  {
+    slug: "connecting-your-register-pos",
+    title: "Connecting your register (cash register / POS)",
+    summary: "Pull in sales so we can show you labor cost as a % of sales in real time — and tell you when to send someone home.",
+    category: "integrations",
+    audience: "manager",
+    tags: ["pos", "register", "sales", "toast", "square", "clover", "labor"],
+    estReadMinutes: 3,
+    relatedRoutes: ["/settings/pos"],
+  },
 
   // For employees -----------------------------------------------------
   {
@@ -120,6 +215,16 @@ export const ARTICLES: HelpArticle[] = [
   },
 
   // Account & billing -------------------------------------------------
+  {
+    slug: "changing-your-plan",
+    title: "Changing your plan, seats, or cancelling",
+    summary: "Upgrade, downgrade, add seats, pause for the off-season, or cancel — all from Settings → Billing. Pro-rated to the day.",
+    category: "account",
+    audience: "manager",
+    tags: ["billing", "plan", "upgrade", "downgrade", "cancel", "seats", "subscription"],
+    estReadMinutes: 3,
+    relatedRoutes: ["/settings/billing"],
+  },
   {
     slug: "two-step-verification",
     title: "Turning on 2-step verification",
