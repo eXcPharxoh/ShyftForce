@@ -53,7 +53,7 @@ const TIPS: Record<string, { title: string; body: string }> = {
   },
   "/settings/locations": {
     title: "Where your team works",
-    body: "Each location has an address, a clock-in radius (so people can't punch in from home), and an optional weekly budget. You can drag the map pin to fine-tune the geofence.",
+    body: "Each location has an address and a clock-in zone — a circle around it that controls how close someone has to be to punch in. Bigger circle = people can clock in from farther away. Drag the map pin to move the center.",
   },
   "/settings/integrations": {
     title: "Connect your other tools",

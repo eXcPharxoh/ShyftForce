@@ -18,10 +18,10 @@ export default async function ApiKeysPage() {
   return (
     <div className="space-y-5 max-w-3xl">
       <PageHeader
-        eyebrow="Developer"
+        eyebrow="For developers"
         icon={Key}
-        title="API keys"
-        subtitle="Issue scoped keys for the public REST API (v1). All endpoints documented at app.shyftforce.com/docs/api."
+        title="Access codes for other tools"
+        subtitle="Create special codes so other software (like Zapier or your own tools) can pull employee, shift, and payroll data. Full docs for tech teams at app.shyftforce.com/docs/api."
       />
       <ApiKeysClient
         initial={keys.map(k => ({

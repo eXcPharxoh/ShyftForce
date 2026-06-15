@@ -24,31 +24,29 @@ export default async function SecurityPage() {
         eyebrow="Account"
         icon={ShieldCheck}
         title="Security & privacy"
-        subtitle="Two-factor auth, push notifications, GDPR data export + deletion."
+        subtitle="Extra login security, phone alerts, and download or delete your data."
       />
 
       <section className="card p-5">
-        <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-1"><ShieldCheck className="w-4 h-4 text-brand-500" /> Two-factor authentication</h3>
+        <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-1"><ShieldCheck className="w-4 h-4 text-brand-500" /> Extra login security (2-step verification)</h3>
         <p className="text-xs text-ink-500 dark:text-ink-400 mb-3">
-          Add a second step to your sign-in using Google Authenticator, Authy, 1Password, or Microsoft Authenticator.
-          Once enabled, every login asks for a 6-digit code.
+          When this is on, signing in needs your password <i>and</i> a 6-digit code from an app on your phone (Google Authenticator, Authy, 1Password, or Microsoft Authenticator). Even if someone gets your password, they can't sign in without your phone.
         </p>
         <TwoFactorClient initialEnabled={!!user?.totpEnabled} email={u.email} />
       </section>
 
       <section className="card p-5">
-        <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-1"><Bell className="w-4 h-4 text-brand-500" /> Push notifications on this device</h3>
+        <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-1"><Bell className="w-4 h-4 text-brand-500" /> Get alerts on this device</h3>
         <p className="text-xs text-ink-500 dark:text-ink-400 mb-3">
-          Get desktop / mobile-home-screen push alerts for shift offers, schedule changes, and time-off decisions.
-          Works in Chrome, Firefox, Edge, and iOS 16.4+ (add ShyftForce to your Home Screen first).
+          Pop-up alerts for new shift offers, schedule changes, and time-off decisions — right on your screen even when ShyftForce isn't open. Works in Chrome, Firefox, Edge on computer, and on iPhone (add ShyftForce to your Home Screen first).
         </p>
         <EnablePushButton />
       </section>
 
       <section className="card p-5">
-        <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-1"><Download className="w-4 h-4 text-brand-500" /> Your data</h3>
+        <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-1"><Download className="w-4 h-4 text-brand-500" /> Your data is yours</h3>
         <p className="text-xs text-ink-500 dark:text-ink-400 mb-3">
-          GDPR / CCPA / PIPEDA right-to-portability. Download every record we hold about you as a single JSON file.
+          Download everything we have about you — shifts, time-off, messages, the lot — in one file. Privacy laws give you the right to ask for this any time.
         </p>
         <DataExportClient initialExport={lastExport
           ? { ...lastExport, createdAt: lastExport.createdAt.toISOString(), completedAt: lastExport.completedAt?.toISOString() ?? null, expiresAt: lastExport.expiresAt?.toISOString() ?? null }

@@ -316,7 +316,7 @@ export default async function Dashboard() {
 
       {/* Live locations map — sites, geofences, and today's punches (in/out). */}
       {isManager && (
-        <LocationsPunchMap orgId={u.organizationId} sinceHours={24} subtitle="Sites, geofences, and today's clock-ins" />
+        <LocationsPunchMap orgId={u.organizationId} sinceHours={24} subtitle="Your locations, clock-in zones, and today's punches" />
       )}
 
       {/* Nudge for invited teammates who haven't gone through /welcome yet. */}

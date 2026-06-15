@@ -110,7 +110,7 @@ export function ImportLocationsButton() {
                       Required: <code className="bg-white/60 dark:bg-black/30 px-1 rounded">name</code>
                     </div>
                     <div className="leading-relaxed">
-                      Optional: <code>address</code> (geocoded for map + GPS clock-in), <code>geofenceRadiusMeters</code> (default 100), <code>weeklyBudget</code>, <code>projectedRevenue</code>, <code>timezone</code> (IANA name like "America/Chicago").
+                      Optional columns: <code>address</code> (we'll look it up for the map + GPS clock-in), <code>geofenceRadiusMeters</code> (clock-in zone size in meters, default 100 ≈ 1 city block), <code>weeklyBudget</code>, <code>projectedRevenue</code>, <code>timezone</code> (like "America/Chicago").
                     </div>
                     <button onClick={downloadSample} className="mt-2 text-[11px] text-brand-700 dark:text-brand-300 font-semibold hover:underline inline-flex items-center gap-1">
                       <Download className="w-3 h-3" /> Download sample template

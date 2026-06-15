@@ -20,8 +20,8 @@ export default async function LocationSettingsPage() {
       <PageHeader
         eyebrow="Workspace"
         icon={Building2}
-        title="Locations & clock-in areas"
-        subtitle="Set the address and the allowed clock-in radius for each site. Stops people from punching in from home."
+        title="Your locations"
+        subtitle="Add each place your team works. We use the address to draw a clock-in zone — people have to be inside it to punch in, so no one clocks in from home."
       >
         <ImportLocationsButton />
         <LocationCreateForm />
@@ -77,10 +77,10 @@ export default async function LocationSettingsPage() {
       <div className="card p-4 text-xs text-ink-500 leading-relaxed">
         <div className="font-semibold mb-1 text-ink-300">Tips</div>
         <ul className="space-y-1">
-          <li>• Find coordinates fast: open Google Maps → right-click your site → click the lat/lng to copy.</li>
-          <li>• Typical radius: 50m for a single building, 100m for a campus, 500m+ for outdoor sites.</li>
-          <li>• Clock-ins outside the allowed area are still recorded but flagged as <b>outside</b> for manager review.</li>
-          <li>• <b>How it works:</b> when an employee taps Clock In, their phone asks for permission to share GPS. We measure how far they are from this address, and only let them clock in if they're inside the radius you set. No paid maps service — works offline-friendly.</li>
+          <li>• <b>Need the exact spot?</b> Open Google Maps → right-click your location → click the numbers that appear to copy them.</li>
+          <li>• <b>How big should the circle be?</b> 50m for one building, 100m for a campus, 500m+ for outdoor sites like construction.</li>
+          <li>• <b>Someone clocks in from too far away?</b> We still record the punch but flag it as "away from location" so you can verify.</li>
+          <li>• <b>How clock-in works:</b> when someone taps Clock In, their phone shares GPS. We check how far they are from this address — if they're inside the circle, they're in. No fancy maps service needed.</li>
         </ul>
       </div>
     </div>

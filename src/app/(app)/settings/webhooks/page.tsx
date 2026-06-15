@@ -26,10 +26,10 @@ export default async function WebhooksPage() {
   return (
     <div className="space-y-5 max-w-4xl">
       <PageHeader
-        eyebrow="Developer"
+        eyebrow="For developers"
         icon={Webhook}
-        title="Outbound webhooks"
-        subtitle="Get real-time events POSTed to your own endpoints. Every payload is HMAC-SHA256-signed."
+        title="Auto-notifications"
+        subtitle="Automatically send updates to your other business tools (Slack, Google Sheets, Zapier, QuickBooks…) when shifts, time-off, or approvals happen."
       />
       <WebhooksClient initial={initial} />
     </div>

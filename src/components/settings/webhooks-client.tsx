@@ -90,7 +90,7 @@ export function WebhooksClient({ initial }: { initial: Sub[] }) {
         <div className="card p-12 text-center">
           <Webhook className="w-10 h-10 mx-auto text-ink-300 mb-3" />
           <h3 className="font-bold">No webhooks yet</h3>
-          <p className="text-sm text-ink-500 mt-1 max-w-md mx-auto">Push real-time events to your own endpoint — wire shyftforce into Zapier, Make, your own systems, anything.</p>
+          <p className="text-sm text-ink-500 mt-1 max-w-md mx-auto">Send updates to your other tools whenever shifts, time-off, or payroll events happen — works with Zapier, Make, Slack, Google Sheets, your own systems.</p>
         </div>
       ) : (
         <ul className="space-y-2">
@@ -155,7 +155,7 @@ export function WebhooksClient({ initial }: { initial: Sub[] }) {
                       {copied ? <><CheckCircle2 className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
                     </button>
                   </div>
-                  <p className="text-[10px] text-amber-700 dark:text-amber-300 mt-2">Use this to verify each incoming payload. HMAC-SHA256 over the raw request body. Expected header: <code>X-ShyftForce-Signature: sha256=&lt;hex&gt;</code>.</p>
+                  <p className="text-[10px] text-amber-700 dark:text-amber-300 mt-2">Save this code somewhere safe — we'll only show it once. Your developer will use it to verify each message is really from us (technical: HMAC-SHA256, header <code>X-ShyftForce-Signature: sha256=&lt;hex&gt;</code>).</p>
                 </div>
                 <div className="text-xs text-ink-500">You'll never see this secret again. If you lose it, delete the webhook and create a new one.</div>
               </div>

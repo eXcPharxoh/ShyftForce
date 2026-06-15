@@ -95,7 +95,7 @@ export default async function AttendancePage() {
           orgId={orgId}
           sinceHours={168}
           title="Clock-in locations"
-          subtitle="Last 7 days — green inside the geofence, amber outside"
+          subtitle="Last 7 days — green if they clocked in from the location, amber if they were too far away"
           height={360}
         />
       )}
@@ -207,14 +207,14 @@ export default async function AttendancePage() {
           <section className="card p-5">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <div className="text-[10px] uppercase tracking-wider font-medium text-brand-500 font-mono">Live geofence</div>
+                <div className="text-[10px] uppercase tracking-wider font-medium text-brand-500 font-mono">Live clock-in zone</div>
                 <h3 className="text-lg font-semibold mt-0.5">{firstLoc.name}</h3>
                 <div className="text-[12px] text-ink-500 mt-0.5">
                   {people.length} clocked in · {centerLat.toFixed(4)}°, {centerLng.toFixed(4)}°
                 </div>
               </div>
               <Link href="/settings/locations" className="btn-ghost btn-sm">
-                <MapPin className="w-3.5 h-3.5" /> Manage geofences
+                <MapPin className="w-3.5 h-3.5" /> Edit clock-in zones
               </Link>
             </div>
             <GeofenceMap
@@ -388,9 +388,9 @@ export default async function AttendancePage() {
                   </div>
                 </div>
                 <div className="text-right text-[11px] shrink-0">
-                  {l.withinGeofence === true   && <span className="badge bg-emerald-50 text-emerald-700 flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> in geofence</span>}
-                  {l.withinGeofence === false  && <span className="badge bg-amber-50 text-amber-700 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> outside</span>}
-                  {l.withinGeofence == null    && <span className="badge-gray">unverified</span>}
+                  {l.withinGeofence === true   && <span className="badge bg-emerald-50 text-emerald-700 flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> at location</span>}
+                  {l.withinGeofence === false  && <span className="badge bg-amber-50 text-amber-700 flex items-center gap-1" title="Punched in from outside the clock-in zone — manager should verify"><AlertTriangle className="w-3 h-3" /> away from location</span>}
+                  {l.withinGeofence == null    && <span className="badge-gray" title="No GPS available">no location</span>}
                   {l.latitude != null && l.longitude != null && (
                     <a className="block mt-1 text-brand-600 hover:underline" target="_blank" rel="noopener" href={`https://www.google.com/maps?q=${l.latitude},${l.longitude}`}>view on map ↗</a>
                   )}

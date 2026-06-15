@@ -37,15 +37,15 @@ export function ConnectForm({ providers, locations }: { providers: Provider[]; l
   return (
     <>
       <button onClick={() => setOpen(true)} className="btn-primary text-xs">
-        <Plug className="w-4 h-4" /> Connect POS
+        <Plug className="w-4 h-4" /> Connect your register
       </button>
       {open && (
         <div className="fixed inset-0 z-50 bg-ink-900/50 dark:bg-black/70 backdrop-blur-[2px] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-ink-900 rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
             <header className="px-5 h-14 border-b border-ink-200 dark:border-ink-800 flex items-center justify-between">
               <div>
-                <div className="font-semibold text-sm">Connect POS</div>
-                <div className="text-[11px] text-ink-500 dark:text-ink-400">Pull live sales for labor cost tracking</div>
+                <div className="font-semibold text-sm">Connect your register</div>
+                <div className="text-[11px] text-ink-500 dark:text-ink-400">We'll pull in sales so you can see labor cost vs sales in real time</div>
               </div>
               <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800"><X className="w-4 h-4" /></button>
             </header>
@@ -54,7 +54,7 @@ export function ConnectForm({ providers, locations }: { providers: Provider[]; l
                 <label className="label">Provider</label>
                 <select className="input" value={provider} onChange={(e) => setProvider(e.target.value as any)}>
                   {providers.map((p) => (
-                    <option key={p.id} value={p.id}>{p.label} {p.status === "stub" ? "(beta — manual token only)" : p.status === "manual" ? "(no live integration — enter revenue by hand)" : ""}</option>
+                    <option key={p.id} value={p.id}>{p.label} {p.status === "stub" ? "(early access — manual setup)" : p.status === "manual" ? "(type in sales yourself)" : ""}</option>
                   ))}
                 </select>
               </div>
@@ -67,21 +67,22 @@ export function ConnectForm({ providers, locations }: { providers: Provider[]; l
               {provider !== "manual" && (
                 <>
                   <div>
-                    <label className="label">{provider === "toast" ? "Restaurant GUID" : "Location ID"}</label>
+                    <label className="label">{provider === "toast" ? "Restaurant ID (from your POS account)" : "Location ID (from your POS account)"}</label>
                     <input className="input" value={externalId} onChange={(e) => setExternalId(e.target.value)} placeholder={provider === "toast" ? "abc-123-…" : "L1234ABCD"} />
                   </div>
                   <div>
-                    <label className="label">Access token</label>
-                    <input className="input font-mono text-xs" value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="paste here — encrypt at rest in production" />
+                    <label className="label">Access code from your POS</label>
+                    <input className="input font-mono text-xs" value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="paste the long code here" />
+                    <div className="text-[11px] text-ink-500 mt-1">Ask your POS support team for a "long-lived access token" or "API key" — they'll give you a long string of letters and numbers.</div>
                   </div>
                   <div className="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-500/10 rounded-lg p-2 leading-snug">
-                    <b>Beta integration.</b> Paste a long-lived access token issued out-of-band — the OAuth handshake isn&rsquo;t live yet. The connection will sync sales every 15 min using this token. If the token expires you&rsquo;ll need to refresh it manually here.
+                    <b>Early access.</b> We'll automatically pull in new sales every 15 minutes. If the connection ever stops working, get a fresh code from your POS and paste it back here.
                   </div>
                 </>
               )}
               {provider === "manual" && (
                 <div className="text-[11px] text-ink-500 dark:text-ink-400 bg-ink-50/60 dark:bg-ink-800/60 rounded-lg p-2 leading-snug">
-                  No external sync. After connecting, enter daily revenue in the Live Labor view and the % vs target updates instantly.
+                  Don't have a connected POS? No problem. After connecting, type in each day's sales total on the Live Labor page and we'll show your labor % vs sales right away.
                 </div>
               )}
               {error && <div className="text-rose-600 text-xs">{error}</div>}

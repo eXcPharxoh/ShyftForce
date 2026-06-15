@@ -39,19 +39,19 @@ export function EwaSettingsForm({ initial }: { initial: Settings }) {
       <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-ink-200 dark:border-ink-700 hover:bg-ink-50/40 dark:hover:bg-ink-800/40">
         <input type="checkbox" checked={s.enabled} onChange={(e) => setS({ ...s, enabled: e.target.checked })} className="rounded border-ink-300 text-brand-500" />
         <div className="flex-1">
-          <div className="font-semibold text-sm">Enable Earned Wage Access</div>
-          <div className="text-[11px] text-ink-500 dark:text-ink-400">Employees can request a portion of earned-but-unpaid wages on demand.</div>
+          <div className="font-semibold text-sm">Let employees get paid before payday</div>
+          <div className="text-[11px] text-ink-500 dark:text-ink-400">Example: an employee has earned $400 this week but payday is Friday. With this on, they can request part of it now and you take it out of their next paycheck.</div>
         </div>
       </label>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="label">Accessible portion</label>
+          <label className="label">How much of their earned pay can they take early?</label>
           <div className="flex items-center gap-2">
             <input type="range" min="0" max="100" value={s.earnedRatePercent} onChange={(e) => setS({ ...s, earnedRatePercent: parseInt(e.target.value, 10) })} className="flex-1" />
             <span className="font-bold text-sm w-12 text-right tabular-nums">{s.earnedRatePercent}%</span>
           </div>
-          <div className="text-[11px] text-ink-500 mt-1">Most providers default to 50%. Higher = more flexibility, more risk for unpaid time.</div>
+          <div className="text-[11px] text-ink-500 mt-1">50% is a safe starting point. Higher % = more flexibility for them, but bigger paycheck reduction if they don't finish the week.</div>
         </div>
 
         <div>

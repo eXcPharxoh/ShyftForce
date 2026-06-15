@@ -26,10 +26,10 @@ export default async function PosSettingsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Live revenue"
+        eyebrow="Sales tracking"
         icon={Plug}
-        title="POS connections"
-        subtitle="Pull live sales for live labor% tracking and send-home recommendations."
+        title="Your register & sales"
+        subtitle="Connect your point-of-sale (cash register) so we can show you what % of every sale is going to labor — and suggest when to send people home."
       >
         <SyncButton />
         {/* Hide stub providers (Toast/Square/Clover) from the UI until
