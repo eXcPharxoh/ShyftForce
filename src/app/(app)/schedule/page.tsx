@@ -162,9 +162,9 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
             </Link>
           </div>
 
-          {/* View pill — moved into the toolbar so it doesn't claim its own
-              row below. Two views only; "By position" is the default. */}
-          <div className="inline-flex items-center bg-white/[0.03] border border-white/[0.06] rounded-md p-0.5">
+          {/* View toggle — uses the new .segmented utility for a modern
+              tab look with gradient active state + smooth transitions. */}
+          <div className="segmented">
             {[
               { v: "position", l: "Position" },
               { v: "employee", l: "Employee" },
@@ -172,9 +172,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
               <Link
                 key={t.v}
                 href={`/schedule?w=${weekOffset}&v=${t.v}`}
-                className={`px-2.5 py-1 rounded-sm text-[12px] font-medium transition ${
-                  view === t.v ? "bg-brand-500/12 text-brand-300" : "text-ink-300 hover:text-ink-50"
-                }`}
+                className={`seg ${view === t.v ? "seg-active" : ""}`}
               >
                 {t.l}
               </Link>

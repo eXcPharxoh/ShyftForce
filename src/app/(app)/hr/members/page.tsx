@@ -38,36 +38,39 @@ export default async function MembersPage() {
             narrow viewports instead of overflowing the page. min-w-[560px] on
             the table keeps the columns from collapsing into mush. */}
         <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[560px]">
-          <thead className="bg-ink-50/60 dark:bg-ink-800/60 text-[11px] uppercase text-ink-600 dark:text-ink-400 font-semibold tracking-wider">
+        <table className="t-modern min-w-[560px]">
+          <thead>
             <tr>
-              <th className="text-left px-4 py-2.5">Name</th>
-              <th className="text-left px-4 py-2.5">Position</th>
-              <th className="text-left px-4 py-2.5 hidden sm:table-cell">Location</th>
-              <th className="text-left px-4 py-2.5 hidden md:table-cell">Hired</th>
-              <th className="text-right px-4 py-2.5">Rate</th>
-              <th className="text-center px-4 py-2.5">Role</th>
+              <th>Name</th>
+              <th>Position</th>
+              <th className="hidden sm:table-cell">Location</th>
+              <th className="hidden md:table-cell">Hired</th>
+              <th className="text-right">Rate</th>
+              <th className="text-center">Role</th>
             </tr>
           </thead>
           <tbody>
             {members.map(m => (
-              <tr key={m.id} className="border-t border-ink-100 dark:border-ink-800 hover:bg-ink-50/40 dark:hover:bg-ink-800/40 group">
-                <td className="px-4 py-2.5">
+              <tr key={m.id} className="group">
+                <td>
                   <Link href={`/hr/members/${m.id}`} className="flex items-center gap-2.5">
                     {m.user.avatar
                       ? <img src={m.user.avatar} className="w-8 h-8 rounded-full" alt="" />
-                      : <div className="w-8 h-8 rounded-full bg-ink-200 dark:bg-ink-800 text-ink-700 dark:text-ink-300 text-xs font-semibold flex items-center justify-center">{initials(m.user.name)}</div>}
-                    <div>
-                      <div className="font-semibold text-ink-900 dark:text-ink-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition">{m.user.name}</div>
-                      <div className="text-[11px] text-ink-500 dark:text-ink-400">{m.user.email}</div>
+                      : <div
+                          className="w-8 h-8 rounded-full text-white text-[10px] font-semibold flex items-center justify-center shrink-0"
+                          style={{ background: "linear-gradient(135deg, #a78bff, #3a6fd8)" }}
+                        >{initials(m.user.name)}</div>}
+                    <div className="min-w-0">
+                      <div className="font-semibold text-ink-50 group-hover:text-brand-300 transition truncate">{m.user.name}</div>
+                      <div className="text-[11px] text-ink-500 truncate">{m.user.email}</div>
                     </div>
                   </Link>
                 </td>
-                <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300">{m.position ?? "—"}</td>
-                <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300 hidden sm:table-cell">{m.location?.name ?? "—"}</td>
-                <td className="px-4 py-2.5 text-ink-600 dark:text-ink-400 hidden md:table-cell">{dateLabel(m.hireDate)}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums text-ink-900 dark:text-ink-100">{fmtMoney(m.hourlyRate ?? 0)}/h</td>
-                <td className="px-4 py-2.5 text-center">
+                <td className="text-ink-300">{m.position ?? "—"}</td>
+                <td className="text-ink-300 hidden sm:table-cell">{m.location?.name ?? "—"}</td>
+                <td className="text-ink-400 hidden md:table-cell">{dateLabel(m.hireDate)}</td>
+                <td className="text-right tabular-nums text-ink-50 font-medium">{fmtMoney(m.hourlyRate ?? 0)}/h</td>
+                <td className="text-center">
                   {m.role === "ADMIN" && <span className="badge-orange">Admin</span>}
                   {m.role === "MANAGER" && <span className="badge-blue">Manager</span>}
                   {m.role === "EMPLOYEE" && <span className="badge-gray">Employee</span>}

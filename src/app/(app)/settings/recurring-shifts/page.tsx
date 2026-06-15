@@ -49,33 +49,33 @@ export default async function RecurringShiftsPage() {
           />
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[680px]">
-            <thead className="bg-ink-50/60 dark:bg-ink-800/60 text-[11px] uppercase font-semibold tracking-wider text-ink-500 dark:text-ink-400">
+          <table className="t-modern min-w-[680px]">
+            <thead>
               <tr>
-                <th className="text-left px-4 py-2.5">Member</th>
-                <th className="text-left px-4 py-2.5">Day</th>
-                <th className="text-left px-4 py-2.5">Time</th>
-                <th className="text-left px-4 py-2.5 hidden md:table-cell">Location · Position</th>
-                <th className="text-left px-4 py-2.5 hidden lg:table-cell">Effective</th>
-                <th className="text-center px-4 py-2.5">Status</th>
-                <th className="text-right px-4 py-2.5"></th>
+                <th>Member</th>
+                <th>Day</th>
+                <th>Time</th>
+                <th className="hidden md:table-cell">Location · Position</th>
+                <th className="hidden lg:table-cell">Effective</th>
+                <th className="text-center">Status</th>
+                <th className="text-right"></th>
               </tr>
             </thead>
             <tbody>
               {items.map(r => (
-                <tr key={r.id} className="border-t border-ink-100 dark:border-ink-800 hover:bg-ink-50/40 dark:hover:bg-ink-800/40">
-                  <td className="px-4 py-2.5 font-medium text-ink-900 dark:text-ink-100">{r.member.user.name}</td>
-                  <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300">{DOW[r.dayOfWeek]}</td>
-                  <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300 tabular-nums">{r.startTime} – {r.endTime}</td>
-                  <td className="px-4 py-2.5 text-ink-700 dark:text-ink-300 hidden md:table-cell">{locById.get(r.locationId) ?? "—"}{r.position ? ` · ${r.position}` : ""}</td>
-                  <td className="px-4 py-2.5 text-[11px] text-ink-500 dark:text-ink-400 hidden lg:table-cell">
+                <tr key={r.id}>
+                  <td className="font-medium text-ink-50">{r.member.user.name}</td>
+                  <td className="text-ink-300">{DOW[r.dayOfWeek]}</td>
+                  <td className="text-ink-300 tabular-nums">{r.startTime} – {r.endTime}</td>
+                  <td className="text-ink-300 hidden md:table-cell">{locById.get(r.locationId) ?? "—"}{r.position ? ` · ${r.position}` : ""}</td>
+                  <td className="text-[11px] text-ink-500 hidden lg:table-cell">
                     from {r.effectiveFrom.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     {r.effectiveUntil && <> · until {r.effectiveUntil.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</>}
                   </td>
-                  <td className="px-4 py-2.5 text-center">
+                  <td className="text-center">
                     {r.active ? <span className="badge-green">Active</span> : <span className="badge-gray">Paused</span>}
                   </td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td className="text-right">
                     <RecurringShiftEditor
                       mode="edit"
                       members={members.map(m => ({ id: m.id, name: m.user.name, position: m.position }))}

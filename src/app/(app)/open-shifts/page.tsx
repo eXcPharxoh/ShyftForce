@@ -143,18 +143,15 @@ export default async function OpenShiftsPage() {
 
       {isManager && (
         <section>
-          {/* Tab strip — matches design spec */}
+          {/* Tab strip — using the new .segmented utility for a modern
+              tab feel. Only one tab is currently interactive (no real
+              "in progress" or "filled" routes yet); the others are read-
+              only labels with built-in muted styling. */}
           <div className="flex items-center gap-3 mb-3">
-            <div className="inline-flex p-1 bg-white/[0.03] border border-white/[0.06] rounded-md">
-              <span className="px-3 py-1.5 rounded-sm text-[12px] font-medium bg-brand-500/12 text-brand-300">
-                Open · {openShifts.length}
-              </span>
-              <span className="px-3 py-1.5 rounded-sm text-[12px] font-medium text-ink-300">
-                In progress · {openShifts.filter(s => s.openShiftOffers.some(o => o.status === "pending")).length}
-              </span>
-              <span className="px-3 py-1.5 rounded-sm text-[12px] font-medium text-ink-500">
-                Filled · —
-              </span>
+            <div className="segmented">
+              <span className="seg seg-active">Open · {openShifts.length}</span>
+              <span className="seg">In progress · {openShifts.filter(s => s.openShiftOffers.some(o => o.status === "pending")).length}</span>
+              <span className="seg opacity-60">Filled · —</span>
             </div>
           </div>
 

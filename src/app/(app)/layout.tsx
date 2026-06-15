@@ -111,8 +111,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {onTrial && <TrialBanner daysLeft={daysLeft} />}
         {showVerifyEmailBanner && <VerifyEmailBanner email={u.email} />}
         <Topbar name={u.name} role={u.role} image={u.image} showPlatformAdmin={showPlatformAdmin} />
-        {/* pb-24 on mobile keeps content clear of the bottom nav; lg restores normal spacing. */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-7 pb-24 lg:pb-7 max-w-[1480px] w-full mx-auto">
+        {/* pb-24 on mobile keeps content clear of the bottom nav; lg restores normal spacing.
+            The page-fade-in class adds a 200ms ease-out fade on every route change
+            so navigation doesn't hard-cut — a subtle premium signal. */}
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-7 pb-24 lg:pb-7 max-w-[1480px] w-full mx-auto page-fade-in">
           {children}
         </main>
         {/* Mobile-only primary navigation (sidebar is hidden < lg). */}
