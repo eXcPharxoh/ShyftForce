@@ -58,16 +58,33 @@
 
   ::selection { background: rgb(var(--accent)); color: #fff; }
 
+  /* Sleek modern scrollbars — narrower track, gradient thumb,
+     smooth color shift on hover. Auto-applies to every scrollable area. */
   ::-webkit-scrollbar          { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track    { background: rgb(var(--ink)); }
-  ::-webkit-scrollbar-thumb    { background: #1f2a44; border-radius: 6px; }
-  ::-webkit-scrollbar-thumb:hover { background: #2c3a5a; }
-
-  *:focus-visible {
-    outline: 2px solid rgb(var(--accent));
-    outline-offset: 2px;
-    border-radius: 4px;
+  ::-webkit-scrollbar-track    { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #2c3a5a 0%, #1f2a44 100%);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #4659a0 0%, #2c3a5a 100%);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-corner { background: transparent; }
+  /* Firefox */
+  * { scrollbar-width: thin; scrollbar-color: #2c3a5a transparent; }
+
+  /* Brand-glow focus ring instead of the harsh solid outline */
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(106,162,255,0.35);
+    border-radius: 4px;
+    transition: box-shadow 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  /* Buttons and links inherit the focus ring naturally; native form
+     elements override with their own component-specific rings above. */
 
   h1, h2, h3, h4 { letter-spacing: -0.025em; }
 }
@@ -83,9 +100,20 @@
       linear-gradient(180deg, rgba(255,255,255,0.04), transparent 30%),
       linear-gradient(180deg, rgb(var(--surface-2)) 0%, rgb(var(--surface)) 100%);
     position: relative;
+    transition: border-color 200ms, box-shadow 200ms;
+  }
+  /* When a card contains a focused element (think: a form inside a card),
+     softly highlight the card itself so the user has visual ownership of
+     where they are. Tiny detail; reads as polish. */
+  .card:focus-within {
+    border-color: rgba(106,162,255,0.25);
+    box-shadow: 0 0 0 1px rgba(106,162,255,0.15), 0 8px 24px -8px rgba(0,0,0,0.4);
   }
   .card-hover {
     @apply transition-all duration-300 hover:-translate-y-px hover:shadow-card-hover;
+  }
+  .card-hover:hover {
+    border-color: rgba(255,255,255,0.18);
   }
   .card-glow {
     @apply card shadow-glow;
@@ -107,23 +135,43 @@
            disabled:opacity-50 disabled:cursor-not-allowed;
     padding: 11px 18px;
   }
-  /* Primary — gradient with multi-layer shadow */
+  /* Primary — gradient with multi-layer shadow + inner top highlight
+     for that subtle 3D depth that flat buttons lack */
   .btn-primary {
-    @apply btn text-white shadow-btn-primary;
+    @apply btn text-white shadow-btn-primary relative overflow-hidden;
     background: linear-gradient(180deg, #7aaeff 0%, #6aa2ff 50%, #3a6fd8 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.25),
+      inset 0 -1px 0 0 rgba(0,0,0,0.15),
+      0 1px 2px 0 rgba(0,0,0,0.2),
+      0 4px 12px -4px rgba(58,111,216,0.5);
   }
   .btn-primary:hover:not(:disabled) {
-    @apply shadow-btn-primary-hover;
     transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.30),
+      inset 0 -1px 0 0 rgba(0,0,0,0.15),
+      0 2px 4px 0 rgba(0,0,0,0.2),
+      0 8px 20px -4px rgba(58,111,216,0.6);
   }
-  /* Ghost — translucent, frosted */
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  /* Ghost — translucent, frosted, with subtle inner highlight */
   .btn-ghost {
-    @apply btn border border-white/[0.12] backdrop-blur-md text-ink-50;
+    @apply btn border border-white/[0.10] backdrop-blur-md text-ink-50;
     background: rgba(255,255,255,0.04);
+    box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.04);
   }
   .btn-ghost:hover:not(:disabled) {
     background: rgba(255,255,255,0.08);
-    border-color: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.22);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.06),
+      0 2px 8px -2px rgba(0,0,0,0.2);
+  }
+  .btn-ghost:active:not(:disabled) {
+    background: rgba(255,255,255,0.06);
   }
   /* Outline */
   .btn-outline {
@@ -151,15 +199,300 @@
   .btn:hover .arrow { transform: translateX(3px); }
 
   /* =========================================================================
-     INPUTS
+     INPUTS — text, textarea, number, etc. Crisper border, soft inner glow,
+     prominent focus ring with brand glow. Auto-applies to every <input>,
+     <select>, and <textarea> using the .input class.
      ========================================================================= */
   .input {
-    @apply block w-full rounded-sm border border-white/[0.12] px-3.5 py-2
-           text-sm text-ink-50 placeholder:text-ink-500 transition
-           focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500;
-    background: rgba(26,36,64,0.4);
+    @apply block w-full rounded-md border border-white/[0.12] px-3.5 py-2.5
+           text-sm text-ink-50 placeholder:text-ink-500
+           transition-all duration-200
+           focus:outline-none focus:border-brand-500/60 focus:ring-4 focus:ring-brand-500/15;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%),
+      rgba(26,36,64,0.45);
+    box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.03);
+  }
+  .input:hover:not(:disabled):not(:focus) {
+    border-color: rgba(255,255,255,0.18);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%),
+      rgba(26,36,64,0.55);
+  }
+  .input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   .label { @apply text-xs font-medium text-ink-300 mb-1.5 block; }
+
+  /* =========================================================================
+     NATIVE SELECT UPGRADE — every <select class="input"> gets a custom
+     chevron, no browser default arrow, smooth open animation. The chevron
+     is inlined as an SVG data URI so it works offline and matches color.
+     ========================================================================= */
+  select.input,
+  select.input-sm {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image:
+      url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23b0bbd1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E"),
+      linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%),
+      rgba(26,36,64,0.45);
+    background-repeat: no-repeat, no-repeat, no-repeat;
+    background-position: right 12px center, 0 0, 0 0;
+    background-size: 12px, auto, auto;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+  select.input:hover:not(:disabled),
+  select.input-sm:hover:not(:disabled) {
+    background-image:
+      url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23ecf1fb' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E"),
+      linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%),
+      rgba(26,36,64,0.55);
+  }
+  /* Style the dropdown menu options where browsers allow (Firefox honors;
+     Chrome partial; Safari uses system menu). */
+  select.input option,
+  select.input-sm option {
+    background-color: rgb(13,20,34);
+    color: rgb(236,241,251);
+    padding: 8px;
+  }
+
+  /* =========================================================================
+     NATIVE CHECKBOX + RADIO UPGRADE — modern card-style controls with
+     smooth check transitions. Set `accent-color` for the few places we
+     can't reach with appearance:none.
+     ========================================================================= */
+  input[type="checkbox"]:not(.no-style) {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1.5px solid rgba(255,255,255,0.18);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%),
+      rgba(26,36,64,0.45);
+    cursor: pointer;
+    display: inline-block;
+    vertical-align: middle;
+    position: relative;
+    transition: all 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    flex-shrink: 0;
+  }
+  input[type="checkbox"]:not(.no-style):hover:not(:disabled) {
+    border-color: rgba(106,162,255,0.4);
+    background: rgba(106,162,255,0.06);
+  }
+  input[type="checkbox"]:not(.no-style):checked {
+    background: linear-gradient(180deg, #7aaeff, #3a6fd8);
+    border-color: #3a6fd8;
+    box-shadow: 0 0 0 1px rgba(106,162,255,0.4), 0 2px 6px -1px rgba(106,162,255,0.4);
+  }
+  input[type="checkbox"]:not(.no-style):checked::after {
+    content: "";
+    position: absolute;
+    left: 4px; top: 0;
+    width: 5px; height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  input[type="checkbox"]:not(.no-style):focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(106,162,255,0.25);
+  }
+  input[type="checkbox"]:not(.no-style):disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  input[type="radio"]:not(.no-style) {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.18);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%),
+      rgba(26,36,64,0.45);
+    cursor: pointer;
+    display: inline-block;
+    vertical-align: middle;
+    position: relative;
+    transition: all 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    flex-shrink: 0;
+  }
+  input[type="radio"]:not(.no-style):hover:not(:disabled) {
+    border-color: rgba(106,162,255,0.4);
+    background: rgba(106,162,255,0.06);
+  }
+  input[type="radio"]:not(.no-style):checked {
+    border-color: #6aa2ff;
+    background: rgba(106,162,255,0.08);
+    box-shadow: 0 0 0 1px rgba(106,162,255,0.4);
+  }
+  input[type="radio"]:not(.no-style):checked::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7aaeff, #3a6fd8);
+  }
+
+  /* =========================================================================
+     NATIVE RANGE SLIDER UPGRADE — track + thumb with brand gradient,
+     soft glow on hover. Used by EWA settings %, pricing seat slider,
+     geofence radius slider.
+     ========================================================================= */
+  input[type="range"]:not(.no-style) {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg,
+      rgba(106,162,255,0.6) 0%, rgba(106,162,255,0.6) var(--value, 50%),
+      rgba(255,255,255,0.08) var(--value, 50%), rgba(255,255,255,0.08) 100%);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]:not(.no-style)::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffffff, #cfd9ee);
+    border: 2px solid #6aa2ff;
+    box-shadow: 0 2px 6px -1px rgba(0,0,0,0.4), 0 0 0 1px rgba(106,162,255,0.3);
+    cursor: pointer;
+    transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                box-shadow 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  input[type="range"]:not(.no-style)::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px -2px rgba(106,162,255,0.5), 0 0 0 6px rgba(106,162,255,0.12);
+  }
+  input[type="range"]:not(.no-style)::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffffff, #cfd9ee);
+    border: 2px solid #6aa2ff;
+    box-shadow: 0 2px 6px -1px rgba(0,0,0,0.4), 0 0 0 1px rgba(106,162,255,0.3);
+    cursor: pointer;
+  }
+
+  /* =========================================================================
+     SEGMENTED CONTROL — modern tabs with a sliding indicator. Use as:
+       <div class="segmented">
+         <button class="seg seg-active">Position</button>
+         <button class="seg">Employee</button>
+       </div>
+     ========================================================================= */
+  .segmented {
+    @apply inline-flex items-center p-1 rounded-md border border-white/[0.06]
+           bg-white/[0.02] gap-0.5;
+  }
+  .seg {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px]
+           font-medium text-ink-300 transition-all duration-150 cursor-pointer;
+  }
+  .seg:hover:not(.seg-active) {
+    @apply text-ink-50;
+    background: rgba(255,255,255,0.04);
+  }
+  .seg-active {
+    @apply text-brand-200;
+    background: linear-gradient(180deg, rgba(106,162,255,0.18) 0%, rgba(106,162,255,0.10) 100%);
+    box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.06),
+                0 1px 2px 0 rgba(0,0,0,0.2),
+                0 0 0 1px rgba(106,162,255,0.25);
+  }
+
+  /* =========================================================================
+     TOGGLE SWITCH — for on/off settings. Use as:
+       <button class="switch" data-on={isOn}><span /></button>
+     The data-on attribute drives the knob position.
+     ========================================================================= */
+  .switch {
+    @apply relative inline-flex w-9 h-5 rounded-full border border-white/[0.08]
+           cursor-pointer transition-colors duration-200;
+    background: rgba(26,36,64,0.6);
+  }
+  .switch[data-on="true"] {
+    background: linear-gradient(180deg, #7aaeff, #3a6fd8);
+    border-color: rgba(106,162,255,0.4);
+    box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.15), 0 0 0 1px rgba(106,162,255,0.2);
+  }
+  .switch > span {
+    @apply absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white
+           transition-transform duration-200;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .switch[data-on="true"] > span {
+    transform: translateX(16px);
+  }
+
+  /* =========================================================================
+     MODERN TABLES — apply to <table class="t-modern">. Sticky header,
+     hover-row highlight, clean dividers, subtle row stripe option via
+     .t-zebra. Auto-handles the right padding + alignment.
+     ========================================================================= */
+  .t-modern {
+    @apply w-full text-sm border-collapse;
+  }
+  .t-modern thead th {
+    @apply text-left px-4 py-3 text-[10px] font-mono uppercase tracking-[0.12em]
+           text-ink-500 font-medium border-b border-white/[0.08]
+           sticky top-0 z-10 backdrop-blur;
+    background: linear-gradient(180deg, rgba(13,20,34,0.95) 0%, rgba(13,20,34,0.85) 100%);
+  }
+  .t-modern tbody td {
+    @apply px-4 py-3 border-b border-white/[0.04] text-ink-200 align-middle;
+  }
+  .t-modern tbody tr {
+    @apply transition-colors duration-100;
+  }
+  .t-modern tbody tr:hover {
+    background: rgba(255,255,255,0.025);
+  }
+  .t-modern tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .t-zebra tbody tr:nth-child(even) {
+    background: rgba(255,255,255,0.012);
+  }
+
+  /* =========================================================================
+     CHIP — for filter chips, tags. Smaller than badge, interactive.
+     ========================================================================= */
+  .chip {
+    @apply inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px]
+           font-medium text-ink-300 border border-white/[0.08]
+           transition-colors duration-150 cursor-pointer;
+    background: rgba(255,255,255,0.02);
+  }
+  .chip:hover {
+    @apply text-ink-50;
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.16);
+  }
+  .chip-active {
+    @apply text-brand-200;
+    background: rgba(106,162,255,0.12);
+    border-color: rgba(106,162,255,0.35);
+  }
 
   /* =========================================================================
      STATUS PILLS — ●  label format
@@ -304,6 +637,77 @@
                 border-color 0.35s;
   }
   .lift:hover { transform: translateY(-3px); }
+
+  /* =========================================================================
+     MODAL CHROME — for every Dialog/Drawer across the app. Backdrop has a
+     stronger blur than before so the dialog feels weighty; the dialog
+     itself gets a subtle scale-in + glow. Use as:
+       <div class="modal-backdrop">
+         <div class="modal-panel">…</div>
+       </div>
+     ========================================================================= */
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    background: rgba(5, 8, 16, 0.65);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    animation: backdrop-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .modal-panel {
+    @apply rounded-lg border border-white/[0.12] max-w-lg w-full;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.04), transparent 30%),
+      linear-gradient(180deg, rgb(var(--surface-2)) 0%, rgb(var(--surface)) 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.06),
+      0 24px 64px -16px rgba(0,0,0,0.5),
+      0 0 0 1px rgba(106,162,255,0.05);
+    animation: modal-in 250ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes backdrop-in {
+    from { opacity: 0; backdrop-filter: blur(0); }
+    to   { opacity: 1; backdrop-filter: blur(12px) saturate(140%); }
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* =========================================================================
+     ICON BUTTON — square, icon-only. Use for toolbar actions: Edit, Print,
+     Delete, etc. Hover lifts the icon's tint, focus glows.
+     ========================================================================= */
+  .icon-btn {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-md
+           text-ink-400 transition-all duration-150 cursor-pointer;
+    background: transparent;
+  }
+  .icon-btn:hover:not(:disabled) {
+    @apply text-ink-50;
+    background: rgba(255,255,255,0.06);
+  }
+  .icon-btn:active:not(:disabled) {
+    background: rgba(255,255,255,0.10);
+  }
+  .icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* =========================================================================
+     LINK — semantic underline that doesn't look like Web 1.0
+     ========================================================================= */
+  .link {
+    @apply text-brand-300 transition-colors duration-150;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(106,162,255,0.4);
+  }
+  .link:hover {
+    @apply text-brand-200;
+    text-decoration-color: rgba(106,162,255,0.8);
+  }
 }
 
 @layer utilities {
