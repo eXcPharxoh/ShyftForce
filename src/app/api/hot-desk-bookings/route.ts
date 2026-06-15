@@ -53,12 +53,17 @@ export async function DELETE(req: Request) {
 
   const b = await prisma.hotDeskBooking.findFirst({
     where: { id: parsed.data.id, hotDesk: { organizationId: u.organizationId } },
-    select: { id: true, memberId: true },
+    select: { id: true, memberId: true, date: true, halfDay: true, hotDesk: { select: { name: true } } },
   });
   if (!b) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (u.role === "EMPLOYEE" && b.memberId !== u.memberId) {
     return NextResponse.json({ error: "Not your booking" }, { status: 403 });
   }
   await prisma.hotDeskBooking.delete({ where: { id: parsed.data.id } });
+  await audit({
+    organizationId: u.organizationId, actorId: u.id,
+    action: "org.update", entityType: "HotDeskBooking", entityId: parsed.data.id,
+    metadata: { op: "delete", deskName: b.hotDesk.name, date: b.date, halfDay: b.halfDay },
+  });
   return NextResponse.json({ ok: true });
 }

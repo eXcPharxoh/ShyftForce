@@ -85,15 +85,15 @@ export async function openShiftForCover(opts: {
     no_show: `${shift.member?.user.name ?? "Assigned employee"} did not clock in`,
   };
   const startStr = shift.startsAt.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  for (const mgr of managers) {
-    if (mgr.id === fromMemberId && mgr.id === opts.triggeredByMemberId) continue;
-    await prisma.message.create({
-      data: {
-        fromId: fromMemberId,
-        toId: mgr.id,
-        body: `🚨 Coverage needed · ${shift.location.name} · ${startStr}. ${reasonLabel[opts.reason]}. Auto-offered to top ${offersSent} → /schedule/coverage`,
-      },
-    });
+  // Single batch insert instead of N sequential creates — at 30 managers
+  // the prior loop was 30 round-trips to Neon per shift opening, which
+  // dominated the request time on bigger orgs.
+  const body = `🚨 Coverage needed · ${shift.location.name} · ${startStr}. ${reasonLabel[opts.reason]}. Auto-offered to top ${offersSent} → /schedule/coverage`;
+  const recipients = managers
+    .filter(mgr => !(mgr.id === fromMemberId && mgr.id === opts.triggeredByMemberId))
+    .map(mgr => ({ fromId: fromMemberId, toId: mgr.id, body }));
+  if (recipients.length > 0) {
+    await prisma.message.createMany({ data: recipients });
   }
 
   return { offersSent, releasedMemberId: previousMemberId };
@@ -182,13 +182,10 @@ async function escalateToManagers(
   });
   const startStr = shift.startsAt.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   const tag = kind === "wave3_done" ? "All 3 waves exhausted" : "No remaining eligible candidates";
-  for (const mgr of managers) {
-    await prisma.message.create({
-      data: {
-        fromId: fromMemberId,
-        toId: mgr.id,
-        body: `🛑 Coverage escalation · ${shift.location.name} · ${startStr}. ${tag}. Manual action needed → /schedule/coverage`,
-      },
+  const body = `🛑 Coverage escalation · ${shift.location.name} · ${startStr}. ${tag}. Manual action needed → /schedule/coverage`;
+  if (managers.length > 0) {
+    await prisma.message.createMany({
+      data: managers.map(mgr => ({ fromId: fromMemberId, toId: mgr.id, body })),
     });
   }
 }

@@ -8,11 +8,19 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const type = url.searchParams.get("type") ?? "timesheets";
 
+  // Hard cap per export type. CSV exports are user-facing one-offs —
+  // a 10k-row file is already past Excel's friendly range, and an
+  // unbounded findMany on a 50k-employee org would OOM the lambda.
+  // If a user really needs more, they can paginate via offset (TODO).
+  const MAX_MEMBERS = 5_000;
+  const MAX_SHIFTS  = 10_000;
+
   if (type === "members") {
     const members = await prisma.member.findMany({
       where: { organizationId: u.organizationId },
       include: { user: true, location: true },
       orderBy: { user: { name: "asc" } },
+      take: MAX_MEMBERS,
     });
     const rows = members.map(m => ({
       name: m.user.name, email: m.user.email,
@@ -30,7 +38,8 @@ export async function GET(req: Request) {
     const shifts = await prisma.shift.findMany({
       where: { location: { organizationId: u.organizationId } },
       include: { member: { include: { user: true } }, location: true },
-      orderBy: { startsAt: "asc" },
+      orderBy: { startsAt: "desc" },
+      take: MAX_SHIFTS,
     });
     const rows = shifts.map(s => ({
       member:    s.member?.user.name ?? "(open shift)",

@@ -70,12 +70,17 @@ export async function DELETE(req: Request) {
 
   const b = await prisma.meetingRoomBooking.findFirst({
     where: { id: parsed.data.id, room: { organizationId: u.organizationId } },
-    select: { id: true, organizerId: true },
+    select: { id: true, organizerId: true, title: true, startsAt: true, endsAt: true, room: { select: { name: true } } },
   });
   if (!b) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (u.role === "EMPLOYEE" && b.organizerId !== u.memberId) {
     return NextResponse.json({ error: "Not your booking" }, { status: 403 });
   }
   await prisma.meetingRoomBooking.delete({ where: { id: parsed.data.id } });
+  await audit({
+    organizationId: u.organizationId, actorId: u.id,
+    action: "org.update", entityType: "MeetingRoomBooking", entityId: parsed.data.id,
+    metadata: { op: "delete", roomName: b.room.name, title: b.title, startsAt: b.startsAt, endsAt: b.endsAt },
+  });
   return NextResponse.json({ ok: true });
 }
