@@ -1593,8 +1593,8 @@ function MarketingFooter() {
     { title: "Customers", links: [
       { label: "Industries we serve", href: "#industries" },
       { label: "Customer stories",    href: "#customers" },
+      { label: "Help center",         href: "/help" },
       { label: "Sign in",             href: "/login" },
-      { label: "Start free",          href: "/signup" },
     ]},
     { title: "Legal", links: [
       { label: "Terms of service",   href: "/legal/terms" },

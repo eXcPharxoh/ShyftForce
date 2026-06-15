@@ -170,6 +170,26 @@ export function HelpButton() {
             <kbd className="kbd shrink-0 mt-1">⌘K</kbd>
           </button>
 
+          {/* browse help center — for the user who wants to read rather than ask */}
+          <a
+            href="/help"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block px-4 py-3 border-b border-white/[0.06] hover:bg-white/[0.03] transition flex items-start gap-2.5"
+            onClick={() => setOpen(false)}
+          >
+            <div className="w-8 h-8 rounded-lg bg-white/[0.04] text-ink-300 flex items-center justify-center shrink-0">
+              <BookOpen className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold">Browse help articles</div>
+              <div className="text-[12px] text-ink-500 mt-0.5 truncate">
+                Plain-English answers, searchable
+              </div>
+            </div>
+            <ExternalLink className="w-3 h-3 text-ink-500 shrink-0 mt-1.5" />
+          </a>
+
           {/* contact support */}
           <a
             href="mailto:support@shyftforce.com?subject=Help%20with%20ShyftForce"
