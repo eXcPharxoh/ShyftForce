@@ -137,6 +137,11 @@ async function loadArticle(slug: string) {
     case "overtime-and-breaks":             return import("@/components/help/articles/overtime-and-breaks");
     case "connecting-payroll-finch":        return import("@/components/help/articles/connecting-payroll-finch");
     case "connecting-your-register-pos":    return import("@/components/help/articles/connecting-your-register-pos");
+    case "restaurant-tip-pooling":          return import("@/components/help/articles/restaurant-tip-pooling");
+    case "security-checkpoint-scans":       return import("@/components/help/articles/security-checkpoint-scans");
+    case "healthcare-permits-licences":     return import("@/components/help/articles/healthcare-permits-licences");
+    case "construction-safety-briefings":   return import("@/components/help/articles/construction-safety-briefings");
+    case "state-by-state-labor-laws":       return import("@/components/help/articles/state-by-state-labor-laws");
     case "changing-your-plan":              return import("@/components/help/articles/changing-your-plan");
     case "two-step-verification":           return import("@/components/help/articles/two-step-verification");
     case "downloading-your-data":           return import("@/components/help/articles/downloading-your-data");

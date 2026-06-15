@@ -116,8 +116,8 @@ function Nav() {
             { l: "Product",    h: "#features" },
             { l: "Industries", h: "#industries" },
             { l: "Pricing",    h: "#pricing" },
-            { l: "Customers",  h: "#customers" },
             { l: "FAQ",        h: "#faq" },
+            { l: "Changelog",  h: "/changelog" },
           ].map(item => (
             <a key={item.l} href={item.h} className="text-[13.5px] text-ink-300 hover:text-ink-50 px-3.5 py-2 rounded-full hover:bg-white/[0.04] transition-all">
               {item.l}
@@ -1590,11 +1590,11 @@ function MarketingFooter() {
       { label: "Pricing",         href: "#pricing" },
       { label: "FAQ",             href: "#faq" },
     ]},
-    { title: "Customers", links: [
+    { title: "Resources", links: [
+      { label: "Help center",         href: "/help" },
+      { label: "Changelog",           href: "/changelog" },
       { label: "Industries we serve", href: "#industries" },
       { label: "Customer stories",    href: "#customers" },
-      { label: "Help center",         href: "/help" },
-      { label: "Sign in",             href: "/login" },
     ]},
     { title: "Legal", links: [
       { label: "Terms of service",   href: "/legal/terms" },

@@ -31,8 +31,9 @@ export const CATEGORIES: HelpCategory[] = [
   { slug: "time-off",        title: "Time off & PTO",           emoji: "🏖️", order: 4, description: "Requests, approvals, and policies" },
   { slug: "compliance",      title: "Labor law & compliance",   emoji: "⚖️", order: 5, description: "Fair Workweek, overtime, and breaks" },
   { slug: "integrations",    title: "Connections & integrations", emoji: "🔌", order: 6, description: "Payroll, POS, SMS, and email" },
-  { slug: "account",         title: "Account & billing",        emoji: "💳", order: 7, description: "Plan, seats, security, and data" },
-  { slug: "troubleshooting", title: "Something not working?",   emoji: "🛠️", order: 8, description: "Common problems and how to fix them" },
+  { slug: "industry",        title: "Industry-specific features", emoji: "🏷️", order: 7, description: "Restaurants, security, healthcare, construction" },
+  { slug: "account",         title: "Account & billing",        emoji: "💳", order: 8, description: "Plan, seats, security, and data" },
+  { slug: "troubleshooting", title: "Something not working?",   emoji: "🛠️", order: 9, description: "Common problems and how to fix them" },
 ];
 
 export type HelpAudience = "manager" | "employee" | "all";
@@ -170,6 +171,16 @@ export const ARTICLES: HelpArticle[] = [
     estReadMinutes: 4,
     relatedRoutes: ["/compliance"],
   },
+  {
+    slug: "state-by-state-labor-laws",
+    title: "State-by-state labor law reference",
+    summary: "Overtime, meal breaks, rest breaks, predictive scheduling, tip credit, and minimum wage — federal default plus every state with stricter rules.",
+    category: "compliance",
+    audience: "manager",
+    tags: ["state", "labor law", "minimum wage", "tip credit", "california", "new york", "texas", "florida", "washington", "oregon"],
+    estReadMinutes: 8,
+    relatedRoutes: ["/compliance"],
+  },
 
   // Integrations ------------------------------------------------------
   {
@@ -191,6 +202,47 @@ export const ARTICLES: HelpArticle[] = [
     tags: ["pos", "register", "sales", "toast", "square", "clover", "labor"],
     estReadMinutes: 3,
     relatedRoutes: ["/settings/pos"],
+  },
+
+  // Industry-specific features ---------------------------------------
+  {
+    slug: "restaurant-tip-pooling",
+    title: "Tip pooling for restaurants",
+    summary: "Pool types (even / by hours / role-weighted), per-employee entry, POS sync, and auto IRS Form 8027 at year-end.",
+    category: "industry",
+    audience: "manager",
+    tags: ["tips", "tip pool", "restaurant", "irs 8027", "tip out", "server", "bartender"],
+    estReadMinutes: 4,
+    relatedRoutes: ["/tips"],
+  },
+  {
+    slug: "security-checkpoint-scans",
+    title: "Patrol checkpoints for security teams",
+    summary: "QR codes around the site, scan from the app, GPS-verified — proof of patrol for your clients and insurance.",
+    category: "industry",
+    audience: "manager",
+    tags: ["security", "patrol", "checkpoint", "qr code", "guard", "scan"],
+    estReadMinutes: 3,
+    relatedRoutes: ["/settings/checkpoints", "/checkpoints"],
+  },
+  {
+    slug: "healthcare-permits-licences",
+    title: "Tracking permits and licenses (RN, BLS, guard cards, etc.)",
+    summary: "Per-employee permit tracking with auto-renewal reminders and auto-block on expiry. Required for healthcare, security, field service.",
+    category: "industry",
+    audience: "manager",
+    tags: ["permits", "license", "rn", "lpn", "bls", "cpr", "acls", "guard card", "osha", "forklift"],
+    estReadMinutes: 4,
+    relatedRoutes: ["/settings/permits", "/hr/members"],
+  },
+  {
+    slug: "construction-safety-briefings",
+    title: "Daily safety briefings (toolbox talks) for construction",
+    summary: "Pre-built 30-topic library aligned to OSHA's most-cited topics. Crew acknowledges before clocking in. Audit-ready PDF logs.",
+    category: "industry",
+    audience: "manager",
+    tags: ["construction", "safety", "toolbox talk", "briefing", "osha", "jsa", "hazcom", "fall protection"],
+    estReadMinutes: 4,
   },
 
   // For employees -----------------------------------------------------
