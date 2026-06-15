@@ -93,10 +93,10 @@ export default async function PtPayoutReportPage({ searchParams }: { searchParam
           <p className="text-sm text-ink-500">No sessions in this period.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
-              <thead className="text-[10px] uppercase tracking-wider text-ink-500">
-                <tr className="border-b border-ink-200 dark:border-ink-800">
-                  <th className="text-left py-2">Trainer</th>
+            <table className="t-modern min-w-[640px]">
+              <thead>
+                <tr>
+                  <th>Trainer</th>
                   <th className="text-right">Booked</th>
                   <th className="text-right">Done</th>
                   <th className="text-right">No-show</th>
@@ -107,20 +107,20 @@ export default async function PtPayoutReportPage({ searchParams }: { searchParam
               </thead>
               <tbody>
                 {trainerRanked.map((t, i) => (
-                  <tr key={t.name} className="border-b border-ink-100 dark:border-ink-800 hover:bg-ink-50/50 dark:hover:bg-ink-800/50">
-                    <td className="py-2.5">
+                  <tr key={t.name}>
+                    <td>
                       <div className="flex items-center gap-2">
                         <UserCheck className="w-4 h-4 text-brand-500" />
-                        <span className="font-semibold">{t.name}</span>
-                        {i === 0 && <span className="text-[10px] bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded font-semibold">TOP</span>}
+                        <span className="font-semibold text-ink-50">{t.name}</span>
+                        {i === 0 && <span className="badge-amber text-[10px]">Top</span>}
                       </div>
                     </td>
-                    <td className="text-right">{t.booked}</td>
-                    <td className="text-right text-emerald-700 dark:text-emerald-400 font-semibold">{t.done}</td>
-                    <td className="text-right text-rose-600">{t.noShow}</td>
+                    <td className="text-right text-ink-200">{t.booked}</td>
+                    <td className="text-right text-emerald-400 font-semibold">{t.done}</td>
+                    <td className="text-right text-rose-400">{t.noShow}</td>
                     <td className="text-right text-ink-500">{t.cancelled}</td>
-                    <td className="text-right">${(t.gross / 100).toFixed(0)}</td>
-                    <td className="text-right font-bold">${(t.payout / 100).toFixed(0)}</td>
+                    <td className="text-right text-ink-200">${(t.gross / 100).toFixed(0)}</td>
+                    <td className="text-right font-bold text-ink-50">${(t.payout / 100).toFixed(0)}</td>
                   </tr>
                 ))}
               </tbody>

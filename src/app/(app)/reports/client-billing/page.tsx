@@ -61,38 +61,38 @@ export default async function ClientBillingPage({ searchParams }: { searchParams
             No clients with billable hours yet. <Link href="/clients" className="text-brand-600">Add clients</Link> and assign locations to them.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-ink-50/60 dark:bg-ink-800/60 text-[11px] uppercase text-ink-600 dark:text-ink-400 font-semibold tracking-wider">
+          <table className="t-modern">
+            <thead>
               <tr>
-                <th className="text-left px-5 py-2.5">Client</th>
-                <th className="text-left px-5 py-2.5">Locations</th>
-                <th className="text-right px-5 py-2.5">Regular</th>
-                <th className="text-right px-5 py-2.5">OT</th>
-                <th className="text-right px-5 py-2.5">Rate</th>
-                <th className="text-right px-5 py-2.5">Subtotal</th>
+                <th>Client</th>
+                <th>Locations</th>
+                <th className="text-right">Regular</th>
+                <th className="text-right">OT</th>
+                <th className="text-right">Rate</th>
+                <th className="text-right">Subtotal</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.clientId} className="border-t border-ink-100 dark:border-ink-800">
-                  <td className="px-5 py-3">
-                    <div className="font-semibold">{r.clientName}</div>
+                <tr key={r.clientId}>
+                  <td>
+                    <div className="font-semibold text-ink-50">{r.clientName}</div>
                     {r.contactEmail && <div className="text-[11px] text-ink-500">{r.contactEmail}</div>}
-                    <div className="text-[10px] text-ink-400">{r.invoiceTerms.replace(/_/g, " ")}</div>
+                    <div className="text-[10px] text-ink-500">{r.invoiceTerms.replace(/_/g, " ")}</div>
                   </td>
-                  <td className="px-5 py-3 text-[11px] text-ink-600 dark:text-ink-400">
+                  <td className="text-[11px] text-ink-400">
                     {r.byLocation.map((l) => <div key={l.locationId}>{l.locationName} · {l.hours.toFixed(1)}h</div>)}
                     {r.byLocation.length === 0 && <span>—</span>}
                   </td>
-                  <td className="px-5 py-3 text-right tabular-nums">{r.hoursRegular.toFixed(1)}h</td>
-                  <td className="px-5 py-3 text-right tabular-nums text-amber-700">{r.hoursOvertime.toFixed(1)}h</td>
-                  <td className="px-5 py-3 text-right tabular-nums">${(r.billRateCents / 100).toFixed(2)}/h</td>
-                  <td className="px-5 py-3 text-right tabular-nums font-bold">${(r.subtotalCents / 100).toFixed(2)}</td>
+                  <td className="text-right tabular-nums text-ink-200">{r.hoursRegular.toFixed(1)}h</td>
+                  <td className="text-right tabular-nums text-amber-400">{r.hoursOvertime.toFixed(1)}h</td>
+                  <td className="text-right tabular-nums text-ink-200">${(r.billRateCents / 100).toFixed(2)}/h</td>
+                  <td className="text-right tabular-nums font-bold text-ink-50">${(r.subtotalCents / 100).toFixed(2)}</td>
                 </tr>
               ))}
-              <tr className="border-t-2 border-ink-300 dark:border-ink-700 bg-ink-50/30 dark:bg-ink-900/30 font-bold">
-                <td colSpan={5} className="px-5 py-3 text-right">Total</td>
-                <td className="px-5 py-3 text-right tabular-nums text-lg">${(totalCents / 100).toFixed(2)}</td>
+              <tr className="font-bold bg-white/[0.03]" style={{ borderTop: "2px solid rgba(255,255,255,0.1)" }}>
+                <td colSpan={5} className="text-right text-ink-300">Total</td>
+                <td className="text-right tabular-nums text-lg grad-text-accent">${(totalCents / 100).toFixed(2)}</td>
               </tr>
             </tbody>
           </table>

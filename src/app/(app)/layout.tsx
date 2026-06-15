@@ -13,6 +13,7 @@ import { isTrialActive } from "@/lib/stripe";
 import { initials } from "@/lib/utils";
 import { LocaleProvider } from "@/lib/i18n/provider";
 import { resolveLocale } from "@/lib/i18n/dictionaries";
+import { ToastProvider } from "@/components/ui/toaster";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const u = await requireUser();
@@ -93,6 +94,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <LocaleProvider locale={locale}>
+    <ToastProvider>
     <div className="min-h-screen flex bg-ink-950 text-ink-50">
       <Sidebar
         orgName={u.organizationName}
@@ -127,6 +129,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <TrialExpiredGate daysExpired={daysExpired} activeMembers={activeMembers} />
       )}
     </div>
+    </ToastProvider>
     </LocaleProvider>
   );
 }
