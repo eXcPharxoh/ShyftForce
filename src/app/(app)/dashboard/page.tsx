@@ -10,6 +10,7 @@ import { LocationsPunchMap } from "@/components/geo/locations-punch-map";
 import { PendingOnboardingWidget } from "@/components/dashboard/pending-onboarding-widget";
 import { QuietDayOne } from "@/components/dashboard/quiet-day-one";
 import { EmployeeHome } from "@/components/dashboard/employee-home";
+import { TodayPriorities } from "@/components/dashboard/today-priorities";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +140,22 @@ export default async function Dashboard() {
       where: { shift: { location: { organizationId: orgId } }, sentAt: { gte: addDays(now, -1) } },
       orderBy: { sentAt: "desc" }, take: 6,
       include: { member: { include: { user: true } }, shift: true },
+    }),
+  ]);
+
+  // Extra counts for the Today Priorities hero card — kept separate from the
+  // big Promise.all above because they're cheap, lightweight, and dialing
+  // them in here means we don't have to thread them through HomeShell.
+  const [draftShiftsThisWeek, pendingTimeOffCount] = await Promise.all([
+    prisma.shift.count({
+      where: {
+        location: { organizationId: orgId },
+        status: "draft",
+        startsAt: { gte: weekStart, lt: weekEnd },
+      },
+    }),
+    prisma.timeOffRequest.count({
+      where: { member: { organizationId: orgId }, status: "pending" },
     }),
   ]);
 
@@ -287,6 +304,24 @@ export default async function Dashboard() {
     <div className="space-y-6">
       {/* Onboarding checklist — auto-hides once the workspace is set up. */}
       {isManager && <GettingStarted orgId={orgId} role={u.role} />}
+
+      {/* Today's priorities — the most urgent action this manager has
+          right now, plus 3 quick-tap shortcuts. Put above the KPI dashboard
+          on purpose: a non-tech-savvy manager wants to know "what should I
+          do?" before reading numbers. The KPI shell still tells the
+          operational story below. */}
+      {isManager && (
+        <TodayPriorities
+          name={u.name}
+          counts={{
+            draftShifts: draftShiftsThisWeek,
+            pendingTimeOff: pendingTimeOffCount,
+            unapprovedTimesheets: period?.entries.filter(e => !e.approved).length ?? 0,
+            openShifts,
+            weekShifts: weekShifts.length,
+          }}
+        />
+      )}
 
       <HomeShell
         greeting={greeting}
