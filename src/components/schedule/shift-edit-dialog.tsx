@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Trash2, Save, Loader2, Send, Users, AlertOctagon, AlertTriangle, ShieldCheck, DollarSign, Sparkles } from "lucide-react";
+import { X, Trash2, Save, Loader2, Send, Users, AlertOctagon, AlertTriangle, ShieldCheck, DollarSign, Sparkles, ShoppingBag } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { Select } from "@/components/ui/select";
 
 export type VerticalOptions = {
   industry: string | null;
@@ -233,13 +234,23 @@ export function ShiftEditDialog({
             </div>
           )}
           <div>
-            <label className="label">Assigned to</label>
-            <select className="input" value={memberId} onChange={(e) => setMemberId(e.target.value as any)}>
-              <option value="open">🟠 Leave as open shift</option>
-              <optgroup label="Members">
-                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </optgroup>
-            </select>
+            <label className="label" id="assigned-label">Assigned to</label>
+            {/* Custom Select instead of native — for any org with 30+
+                members, the searchable filter is the only sane way to
+                find a person without scrolling. The "leave as open
+                shift" option sits at the top so the marketplace flow
+                stays one click away. */}
+            <Select
+              ariaLabel="Assigned to"
+              value={memberId}
+              onChange={(v) => setMemberId(v as any)}
+              searchable={members.length > 8}
+              placeholder="Pick someone…"
+              options={[
+                { value: "open", label: "Leave as open shift", icon: <ShoppingBag className="w-4 h-4 text-warn" />, hint: "Will be auto-offered via the marketplace" },
+                ...members.map(m => ({ value: m.id, label: m.name })),
+              ]}
+            />
           </div>
           <div>
             <label className="label">Date</label>
@@ -308,10 +319,20 @@ export function ShiftEditDialog({
               {verticals.industry === "hospitality" && (
                 <div>
                   <label className="label">Manager on Duty for this block</label>
-                  <select className="input" value={modMemberId} onChange={(e) => setModMemberId(e.target.value)}>
-                    <option value="">— No MOD assigned —</option>
-                    {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
+                  {/* Custom Select — searchable when the team has 8+
+                      members so picking the MOD is one type-and-tap
+                      instead of a long scroll. */}
+                  <Select
+                    ariaLabel="Manager on Duty"
+                    value={modMemberId}
+                    onChange={(v) => setModMemberId(v)}
+                    searchable={members.length > 8}
+                    placeholder="No MOD assigned"
+                    options={[
+                      { value: "", label: "No MOD assigned", hint: "Skip if this block doesn't need one" },
+                      ...members.map(m => ({ value: m.id, label: m.name })),
+                    ]}
+                  />
                 </div>
               )}
               {verticals.industry === "healthcare" && (
