@@ -1,19 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookmarkPlus, Loader2, X, Save, Trash2, PlayCircle, Layers, Check, AlertCircle } from "lucide-react";
+import { BookmarkPlus, Loader2, X, Save, Trash2, PlayCircle, Layers } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toaster";
 
 type Tpl = { id: string; name: string; description: string | null; shiftCount: number; createdAt: string; updatedAt: string };
 
 export function TemplatesButton({ weekStart }: { weekStart: string }) {
   const r = useRouter();
   const confirm = useConfirm();
+  const toast = useToast();
   const [open, setOpen]    = useState(false);
   const [items, setItems]  = useState<Tpl[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy]    = useState<string | null>(null);
-  const [toast, setToast]  = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
 
   // Save modal state
   const [saveOpen, setSaveOpen] = useState(false);
@@ -26,10 +27,6 @@ export function TemplatesButton({ weekStart }: { weekStart: string }) {
     fetch("/api/schedule/templates").then(r => r.json()).then(d => { setItems(d.items ?? []); setLoading(false); });
   }, [open]);
 
-  function showToast(kind: "ok" | "err", msg: string) {
-    setToast({ kind, msg }); setTimeout(() => setToast(null), 3500);
-  }
-
   async function saveCurrent(e: React.FormEvent) {
     e.preventDefault();
     setBusy("save");
@@ -39,10 +36,10 @@ export function TemplatesButton({ weekStart }: { weekStart: string }) {
     });
     const d = await res.json();
     setBusy(null);
-    if (!res.ok) { showToast("err", d.error ?? "Save failed"); return; }
+    if (!res.ok) { toast.error("Couldn't save template", { description: d.error ?? "Try again." }); return; }
     setItems(prev => [{ id: d.template.id, name: d.template.name, description: null, shiftCount: d.template.shiftCount, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, ...prev]);
     setSaveOpen(false); setSaveName(""); setSaveDesc("");
-    showToast("ok", `Saved "${d.template.name}" with ${d.template.shiftCount} shifts`);
+    toast.success(`Saved "${d.template.name}"`, { description: `${d.template.shiftCount} shifts captured.` });
   }
 
   async function applyTemplate(t: Tpl, publish: boolean) {
@@ -59,8 +56,8 @@ export function TemplatesButton({ weekStart }: { weekStart: string }) {
     });
     const d = await res.json();
     setBusy(null); setOpen(false);
-    if (!res.ok) { showToast("err", d.error ?? "Apply failed"); return; }
-    showToast("ok", `Created ${d.created} shifts${d.skipped > 0 ? ` (${d.skipped} skipped)` : ""}`);
+    if (!res.ok) { toast.error("Couldn't apply template", { description: d.error ?? "Try again." }); return; }
+    toast.success(`Created ${d.created} shifts`, { description: d.skipped > 0 ? `${d.skipped} skipped due to conflicts.` : undefined });
     r.refresh();
   }
 
@@ -72,7 +69,7 @@ export function TemplatesButton({ weekStart }: { weekStart: string }) {
     setBusy(null);
     if (res.ok) {
       setItems(prev => prev.filter(x => x.id !== t.id));
-      showToast("ok", "Template deleted");
+      toast.success("Template deleted");
     }
   }
 
@@ -162,12 +159,6 @@ export function TemplatesButton({ weekStart }: { weekStart: string }) {
         </div>
       )}
 
-      {toast && (
-        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-xl text-white text-sm font-medium shadow-soft animate-fade-up flex items-center gap-2 ${toast.kind === "ok" ? "bg-emerald-600" : "bg-rose-600"}`}>
-          {toast.kind === "ok" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-          {toast.msg}
-        </div>
-      )}
     </>
   );
 }

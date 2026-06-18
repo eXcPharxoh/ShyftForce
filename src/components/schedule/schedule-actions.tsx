@@ -3,41 +3,43 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Copy, Printer, Repeat, Loader2, Check, AlertCircle, MoreHorizontal, ShieldAlert, TrendingUp,
+  Copy, Printer, Repeat, Loader2, MoreHorizontal, ShieldAlert, TrendingUp,
 } from "lucide-react";
+import { useToast } from "@/components/ui/toaster";
 
 export function ScheduleActions({ weekStart }: { weekStart: string }) {
   const r = useRouter();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  function show(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
   async function copyWeek() {
-    setBusy("copy"); setError(null);
+    setBusy("copy");
     const res = await fetch("/api/schedule/copy-week", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ toWeekStart: weekStart }),
     });
     const data = await res.json();
     setBusy(null); setOpen(false);
-    if (!res.ok) { setError(data.error ?? "Failed"); return; }
-    show(`Copied ${data.created} shifts from last week (${data.skipped} skipped due to conflicts)`);
+    if (!res.ok) { toast.error("Couldn't copy last week", { description: data.error ?? "Try again." }); return; }
+    toast.success(`Copied ${data.created} shifts`, {
+      description: data.skipped > 0 ? `${data.skipped} skipped due to conflicts.` : undefined,
+    });
     r.refresh();
   }
 
   async function applyRecurring() {
-    setBusy("recurring"); setError(null);
+    setBusy("recurring");
     const res = await fetch("/api/schedule/apply-recurring", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ weekStart }),
     });
     const data = await res.json();
     setBusy(null); setOpen(false);
-    if (!res.ok) { setError(data.error ?? "Failed"); return; }
-    show(`Created ${data.created} shifts from recurring patterns (${data.skipped} skipped)`);
+    if (!res.ok) { toast.error("Couldn't apply recurring patterns", { description: data.error ?? "Try again." }); return; }
+    toast.success(`Created ${data.created} shifts from recurring patterns`, {
+      description: data.skipped > 0 ? `${data.skipped} skipped due to conflicts.` : undefined,
+    });
     r.refresh();
   }
 
@@ -74,17 +76,6 @@ export function ScheduleActions({ weekStart }: { weekStart: string }) {
             </Link>
           </div>
         </>
-      )}
-
-      {toast && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium shadow-soft animate-fade-up flex items-center gap-2">
-          <Check className="w-4 h-4" /> {toast}
-        </div>
-      )}
-      {error && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-medium shadow-soft animate-fade-up flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" /> {error}
-        </div>
       )}
     </div>
   );

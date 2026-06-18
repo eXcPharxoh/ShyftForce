@@ -1,24 +1,23 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, Loader2, Check, AlertCircle, ExternalLink } from "lucide-react";
+import { CreditCard, Loader2, ExternalLink } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toaster";
 
 export function RunPayrollButton({ finchConnected, payPeriodId, unapprovedCount }: { finchConnected: boolean; payPeriodId: string | null; unapprovedCount: number }) {
   const r = useRouter();
   const confirm = useConfirm();
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
 
   async function run() {
     if (!finchConnected) {
-      setToast({ kind: "err", msg: "Connect a payroll provider in Settings → Integrations first." });
-      setTimeout(() => setToast(null), 3500);
+      toast.error("Payroll not connected", { description: "Set it up in Settings → Integrations first." });
       return;
     }
     if (!payPeriodId) {
-      setToast({ kind: "err", msg: "No open pay period." });
-      setTimeout(() => setToast(null), 3000);
+      toast.error("No open pay period");
       return;
     }
     const ok = await confirm({
@@ -29,7 +28,7 @@ export function RunPayrollButton({ finchConnected, payPeriodId, unapprovedCount 
       confirmLabel: "Run payroll",
     });
     if (!ok) return;
-    setBusy(true); setToast(null);
+    setBusy(true);
     const res = await fetch("/api/finch/push-pay", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ payPeriodId }),
@@ -37,12 +36,13 @@ export function RunPayrollButton({ finchConnected, payPeriodId, unapprovedCount 
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
-      setToast({ kind: "err", msg: data.error ?? "Payroll push failed" });
-      setTimeout(() => setToast(null), 4000);
+      toast.error("Payroll push failed", { description: data.error ?? "Try again." });
       return;
     }
-    setToast({ kind: "ok", msg: `Pushed ${data.pushed} member${data.pushed === 1 ? "" : "s"} · ${data.skipped} skipped${data.errors?.length ? ` · ${data.errors.length} error${data.errors.length === 1 ? "" : "s"}` : ""}` });
-    setTimeout(() => setToast(null), 5000);
+    const errorPart = data.errors?.length ? ` · ${data.errors.length} error${data.errors.length === 1 ? "" : "s"}` : "";
+    toast.success(`Pushed ${data.pushed} member${data.pushed === 1 ? "" : "s"} to payroll`, {
+      description: `${data.skipped} skipped${errorPart}.`,
+    });
     r.refresh();
   }
 
@@ -55,17 +55,9 @@ export function RunPayrollButton({ finchConnected, payPeriodId, unapprovedCount 
   }
 
   return (
-    <>
-      <button onClick={run} disabled={busy} className="btn-primary">
-        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-        {busy ? "Pushing…" : "Run payroll"}
-      </button>
-      {toast && (
-        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-white text-sm font-medium shadow-soft animate-fade-up flex items-center gap-2 ${toast.kind === "ok" ? "bg-emerald-600" : "bg-rose-600"}`}>
-          {toast.kind === "ok" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-          {toast.msg}
-        </div>
-      )}
-    </>
+    <button onClick={run} disabled={busy} className="btn-primary">
+      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+      {busy ? "Pushing…" : "Run payroll"}
+    </button>
   );
 }
