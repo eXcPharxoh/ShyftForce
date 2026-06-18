@@ -54,8 +54,16 @@ export default function LoginPage() {
       setErr(null);
       return;
     }
+    if (res?.error === "ACCOUNT_LOCKED") {
+      setErr("Too many failed attempts — try again in 15 minutes, or reset your password.");
+      return;
+    }
     if (res?.error) {
-      setErr(needsTotp ? "Invalid 2FA code" : "Invalid credentials");
+      // CredentialsSignin / generic failure — covers wrong email, wrong
+      // password, no account found, or any unhandled exception in
+      // authorize(). Don't try to disambiguate (would leak account
+      // existence to a brute-forcer).
+      setErr(needsTotp ? "That 2-step code didn't match. Try again or use a recovery code." : "Email or password is incorrect. Make sure your email matches the one you signed up with.");
     } else {
       r.push("/dashboard");
     }

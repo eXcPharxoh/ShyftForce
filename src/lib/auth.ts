@@ -76,8 +76,14 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+        // Normalize the typed email to match how we stored it on signup
+        // (z.string().email().toLowerCase().trim()). Without this, somebody
+        // who typed Omar@gmail.com here but signed up with omar@gmail.com
+        // would silently fail with "Invalid credentials" — which is exactly
+        // the bug that was happening.
+        const email = credentials.email.toLowerCase().trim();
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email },
           include: { member: { include: { organization: true, location: true } } },
         });
         if (!user) {
