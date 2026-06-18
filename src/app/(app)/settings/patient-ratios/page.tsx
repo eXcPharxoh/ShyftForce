@@ -31,18 +31,18 @@ export default async function PatientRatiosPage() {
         <p className="text-xs text-ink-500 dark:text-ink-400 mb-3">
           Most-cited US benchmark. Your jurisdiction may differ — these are starting points.
         </p>
-        <table className="w-full text-xs">
-          <thead className="text-[10px] uppercase text-ink-500">
-            <tr><th className="text-left">Unit</th><th className="text-left">Required ratio</th></tr>
+        <table className="t-modern text-xs">
+          <thead>
+            <tr><th>Unit</th><th>Required ratio</th></tr>
           </thead>
-          <tbody className="text-ink-700 dark:text-ink-300">
-            <tr><td className="py-1">ICU / NICU / CCU</td><td>1 RN : 2 patients</td></tr>
-            <tr><td className="py-1">Step-down / Telemetry</td><td>1 RN : 4 patients</td></tr>
-            <tr><td className="py-1">Med-surg</td><td>1 RN : 5 patients</td></tr>
-            <tr><td className="py-1">Emergency department</td><td>1 RN : 4 patients</td></tr>
-            <tr><td className="py-1">Psychiatric</td><td>1 RN : 6 patients</td></tr>
-            <tr><td className="py-1">Labor & delivery</td><td>1 RN : 2 patients</td></tr>
-            <tr><td className="py-1">Post-anesthesia (PACU)</td><td>1 RN : 2 patients</td></tr>
+          <tbody>
+            <tr><td className="text-ink-100">ICU / NICU / CCU</td><td className="text-ink-200">1 RN : 2 patients</td></tr>
+            <tr><td className="text-ink-100">Step-down / Telemetry</td><td className="text-ink-200">1 RN : 4 patients</td></tr>
+            <tr><td className="text-ink-100">Med-surg</td><td className="text-ink-200">1 RN : 5 patients</td></tr>
+            <tr><td className="text-ink-100">Emergency department</td><td className="text-ink-200">1 RN : 4 patients</td></tr>
+            <tr><td className="text-ink-100">Psychiatric</td><td className="text-ink-200">1 RN : 6 patients</td></tr>
+            <tr><td className="text-ink-100">Labor & delivery</td><td className="text-ink-200">1 RN : 2 patients</td></tr>
+            <tr><td className="text-ink-100">Post-anesthesia (PACU)</td><td className="text-ink-200">1 RN : 2 patients</td></tr>
           </tbody>
         </table>
       </section>

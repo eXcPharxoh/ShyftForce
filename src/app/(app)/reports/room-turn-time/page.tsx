@@ -142,16 +142,20 @@ export default async function RoomTurnTimeReportPage({ searchParams }: { searchP
         {typeRows.length === 0 ? (
           <p className="text-sm text-ink-500">No data.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="text-[10px] uppercase tracking-wider text-ink-500">
-              <tr><th className="text-left py-1">Type</th><th className="text-right">Rooms</th><th className="text-right">Avg turn</th></tr>
+          <table className="t-modern">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th className="text-right">Rooms</th>
+                <th className="text-right">Avg turn</th>
+              </tr>
             </thead>
             <tbody>
               {typeRows.map(([t, v]) => (
-                <tr key={t} className="border-t border-ink-100 dark:border-ink-800">
-                  <td className="py-2 capitalize">{t}</td>
-                  <td className="text-right">{v.rooms}</td>
-                  <td className="text-right font-semibold">{(v.totalMin / v.rooms).toFixed(0)}m</td>
+                <tr key={t}>
+                  <td className="capitalize text-ink-50">{t}</td>
+                  <td className="text-right text-ink-200">{v.rooms}</td>
+                  <td className="text-right font-semibold text-ink-50">{(v.totalMin / v.rooms).toFixed(0)}m</td>
                 </tr>
               ))}
             </tbody>
