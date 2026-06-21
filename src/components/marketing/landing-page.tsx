@@ -1256,54 +1256,78 @@ function Pricing() {
 }
 
 /* ============================================================================
-   CUSTOMERS
+   EARLY CUSTOMERS — honest "be one of the first" framing
    ============================================================================ */
 function Customers() {
-  const quotes = [
-    { quote: "We went from spending 8 hours a week building the schedule to about 4 minutes. The Co-pilot just does it.",
-      name: "Sarah Tremblay", role: "Site Manager · Platinum Security", stat: "8h → 4 min schedule build", tone: "#a78bff" },
-    { quote: "No-shows are down 52% since we turned on the open-shift marketplace. People claim shifts before we even text.",
-      name: "Marc-Antoine Roy", role: "Operations · Supermarché PA", stat: "No-show rate –52%", tone: "#4ee0c5" },
-    { quote: "It caught 3 OT violations on a draft schedule before publish. We saved $4,800 in pred-pay we didn't even know we owed.",
-      name: "Léa Beaulieu", role: "HR Lead · 9487 Québec inc", stat: "3 OT violations caught", tone: "#8db9ff" },
+  // Previously this section had 3 fabricated testimonials (Sarah Tremblay
+  // at Platinum Security, etc.). Smart prospects Google those names and
+  // find nothing — which evaporates trust faster than no testimonials at
+  // all. We replaced them with an honest "be one of the first" framing
+  // until we have real customers we can quote. Swap back to a testimonial
+  // grid once we have 3 real names with permission to publish.
+  const promises = [
+    {
+      emoji: "🎯",
+      title: "Direct line to the founder",
+      body: "Email Omar (the actual builder) any time. We act on feedback in days, not quarters — your blockers shape the roadmap.",
+      tone: "#a78bff",
+    },
+    {
+      emoji: "💸",
+      title: "Locked-in early pricing",
+      body: "Whatever plan you start on stays at that price for life, even when we raise it. Be the first 50 customers and you're locked in.",
+      tone: "#4ee0c5",
+    },
+    {
+      emoji: "🛠️",
+      title: "Custom industry tuning",
+      body: "Tell us your vertical's quirks (tip-credit math, permit categories, shift-bidding rules) and we'll build them in for your account.",
+      tone: "#8db9ff",
+    },
   ];
+
   return (
     <section id="customers" className="section-pad relative">
       <div className="container">
         <Reveal>
-          <div className="text-center mb-16">
-            <div className="eyebrow mb-4"><Bolt size={14} /> Customers</div>
-            <h2 className="h-section-display max-w-[800px] mx-auto">
-              <span className="grad-text">Built with operators </span>
-              <span className="grad-text-accent font-normal">who hated their schedule.</span>
+          <div className="text-center mb-12">
+            <div className="eyebrow mb-4"><Bolt size={14} /> Early customers</div>
+            <h2 className="h-section-display max-w-[820px] mx-auto">
+              <span className="grad-text">Be one of the first teams </span>
+              <span className="grad-text-accent font-normal">on shyftforce.</span>
             </h2>
+            <p className="mt-5 text-[15px] text-ink-300 max-w-[560px] mx-auto leading-relaxed">
+              We launched in 2026 and we&apos;re building this with our earliest customers — restaurants, security ops, retail managers — not in a vacuum. Here&apos;s what you get for being early.
+            </p>
           </div>
         </Reveal>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {quotes.map((q, i) => (
+          {promises.map((p, i) => (
             <Reveal key={i} delay={100 + i * 80}>
               <div className="card p-6 lift h-full flex flex-col">
-                <div className="text-[48px] leading-none font-display grad-text-accent select-none">&ldquo;</div>
-                <p className="text-[15px] text-ink-50 leading-relaxed mt-2 flex-1">{q.quote}</p>
-                <div className="flex items-center gap-3 mt-5 pt-4 border-t border-white/[0.06]">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] text-white font-semibold shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${q.tone}, color-mix(in srgb, ${q.tone} 40%, #000))` }}>
-                    {q.name.split(" ").map(p => p[0]).join("")}
-                  </div>
-                  <div>
-                    <div className="text-[13px] font-medium">{q.name}</div>
-                    <div className="text-[11px] text-ink-500">{q.role}</div>
-                  </div>
-                </div>
-                <div className="mt-3 p-3 rounded-md bg-brand-500/8 border border-brand-500/20 text-center">
-                  <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-brand-500">Result</div>
-                  <div className="text-[15px] font-semibold mt-0.5 grad-text-accent">{q.stat}</div>
-                </div>
+                <div className="text-4xl leading-none mb-4">{p.emoji}</div>
+                <h3 className="text-[18px] font-semibold text-ink-50 mb-2">{p.title}</h3>
+                <p className="text-[14px] text-ink-300 leading-relaxed flex-1">{p.body}</p>
+                <div
+                  className="mt-5 h-1 w-12 rounded-full"
+                  style={{ background: `linear-gradient(90deg, ${p.tone}, color-mix(in srgb, ${p.tone} 40%, transparent))` }}
+                />
               </div>
             </Reveal>
           ))}
         </div>
+
+        <Reveal delay={400}>
+          <div className="mt-10 text-center">
+            <Link href="/signup" className="btn-primary">
+              Start free — be one of the first <ArrowRight className="w-4 h-4 arrow" />
+            </Link>
+            <div className="mt-3 text-[12px] text-ink-500">
+              Already using us? <a href="mailto:hi@shyftforce.com?subject=Happy%20to%20be%20a%20reference" className="text-brand-300 underline">Tell us</a> — we&apos;d love to feature you here.
+            </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

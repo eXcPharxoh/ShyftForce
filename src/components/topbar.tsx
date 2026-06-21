@@ -69,27 +69,32 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
 
   return (
     <>
-      <header className="h-14 sticky top-0 z-30 flex items-center px-6 gap-3 border-b border-white/[0.06] bg-ink-950/80 backdrop-blur-xl">
+      <header className="h-14 sticky top-0 z-30 flex items-center px-3 sm:px-6 gap-2 sm:gap-3 border-b border-white/[0.06] bg-ink-950/80 backdrop-blur-xl">
         {/* ⌘K palette trigger — promoted as the primary entry point.
             Non-technical users can type intent in plain English ("schedule
             Joe for Friday") instead of hunting through menus. The gradient
             sparkle icon + wider footprint signals it's the smart action.
-            ⌘K still works globally for keyboard users. */}
+            On mobile we hide the ⌘K kbd hint (no keyboard to hit it on) and
+            the placeholder text shrinks to "Ask the assistant" to fit. */}
         <button
           onClick={() => setCmdkOpen(true)}
-          className="group flex-1 max-w-[640px] mx-auto flex items-center gap-3 px-4 h-10 rounded-lg
+          className="group flex-1 max-w-[640px] mx-auto flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-10 rounded-lg
                      border border-brand-500/25 bg-gradient-to-r from-brand-500/[0.06] to-purple-500/[0.06]
                      hover:from-brand-500/[0.12] hover:to-purple-500/[0.12] hover:border-brand-500/40
                      transition text-left shadow-soft"
+          aria-label="Open AI assistant"
         >
           <Sparkles className="w-4 h-4 text-brand-300 shrink-0" />
           <span className="text-[13px] text-ink-200 flex-1 truncate group-hover:text-ink-50 font-medium">
-            {t("copilot.ask")}
+            <span className="sm:hidden">Ask the assistant</span>
+            <span className="hidden sm:inline">{t("copilot.ask")}</span>
           </span>
-          <kbd className="kbd">⌘K</kbd>
+          <kbd className="kbd hidden sm:inline-flex">⌘K</kbd>
         </button>
 
-        {/* Right cluster */}
+        {/* Right cluster — Clock-in button hidden on mobile (bottom nav
+            owns clock-in there). Help + notifications + profile all
+            shrink-0 with bigger tap targets (44x44) on mobile. */}
         <Link href="/attendance" className="btn-primary btn-sm hidden sm:inline-flex">
           <Clock className="w-3.5 h-3.5" /> {t("action.clock_in").split(" ")[0]}
         </Link>
@@ -97,10 +102,13 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
         <HelpButton />
         <NotificationsBell />
 
-        <div className="relative" ref={menuRef}>
+        <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={() => setOpen(v => !v)}
-            className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-md hover:bg-white/[0.04] transition"
+            aria-label="Open profile menu"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-md hover:bg-white/[0.04] transition min-h-[36px]"
           >
             {image
               ? <img src={image} alt={name} className="w-7 h-7 rounded-full object-cover ring-1 ring-white/[0.12]" />
