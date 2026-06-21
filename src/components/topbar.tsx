@@ -1,5 +1,5 @@
 "use client";
-import { Settings, LogOut, Clock, Sparkles, User as UserIcon, CreditCard, ChevronDown, Shield, Search, Languages } from "lucide-react";
+import { Settings, LogOut, Clock, Sparkles, User as UserIcon, CreditCard, ChevronDown, Shield, Search, Languages, HelpCircle } from "lucide-react";
 import { LOCALES, type Locale } from "@/lib/i18n/dictionaries";
 import { useLocale, useT } from "@/lib/i18n/provider";
 import { signOut } from "next-auth/react";
@@ -139,6 +139,20 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
               <MenuLink href="/hr/members"       icon={UserIcon}   label="Profile" />
               <MenuLink href="/settings/billing" icon={CreditCard} label="Billing & plan" />
               <MenuLink href="/more"             icon={Settings}   label="Settings" />
+              {/* Help center deep-link from the profile menu — most
+                  discoverable surface for users who never noticed the
+                  small question-mark icon up in the topbar. Opens the
+                  public help site in a new tab so they don't lose
+                  in-app context. */}
+              <a
+                href="/help"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-ink-200 hover:bg-white/[0.04] transition"
+                onClick={() => setOpen(false)}
+              >
+                <HelpCircle className="w-4 h-4 text-ink-400" /> Help center
+              </a>
               <LanguagePicker />
               {showPlatformAdmin && (
                 <>
