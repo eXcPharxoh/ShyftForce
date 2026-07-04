@@ -193,21 +193,29 @@ export function ClockInDialog({
 
   async function submit() {
     setSubmitting(true);
-    const res = await fetch("/api/attendance/clock", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        memberId, type: action,
-        latitude: coords?.lat, longitude: coords?.lng, accuracyMeters: coords?.accuracy,
-        photoData: photoData ?? undefined,
-        faceDescriptor: faceDescriptor ?? undefined,
-      }),
-    });
-    const data = await res.json();
-    setSubmitting(false);
-    setResult({ ok: res.ok, ...data });
-    if (res.ok) {
-      streamRef.current?.getTracks().forEach(t => t.stop());
-      setTimeout(() => { onClose(); r.refresh(); }, 1400);
+    // try/catch so a network throw or a non-JSON 500 body never leaves the
+    // button stuck on "Saving…" — the exact anxiety moment a time clock must
+    // never create.
+    try {
+      const res = await fetch("/api/attendance/clock", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId, type: action,
+          latitude: coords?.lat, longitude: coords?.lng, accuracyMeters: coords?.accuracy,
+          photoData: photoData ?? undefined,
+          faceDescriptor: faceDescriptor ?? undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setSubmitting(false);
+      setResult({ ok: res.ok, ...data });
+      if (res.ok) {
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        setTimeout(() => { onClose(); r.refresh(); }, 1400);
+      }
+    } catch {
+      setSubmitting(false);
+      setResult({ ok: false, error: "Couldn't reach the server — check your connection and try again." });
     }
   }
 
@@ -308,7 +316,19 @@ export function ClockInDialog({
 
           {result && (
             <div className="text-center py-4">
-              {result.ok ? (
+              {result.queued ? (
+                // Offline: the service worker saved this punch on-device and
+                // will sync it when back online. Do NOT claim it was recorded.
+                <>
+                  <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 flex items-center justify-center mx-auto mb-3">
+                    <AlertTriangle className="w-8 h-8" />
+                  </div>
+                  <div className="font-semibold">Saved on your phone</div>
+                  <div className="text-sm text-ink-500 dark:text-ink-400 mt-1">
+                    You&rsquo;re offline — we&rsquo;ll send this {meta.label.toLowerCase()} automatically when you&rsquo;re back online. Keep the app installed so it can sync.
+                  </div>
+                </>
+              ) : result.ok ? (
                 <>
                   <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 flex items-center justify-center mx-auto mb-3">
                     <CheckCircle2 className="w-8 h-8" />

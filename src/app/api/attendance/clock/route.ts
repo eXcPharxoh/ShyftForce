@@ -13,13 +13,27 @@ const Schema = z.object({
   accuracyMeters: z.number().min(0).max(100_000).optional(),
   photoData:      z.string().max(500_000).optional(), // data URL ("data:image/jpeg;base64,...")
   faceDescriptor: z.array(z.number()).length(128).optional(), // on-device face print
+  // When an offline punch is replayed by the service worker, it carries the
+  // ORIGINAL punch time so we don't record it at drain time (which would
+  // create phantom paid hours). Ignored for live punches. Bounded to the
+  // last 24h in the past and no future to stop back-dating abuse.
+  occurredAt:     z.string().datetime().optional(),
 }).strict();
 
 export async function POST(req: Request) {
   const u = await requireUser();
   const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
-  const { memberId, type, latitude, longitude, accuracyMeters, photoData, faceDescriptor } = parsed.data;
+  const { memberId, type, latitude, longitude, accuracyMeters, photoData, faceDescriptor, occurredAt } = parsed.data;
+
+  // Resolve the effective punch time: use occurredAt only if it's within the
+  // last 24h and not in the future; otherwise stamp now.
+  let effectiveAt: Date | undefined;
+  if (occurredAt) {
+    const t = new Date(occurredAt);
+    const now = Date.now();
+    if (!isNaN(+t) && +t <= now && +t >= now - 24 * 3600 * 1000) effectiveAt = t;
+  }
 
   if (memberId !== u.memberId && u.role === "EMPLOYEE") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
@@ -161,6 +175,9 @@ export async function POST(req: Request) {
     const log = await prisma.attendanceLog.create({
       data: {
         memberId, type,
+        // Stamp the original punch time for replayed offline punches; the
+        // schema default (now()) applies for live ones.
+        ...(effectiveAt ? { at: effectiveAt } : {}),
         latitude:       latitude       ?? null,
         longitude:      longitude      ?? null,
         accuracyMeters: accuracyMeters ?? null,

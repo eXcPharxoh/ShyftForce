@@ -95,6 +95,26 @@ async function enqueue(payload) {
     tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error);
   });
 }
+async function deleteQueued(id) {
+  const dx = await db();
+  await new Promise((ok, no) => {
+    const tx = dx.transaction("clockEvents", "readwrite");
+    tx.objectStore("clockEvents").delete(id);
+    tx.oncomplete = () => ok(); tx.onerror = () => no(tx.error);
+  });
+}
+
+async function notify(title, body) {
+  try {
+    await self.registration.showNotification(title, {
+      body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: "clock-sync",
+    });
+  } catch { /* notifications may be denied — nothing else we can do here */ }
+}
+
 async function drainQueue() {
   const d = await db();
   const items = await new Promise((res, rej) => {
@@ -106,17 +126,39 @@ async function drainQueue() {
     try {
       const r = await fetch("/api/attendance/clock", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(item.payload),
+        // redirect:"manual" so a 307 -> /login (expired session) is NOT
+        // followed. Previously we followed it, got the login page as 200 OK,
+        // saw r.ok === true, and DELETED the punch — permanently losing paid
+        // time. Also stamp the ORIGINAL punch time (occurredAt) so late-
+        // draining doesn't record the shift at drain time.
+        redirect: "manual",
+        body: JSON.stringify({ ...item.payload, occurredAt: new Date(item.at).toISOString() }),
       });
-      if (r.ok) {
-        const dx = await db();
-        await new Promise((ok, no) => {
-          const tx = dx.transaction("clockEvents", "readwrite");
-          tx.objectStore("clockEvents").delete(item.id);
-          tx.oncomplete = () => ok(); tx.onerror = () => no(tx.error);
-        });
+
+      // A followed-manually redirect shows up as an opaque redirect (status 0,
+      // type "opaqueredirect"). Treat that as "session expired — keep it."
+      if (r.type === "opaqueredirect" || r.status === 0 || r.status === 401 || r.status === 307) {
+        await notify("Sign in to sync your clock-in", "You have a saved punch waiting. Open ShyftForce and sign in to send it.");
+        continue; // keep the item, retry after re-login
       }
-    } catch { /* still offline */ }
+
+      if (r.ok) {
+        await deleteQueued(item.id);
+        continue;
+      }
+
+      // 4xx that isn't auth = terminal rejection (e.g. 422 photo/face required,
+      // 409 checklist gate). Retrying forever won't help — delete it and tell
+      // the employee it couldn't be recorded so they can fix it with a manager.
+      if (r.status >= 400 && r.status < 500) {
+        await deleteQueued(item.id);
+        const when = new Date(item.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        await notify("A saved clock-in couldn't be recorded", `Your punch from ${when} wasn't accepted. Please clock in again or ask your manager to add it.`);
+        continue;
+      }
+
+      // 5xx: transient server error — leave it queued to retry later.
+    } catch { /* still offline — leave queued */ }
   }
 }
 
