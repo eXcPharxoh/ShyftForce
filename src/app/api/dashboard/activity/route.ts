@@ -25,7 +25,12 @@ export async function GET(req: Request) {
     prisma.attendanceLog.findMany({
       where: { member: { organizationId: u.organizationId }, at: { gte: since } },
       orderBy: { at: "desc" }, take: 20,
-      include: { member: { include: { user: true, location: true } } },
+      // Polled every 15s per open dashboard — only the fields the feed renders,
+      // NOT the base64 selfie photoData (would ship ~250KB × 20 every tick).
+      select: {
+        id: true, type: true, at: true,
+        member: { select: { user: { select: { name: true } }, location: { select: { name: true } } } },
+      },
     }),
     prisma.openShiftOffer.findMany({
       where: { shift: { location: { organizationId: u.organizationId } }, sentAt: { gte: since } },

@@ -129,12 +129,19 @@ export default async function Dashboard() {
     prisma.attendanceLog.findMany({
       where: { member: { organizationId: orgId }, at: { gte: new Date(now.getTime() - 36 * 3600_000) } },
       orderBy: { at: "asc" },
+      // Only the fields we derive clock-in status from — NOT the base64 selfie
+      // photoData (can be ~250KB each and would balloon every dashboard load).
+      select: { type: true, memberId: true },
     }),
     prisma.payPeriod.findFirst({ where: { organizationId: orgId, status: "open" }, include: { entries: true } }),
     prisma.attendanceLog.findMany({
       where: { member: { organizationId: orgId }, at: { gte: addDays(now, -1) } },
       orderBy: { at: "desc" }, take: 10,
-      include: { member: { include: { user: true, location: true } } },
+      // Activity feed only needs the name + location — skip photoData.
+      select: {
+        id: true, type: true, at: true,
+        member: { select: { user: { select: { name: true } }, location: { select: { name: true } } } },
+      },
     }),
     prisma.openShiftOffer.findMany({
       where: { shift: { location: { organizationId: orgId } }, sentAt: { gte: addDays(now, -1) } },

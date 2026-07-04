@@ -14,15 +14,20 @@ export default async function OpenShiftsPage() {
   const isManager = u.role === "ADMIN" || u.role === "MANAGER";
   const now = new Date();
   const weekHorizon = addDays(now, 14);
+  // Open shifts are near-term by nature — cap the look-ahead (60 days) and row
+  // count so a stray far-future open shift can't turn this into a full-table
+  // scan with every offer eagerly joined.
+  const openHorizon = addDays(now, 60);
 
-  // All open shifts in the org going forward
+  // Open shifts in the org over the next 60 days
   const openShifts = await prisma.shift.findMany({
-    where: { isOpen: true, location: { organizationId: u.organizationId }, startsAt: { gte: now } },
+    where: { isOpen: true, location: { organizationId: u.organizationId }, startsAt: { gte: now, lte: openHorizon } },
     include: {
       location: true,
       openShiftOffers: { include: { member: { include: { user: true } } } },
     },
     orderBy: { startsAt: "asc" },
+    take: 200,
   });
 
   // Pending offers for this user

@@ -12,11 +12,16 @@ export default async function MessengerPage() {
       include: { user: true, location: true },
       orderBy: { user: { name: "asc" } },
     }),
+    // Most-recent 1000 messages, newest-first from the DB (uses the index),
+    // then reversed below to oldest→newest for the thread view. Previously this
+    // pulled the user's ENTIRE lifetime history on every visit.
     prisma.message.findMany({
       where: { OR: [{ fromId: u.memberId }, { toId: u.memberId }] },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
     }),
   ]);
+  messages.reverse();
 
   const contactsLite = contacts.map(c => ({
     id: c.id,

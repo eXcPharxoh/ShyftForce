@@ -40,10 +40,16 @@ export default async function AttendancePage() {
     prisma.attendanceLog.findMany({
       where: { member: { organizationId: orgId }, at: { gte: new Date(Date.now() - 36 * 3600_000) } },
       orderBy: { at: "asc" },
+      // Status + punch-map fields only — deliberately skip the base64 selfie
+      // photoData (this window is unbounded by count and would pull megabytes
+      // on a busy org). The lat/lng/geofence fields are tiny scalars.
+      select: { memberId: true, type: true, at: true, latitude: true, longitude: true, withinGeofence: true },
     }),
     prisma.attendanceLog.findMany({
       where: { member: { organizationId: orgId } },
       orderBy: { at: "desc" }, take: 12,
+      // This widget DOES render the selfie thumbnails + verified badge, so it
+      // needs photoData — but it's capped at 12 rows (manager-only surface).
       include: { member: { include: { user: true, location: true } } },
     }),
     prisma.organization.findUnique({ where: { id: orgId }, select: { finchAccessToken: true } }),

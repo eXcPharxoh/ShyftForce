@@ -582,7 +582,7 @@ export async function runTool(name: string, input: any, user: SessionUser) {
     case "get_metrics": {
       const period = await prisma.payPeriod.findFirst({
         where: { organizationId: orgId, status: "open" },
-        include: { entries: { include: { member: { include: { location: true } } } } },
+        include: { entries: { include: { member: { include: { location: true, user: true } } } } },
       });
       const entries = period?.entries ?? [];
       const filt = input.location
@@ -604,7 +604,9 @@ export async function runTool(name: string, input: any, user: SessionUser) {
       // Top 5 by hours
       const byMember = new Map<string, { name: string; hours: number; cost: number }>();
       for (const e of filt) {
-        const cur = byMember.get(e.memberId) ?? { name: (await prisma.user.findFirst({ where: { member: { id: e.memberId } } }))!.name, hours: 0, cost: 0 };
+        // e.member.user is now eagerly joined (see include above), so no
+        // per-entry user lookup — this used to fire one query per timesheet row.
+        const cur = byMember.get(e.memberId) ?? { name: e.member.user.name, hours: 0, cost: 0 };
         cur.hours += e.hours; cur.cost += e.hours * (e.member.hourlyRate ?? 0);
         byMember.set(e.memberId, cur);
       }
