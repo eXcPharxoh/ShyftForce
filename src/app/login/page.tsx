@@ -17,17 +17,28 @@ const DEMOS: { email: string; password: string; badge: string; tone: "orange" | 
   { email: "jordan@platinum.com", password: "password", badge: "Employee", tone: "gray",   sub: "Schedule + clock-in only" },
 ];
 
+// The one-click demo panel is a sales/dev convenience, NOT a production
+// feature. It is only shown when BOTH are true:
+//   1. NEXT_PUBLIC_SHOW_DEMO === "1"  (explicit opt-in, unset in prod), AND
+//   2. the demo org is actually seeded (checked via /api/demo-status).
+// Without the flag it never renders — so a real prospect can never hit a
+// broken "Admin · Full org access" button whose sign-in fails. To run a
+// live sales demo later: seed the demo org, then set NEXT_PUBLIC_SHOW_DEMO=1.
+const DEMO_PANEL_ENABLED = process.env.NEXT_PUBLIC_SHOW_DEMO === "1";
+
 export default function LoginPage() {
   const r = useRouter();
-  const [email, setEmail] = useState("admin@platinum.com");
-  const [password, setPassword] = useState("password");
+  // Start EMPTY — a real visitor must not see demo credentials pre-filled
+  // in their own login form. (Was hard-coded to admin@platinum.com/password.)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState<string | null>(null);
-  // Demo panel only renders when the seed user actually exists in this database.
-  // Otherwise the buttons would 'Invalid credentials' and look broken.
+  // Demo panel only renders when the flag is on AND the seed user exists.
   const [demoAvailable, setDemoAvailable] = useState<boolean | null>(null);
   useEffect(() => {
+    if (!DEMO_PANEL_ENABLED) { setDemoAvailable(false); return; }
     fetch("/api/demo-status")
       .then((r) => r.json())
       .then((d) => setDemoAvailable(!!d.exists))

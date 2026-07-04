@@ -388,31 +388,35 @@ function CopilotBubble() {
    TRUST MARQUEE
    ============================================================================ */
 function TrustMarquee() {
-  const logos = [
-    { mono: "YL", name: "Yoko Luna",             desc: "Restaurant · Mile End",      tone: "#6aa2ff" },
-    { mono: "PS", name: "Platinum Security",     desc: "Security · 24 sites",        tone: "#a78bff" },
-    { mono: "SP", name: "Supermarché PA",        desc: "Grocery · 12 locations",     tone: "#4ee0c5" },
-    { mono: "PA", name: "PANGEA 9487 inc",       desc: "Field service · Montréal",   tone: "#f5b544" },
-    { mono: "BG", name: "Boulangerie Guillaume", desc: "Hospitality · Quebec City",  tone: "#f17a8e" },
-    { mono: "SS", name: "Studio Sphere Fitness", desc: "Fitness · 3 studios",        tone: "#8db9ff" },
-    { mono: "MC", name: "Mile End Clinic",       desc: "Healthcare · 18 clinicians", tone: "#4ee0c5" },
-    { mono: "CR", name: "Clover Retail Group",   desc: "Retail · 8 stores",          tone: "#a78bff" },
+  // Honest framing: these are the INDUSTRIES ShyftForce ships templates for,
+  // not a roster of real customers. (The section used to list fabricated
+  // company names under "Trusted by…", which reads as a false customer
+  // claim — replaced with the verticals we genuinely support out of the box.)
+  const industries = [
+    { emoji: "🍽️", name: "Restaurants & cafés",   desc: "tips, 86-list, sections",   tone: "#6aa2ff" },
+    { emoji: "🛡️", name: "Security firms",         desc: "patrols, licences, posts",  tone: "#a78bff" },
+    { emoji: "🛒", name: "Grocery & retail",       desc: "departments, lanes, shrink", tone: "#4ee0c5" },
+    { emoji: "🔧", name: "Field service",          desc: "dispatch, crews, vehicles", tone: "#f5b544" },
+    { emoji: "🏥", name: "Healthcare",             desc: "permits, patient ratios",   tone: "#f17a8e" },
+    { emoji: "💪", name: "Fitness studios",        desc: "classes, PT sessions",      tone: "#8db9ff" },
+    { emoji: "🏗️", name: "Construction",           desc: "crews, safety briefings",   tone: "#4ee0c5" },
+    { emoji: "🏨", name: "Hospitality",            desc: "room turns, MOD blocks",    tone: "#a78bff" },
   ];
-  const doubled = [...logos, ...logos];
+  const doubled = [...industries, ...industries];
   return (
     <section className="py-16 border-y border-white/[0.06] bg-ink-950">
       <div className="container text-center mb-8">
         <div className="text-[12px] font-mono uppercase tracking-[0.16em] text-ink-500">
-          Trusted by teams of every shape and size
+          Built for every kind of shift team
         </div>
       </div>
       <div className="marquee">
         <div className="marquee-track">
           {doubled.map((l, i) => (
-            <div key={i} className="flex items-center gap-3 opacity-65">
-              <div className="w-7 h-7 rounded-md text-[10px] font-bold text-white flex items-center justify-center shrink-0"
-                style={{ background: `linear-gradient(135deg, ${l.tone}, color-mix(in srgb, ${l.tone} 40%, #000))` }}>
-                {l.mono}
+            <div key={i} className="flex items-center gap-3 opacity-75">
+              <div className="w-7 h-7 rounded-md text-[14px] flex items-center justify-center shrink-0"
+                style={{ background: `linear-gradient(135deg, ${l.tone}22, ${l.tone}0a)`, border: `1px solid ${l.tone}33` }}>
+                {l.emoji}
               </div>
               <div className="text-[13px] whitespace-nowrap">
                 <span className="text-ink-50">{l.name}</span>

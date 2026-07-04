@@ -24,8 +24,8 @@ const jetbrains = JetBrains_Mono({
 // set in globals.css base layer fallback chain.
 
 export const metadata: Metadata = {
-  title: "shyftforce — The workforce platform that runs itself.",
-  description: "AI scheduling, geofenced clock-in, real-time compliance, and a smart open-shift marketplace. One platform for restaurants, retail, security, healthcare, and field services — set up in 5 minutes.",
+  title: "ShyftForce — Run your team on autopilot",
+  description: "AI scheduling, GPS clock-in that stops time theft, real-time labor-law compliance, and a smart open-shift marketplace. One app for restaurants, retail, security, healthcare, and field service — set up in 5 minutes.",
   applicationName: "shyftforce",
   appleWebApp: { capable: true, title: "shyftforce", statusBarStyle: "black-translucent" },
   manifest: "/manifest.webmanifest",
