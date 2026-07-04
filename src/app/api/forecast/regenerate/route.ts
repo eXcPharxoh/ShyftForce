@@ -16,7 +16,7 @@ const Schema = z.object({
 
 export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
-  const parsed = Schema.safeParse(await req.json());
+  const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
 
   const weekStart = parsed.data.weekStart ? new Date(`${parsed.data.weekStart}T00:00:00`) : startOfWeek(new Date());

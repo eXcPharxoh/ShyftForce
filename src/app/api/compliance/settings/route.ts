@@ -6,7 +6,7 @@ import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 export async function PATCH(req: Request) {
   const u = await requireManagerOrAdmin();
   await getOrCreateComplianceSettings(u.organizationId); // ensure exists
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const allowed = [
     "maxWeeklyHours", "maxDailyHours", "minRestGapHours",
     "mealBreakRequiredAfterHours", "maxConsecutiveDays",

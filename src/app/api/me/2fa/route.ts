@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { generateSecret, otpauthUri, verifyCode, generateRecoveryCodes } from "@/lib/totp";
+import QRCode from "qrcode";
 
 export async function GET() {
   const u = await requireUser();
@@ -31,11 +32,19 @@ export async function POST() {
     },
   });
 
+  const uri = otpauthUri({ issuer: "ShyftForce", account: u.email, secret });
+  // Render the QR ourselves as a data: URL. Previously the client loaded it
+  // from api.qrserver.com, which (a) our CSP blocks (img-src) so it never
+  // showed, and (b) would have shipped the raw TOTP secret to a third party.
+  // A data: URL renders under CSP and keeps the secret on our servers.
+  const qrDataUrl = await QRCode.toDataURL(uri, { margin: 1, width: 200 }).catch(() => null);
+
   return NextResponse.json({
     secret,
-    uri: otpauthUri({ issuer: "ShyftForce", account: u.email, secret }),
+    uri,
+    qrDataUrl,
     recoveryCodes: codes,
-    instructions: "Add this secret to Google Authenticator / Authy / 1Password. Then verify a code via PUT to enable 2FA. Save the recovery codes — they're shown ONCE.",
+    instructions: "Scan the QR with Google Authenticator / Authy / 1Password (or type the secret in). Then verify a code via PUT to enable 2FA. Save the recovery codes — they're shown ONCE.",
   });
 }
 

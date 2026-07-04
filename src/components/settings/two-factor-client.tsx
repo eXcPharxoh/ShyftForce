@@ -5,6 +5,7 @@ import { Loader2, ShieldCheck, ShieldX, Copy, CheckCircle2, AlertCircle, QrCode 
 type EnrollResp = {
   secret: string;
   uri: string;
+  qrDataUrl: string | null;
   recoveryCodes: string[];
 };
 
@@ -85,9 +86,13 @@ export function TwoFactorClient({ initialEnabled, email }: { initialEnabled: boo
           <h4 className="font-semibold text-sm flex items-center gap-1.5"><QrCode className="w-4 h-4 text-amber-600" /> Scan or enter the key</h4>
           <p className="text-[11px] text-ink-700 dark:text-ink-300 mt-1">Open your authenticator app and scan the QR code, or paste the secret manually.</p>
           <div className="mt-3 flex items-start gap-4 flex-wrap">
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(enroll.uri)}`}
-              alt="2FA QR code" className="w-40 h-40 rounded-lg bg-white p-2" />
+            {enroll.qrDataUrl ? (
+              <img src={enroll.qrDataUrl} alt="2FA QR code" className="w-40 h-40 rounded-lg bg-white p-2" />
+            ) : (
+              <div className="w-40 h-40 rounded-lg bg-white/5 border border-dashed border-ink-300 dark:border-ink-700 flex items-center justify-center text-center text-[11px] text-ink-500 p-3">
+                QR unavailable — enter the secret manually
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <label className="label">Secret (case-insensitive, no spaces)</label>
               <div className="flex items-center gap-2">

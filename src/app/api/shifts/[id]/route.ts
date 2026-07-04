@@ -19,7 +19,7 @@ function combine(date: string, time: string): Date {
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireManagerOrAdmin();
   const { id } = await params;
-  const body = await req.json() as {
+  const body = await req.json().catch(() => ({})) as {
     date?: string; startTime?: string; endTime?: string;
     position?: string; notes?: string; status?: string;
     memberId?: string | null; isOpen?: boolean;

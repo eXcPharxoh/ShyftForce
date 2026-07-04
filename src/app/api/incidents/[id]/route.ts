@@ -32,7 +32,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const r = await prisma.incidentReport.findFirst({ where: { id, organizationId: u.organizationId } });
   if (!r) return NextResponse.json({ error: "not found" }, { status: 404 });
-  const parsed = PatchSchema.safeParse(await req.json());
+  const parsed = PatchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
   const data: any = { ...parsed.data };

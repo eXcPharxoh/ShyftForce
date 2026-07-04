@@ -43,7 +43,7 @@ function date(v: any): Date | null {
 
 export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = Body.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
 

@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
   const denied = await featureGuard(u.organizationId, "pos_integrations");
   if (denied) return denied;
-  const parsed = Schema.safeParse(await req.json());
+  const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
 
   const loc = await prisma.location.findFirst({ where: { id: parsed.data.locationId, organizationId: u.organizationId } });

@@ -25,7 +25,7 @@ export async function GET() {
 // Applies the named jurisdiction's rule pack as the org's defaults.
 export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
-  const { jurisdictionId } = await req.json();
+  const { jurisdictionId } = await req.json().catch(() => ({}));
   if (!jurisdictionId || !JURISDICTIONS[jurisdictionId]) {
     return NextResponse.json({ error: "Unknown jurisdiction" }, { status: 400 });
   }

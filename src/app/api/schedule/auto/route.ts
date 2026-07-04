@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "AI Auto-Scheduler isn't configured on this workspace yet." }, { status: 503 });
   }
 
-  const body = await req.json() as {
+  const body = await req.json().catch(() => ({})) as {
     weekStart?: string;       // ISO YYYY-MM-DD; defaults to next week
     coverage:   Coverage[];   // per-location coverage requirements
     notes?:     string;       // free-text guidance

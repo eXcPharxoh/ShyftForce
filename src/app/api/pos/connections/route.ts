@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
   const denied = await featureGuard(u.organizationId, "pos_integrations");
   if (denied) return denied;
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = Schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
 

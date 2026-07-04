@@ -32,7 +32,7 @@ const Schema = z.object({
 
 export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = Schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 

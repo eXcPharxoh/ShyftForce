@@ -832,13 +832,24 @@
    ============================================================================ */
 .bg-white                                       { background-color: rgb(13,20,34) !important; }
 .bg-ink-50                                      { background-color: rgb(13,20,34) !important; }
+/* Opacity variants of bg-ink-50 (e.g. table thead `bg-ink-50/60`) weren't
+   remapped and rendered as a light band over the dark theme. Treat them as a
+   subtle light tint so headers/zebra rows read correctly on navy. */
+.bg-ink-50\/60,
+.bg-ink-50\/50,
+.bg-ink-50\/40                                  { background-color: rgba(255,255,255,0.04) !important; }
 .bg-ink-100                                     { background-color: rgb(19,27,46) !important; }
+.bg-ink-100\/70,
+.bg-ink-100\/60,
+.bg-ink-100\/50                                 { background-color: rgba(255,255,255,0.05) !important; }
 .bg-ink-200,
 .bg-ink-200\/70,
 .bg-ink-200\/60                                 { background-color: rgb(26,36,64) !important; }
 
 /* Pressed / hover states using light-ink hover bgs */
 .hover\:bg-ink-50:hover                         { background-color: rgba(255,255,255,0.03) !important; }
+.hover\:bg-ink-50\/40:hover,
+.hover\:bg-ink-50\/60:hover                     { background-color: rgba(255,255,255,0.04) !important; }
 .hover\:bg-ink-100:hover                        { background-color: rgba(255,255,255,0.06) !important; }
 .hover\:bg-ink-100\/70:hover                    { background-color: rgba(255,255,255,0.04) !important; }
 .hover\:bg-brand-50\/40:hover,

@@ -7,7 +7,7 @@ import { audit } from "@/lib/audit";
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
   const { id } = await params;
-  const { action } = await req.json();
+  const { action } = await req.json().catch(() => ({}));
 
   const r = await prisma.shiftSwapRequest.findUnique({
     where: { id },

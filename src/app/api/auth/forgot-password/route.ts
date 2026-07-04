@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (!limit.allowed) {
     return NextResponse.json({ ok: true }); // mirror the enumeration-safe success path
   }
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = Schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ ok: true }); // never leak whether email exists
 

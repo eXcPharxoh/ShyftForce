@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       { status: 429 },
     );
   }
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = Schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten().fieldErrors }, { status: 400 });
   const { name, email, password, orgName } = parsed.data;

@@ -33,7 +33,7 @@ export async function GET() {
 // PATCH /api/compliance/predictability  body { eventIds: string[], action: "resolve" | "unresolve" }
 export async function PATCH(req: Request) {
   const u = await requireManagerOrAdmin();
-  const { eventIds, action } = await req.json();
+  const { eventIds, action } = await req.json().catch(() => ({}));
   if (!Array.isArray(eventIds) || eventIds.length === 0) {
     return NextResponse.json({ error: "eventIds required" }, { status: 400 });
   }

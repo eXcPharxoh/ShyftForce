@@ -28,7 +28,7 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   const u = await requireUser();
-  const parsed = PatchSchema.safeParse(await req.json());
+  const parsed = PatchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
 
   const profile = await getOrCreateWorkerProfile(u.id);

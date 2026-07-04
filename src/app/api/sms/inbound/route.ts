@@ -97,14 +97,20 @@ export async function POST(req: Request) {
     });
   }
 
-  // Build a SessionUser-shaped object so the replier can call our scoped tools
+  // Build a SessionUser-shaped object so the replier can call our scoped tools.
+  // SECURITY: an inbound SMS is authenticated only by caller-ID, which is
+  // spoofable at the telephony layer (the Twilio signature proves the request
+  // came from Twilio, not that the From number is genuine). So we deliberately
+  // cap SMS sessions to EMPLOYEE scope regardless of the member's real role —
+  // a spoofed manager number must NOT be able to drive manager/admin tools over
+  // text. Managers perform privileged actions in the authenticated web app.
   const sessionUser: SessionUser = {
     id: member.userId,
     email: member.user.email,
     name: member.user.name,
     image: member.user.avatar,
     memberId: member.id,
-    role: (member.role as any) ?? "EMPLOYEE",
+    role: "EMPLOYEE",
     organizationId: member.organizationId,
     organizationName: member.organization.name,
     organizationIndustry: member.organization.industry,

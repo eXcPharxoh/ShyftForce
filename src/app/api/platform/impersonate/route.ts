@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   if (!isPlatformAdminEmail(real.email)) {
     return NextResponse.json({ error: "platform admin only" }, { status: 403 });
   }
-  const parsed = Schema.safeParse(await req.json());
+  const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "invalid input" }, { status: 400 });
 
   try {

@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireManagerOrAdmin();
   const { id } = await params;
-  const body = await req.json() as { wave?: 1 | 2 | 3; candidateIds?: string[] };
+  const body = await req.json().catch(() => ({})) as { wave?: 1 | 2 | 3; candidateIds?: string[] };
   const wave = (body.wave ?? 1) as 1 | 2 | 3;
   const plan = WAVES[wave];
 

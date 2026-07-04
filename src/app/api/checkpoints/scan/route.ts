@@ -24,7 +24,7 @@ function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number):
 
 export async function POST(req: Request) {
   const u = await requireUser();
-  const parsed = Schema.safeParse(await req.json());
+  const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
   const post = await prisma.checkpointPost.findUnique({

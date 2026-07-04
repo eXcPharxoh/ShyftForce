@@ -23,7 +23,7 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   const u = await requireManagerOrAdmin();
-  const parsed = Schema.safeParse(await req.json());
+  const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
 
   await getOrCreateEwaSettings(u.organizationId);

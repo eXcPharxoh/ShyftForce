@@ -15,7 +15,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if ("denied" in check) return NextResponse.json({ error: "You don't have time-off approval permission." }, { status: 403 });
   const u = check.user;
   const { id } = await params;
-  const { status } = await req.json();
+  const { status } = await req.json().catch(() => ({}));
   if (!["pending", "approved", "rejected"].includes(status)) return NextResponse.json({ error: "bad status" }, { status: 400 });
 
   const existing = await prisma.timeOffRequest.findUnique({

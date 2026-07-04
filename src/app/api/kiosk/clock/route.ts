@@ -7,6 +7,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/lib/audit";
+import { rateLimit } from "@/lib/rate-limit";
 
 const Schema = z.object({
   pin:  z.string().regex(/^\d{4,6}$/),
@@ -26,6 +27,15 @@ export async function POST(req: Request) {
 
   const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+
+  // Brute-force guard: a 4-digit PIN is only 10k combinations, and this endpoint
+  // is reachable by anyone holding the device token. Cap attempts per device so
+  // the PIN space can't be walked. (Best-effort in-memory limiter — still raises
+  // the bar from "instant" to "loud and slow".)
+  const rl = rateLimit({ key: `kiosk-pin:${device.id}`, max: 8, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many attempts. Wait a minute and try again." }, { status: 429 });
+  }
 
   // Find candidates: members of this org with a PIN set. We check each PIN
   // server-side because we can't index a hashed PIN. Bounded by org member

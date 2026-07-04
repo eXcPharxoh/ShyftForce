@@ -21,7 +21,7 @@ function combine(date: string, time: string): Date {
 // so that adding new shifts on top of already-saved ones surfaces realistic violations.
 export async function POST(req: Request) {
   const u = await requireUser();
-  const body = await req.json() as { shifts: ProposedShift[]; weekStart?: string };
+  const body = await req.json().catch(() => ({})) as { shifts: ProposedShift[]; weekStart?: string };
 
   // Pull current org members + existing shifts in a +/- 1 week window around the proposal
   const proposalDates = body.shifts.map(s => +new Date(s.date));

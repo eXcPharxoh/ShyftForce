@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   const u = await requireManagerOrAdmin();
   const denied = await featureGuard(u.organizationId, "worker_network");
   if (denied) return denied;
-  const parsed = Schema.safeParse(await req.json());
+  const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
 
   // Verify ownership

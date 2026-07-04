@@ -6,7 +6,7 @@ import { audit } from "@/lib/audit";
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireManagerOrAdmin();
   const { id } = await params;
-  const data = await req.json();
+  const data = await req.json().catch(() => ({}));
   const allowed = ["dayOfWeek", "startTime", "endTime", "position", "active", "effectiveUntil", "locationId"] as const;
   const update: any = {};
   for (const k of allowed) if (k in data) update[k] = k === "effectiveUntil" && data[k] ? new Date(data[k]) : data[k];

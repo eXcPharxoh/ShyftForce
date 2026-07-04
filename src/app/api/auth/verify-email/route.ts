@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { audit } from "@/lib/audit";
 
 export async function POST(req: Request) {
-  const { token } = await req.json();
+  const { token } = await req.json().catch(() => ({}));
   if (!token) return NextResponse.json({ error: "Token required" }, { status: 400 });
 
   const v = await prisma.emailVerification.findUnique({ where: { token }, include: { user: { include: { member: true } } } });
