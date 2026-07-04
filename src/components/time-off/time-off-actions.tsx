@@ -1,20 +1,33 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useToast } from "@/components/ui/toaster";
 
 export function TimeOffActions({ requestId }: { requestId: string }) {
   const r = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState<string | null>(null);
 
   async function act(status: "approved" | "rejected") {
     setLoading(status);
-    await fetch(`/api/time-off/${requestId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    setLoading(null);
-    r.refresh();
+    try {
+      const res = await fetch(`/api/time-off/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      setLoading(null);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(`Couldn't ${status === "approved" ? "approve" : "decline"} the request`, { description: data.error ?? "Please try again." });
+        return;
+      }
+      toast.success(status === "approved" ? "Time off approved" : "Request declined");
+      r.refresh();
+    } catch {
+      setLoading(null);
+      toast.error("Couldn't reach the server", { description: "Check your connection and try again." });
+    }
   }
 
   return (

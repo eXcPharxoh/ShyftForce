@@ -194,7 +194,7 @@ export function JobCloseoutClient({ recentShifts, preselected }: { recentShifts:
           <Check className="w-8 h-8" />
         </div>
         <h3 className="font-bold text-lg">Closeout saved</h3>
-        <p className="text-sm text-ink-500 mt-1">The customer record + photo are stored. CRM webhook fired.</p>
+        <p className="text-sm text-ink-500 mt-1">The customer&rsquo;s sign-off and photo are saved.</p>
         <Link href="/job-closeout" className="btn-outline text-sm mt-4 inline-flex">Back to list</Link>
       </div>
     );

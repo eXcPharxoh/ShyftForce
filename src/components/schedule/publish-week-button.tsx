@@ -18,7 +18,7 @@ export function PublishWeekButton({ weekStart, draftCount }: { weekStart: string
     }
     const ok = await confirm({
       title: `Publish ${draftCount} draft shift${draftCount === 1 ? "" : "s"}?`,
-      description: "Assigned employees will see these shifts on their dashboard and get notified. Predictability-pay rules kick in for any changes after publish.",
+      description: "Assigned employees will see these shifts on their dashboard. Predictability-pay rules kick in for any changes after publish.",
       confirmLabel: "Publish week",
     });
     if (!ok) return;
@@ -34,7 +34,7 @@ export function PublishWeekButton({ weekStart, draftCount }: { weekStart: string
       return;
     }
     toast.success(`Published ${data.published} shift${data.published === 1 ? "" : "s"}`, {
-      description: "Your team has been notified.",
+      description: "Your team can see the schedule on their dashboard now.",
     });
     r.refresh();
   }
