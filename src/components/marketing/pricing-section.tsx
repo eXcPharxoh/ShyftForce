@@ -59,7 +59,7 @@ const TIERS: { key: PlanKey; cta: string; ctaHref: string; tagline: string; feat
     features: [
       "Everything in Business",
       "SSO (SAML)",
-      "Custom SLA · 99.99%",
+      "Custom SLA (on contract)",
       "Dedicated CSM",
       "Volume discount on per-seat",
       "On-premise option",

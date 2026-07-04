@@ -35,6 +35,11 @@ export function ClockInDialog({
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<any | null>(null);
+  // Daily safety-briefing gate (construction): if the clock-in API returns
+  // safety_ack_required, we show the briefing(s) and let the crew member
+  // acknowledge, then retry the clock-in automatically.
+  const [pendingBriefings, setPendingBriefings] = useState<{ id: string; topic: string; details: string | null }[] | null>(null);
+  const [ackError, setAckError] = useState<string | null>(null);
 
   // Face verification (anti-buddy-punch). Mode + enrollment fetched on open.
   const [faceMode, setFaceMode] = useState<"off" | "flag" | "block">("off");
@@ -207,6 +212,13 @@ export function ClockInDialog({
         }),
       });
       const data = await res.json().catch(() => ({}));
+      // Safety-briefing gate: don't surface a hard error — show the briefing so
+      // the crew member can acknowledge and continue.
+      if (!res.ok && data.code === "safety_ack_required" && Array.isArray(data.safetyBriefings)) {
+        setSubmitting(false);
+        setPendingBriefings(data.safetyBriefings);
+        return;
+      }
       setSubmitting(false);
       setResult({ ok: res.ok, ...data });
       if (res.ok) {
@@ -216,6 +228,26 @@ export function ClockInDialog({
     } catch {
       setSubmitting(false);
       setResult({ ok: false, error: "Couldn't reach the server — check your connection and try again." });
+    }
+  }
+
+  // Acknowledge every pending briefing, then retry the clock-in.
+  async function acknowledgeAndClockIn() {
+    if (!pendingBriefings) return;
+    setSubmitting(true); setAckError(null);
+    try {
+      for (const b of pendingBriefings) {
+        const res = await fetch("/api/safety-briefings", {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ briefingId: b.id }),
+        });
+        if (!res.ok) throw new Error();
+      }
+      setPendingBriefings(null);
+      await submit();
+    } catch {
+      setSubmitting(false);
+      setAckError("Couldn't record your acknowledgment — check your connection and try again.");
     }
   }
 
@@ -237,7 +269,25 @@ export function ClockInDialog({
         </header>
 
         <div className="p-5 space-y-4">
-          {!result && (
+          {!result && pendingBriefings && (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 p-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-800 dark:text-amber-200">
+                  Read {pendingBriefings.length === 1 ? "today's safety briefing" : `today's ${pendingBriefings.length} safety briefings`} and acknowledge before you clock in.
+                </div>
+              </div>
+              {pendingBriefings.map((b) => (
+                <div key={b.id} className="rounded-xl border border-ink-200 dark:border-ink-800 p-3">
+                  <div className="font-semibold text-sm">{b.topic}</div>
+                  {b.details && <div className="text-sm text-ink-600 dark:text-ink-300 mt-1 whitespace-pre-wrap">{b.details}</div>}
+                </div>
+              ))}
+              {ackError && <div className="text-[12px] text-rose-600 dark:text-rose-400">{ackError}</div>}
+            </div>
+          )}
+
+          {!result && !pendingBriefings && (
             <>
               {/* Camera preview / photo */}
               <div className="relative aspect-square bg-ink-900 rounded-2xl overflow-hidden">
@@ -354,7 +404,16 @@ export function ClockInDialog({
           )}
         </div>
 
-        {!result && (
+        {!result && pendingBriefings && (
+          <footer className="border-t border-ink-200 dark:border-ink-800 p-4 flex items-center justify-end gap-2 shrink-0">
+            <button onClick={onClose} className="btn-ghost">Cancel</button>
+            <button onClick={acknowledgeAndClockIn} disabled={submitting} className={`btn-primary bg-${meta.tone}-500 hover:bg-${meta.tone}-600`}>
+              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><CheckCircle2 className="w-4 h-4" /> I acknowledge & {meta.label.toLowerCase()}</>}
+            </button>
+          </footer>
+        )}
+
+        {!result && !pendingBriefings && (
           <footer className="border-t border-ink-200 dark:border-ink-800 p-4 flex flex-col gap-2 shrink-0">
             {blockReason && (
               <div className="text-[11px] text-amber-600 dark:text-amber-400 text-center">{blockReason}</div>

@@ -436,11 +436,15 @@ function TrustMarquee() {
 function MetricsStrip() {
   return (
     <section className="py-20 border-b border-white/[0.06]">
+      {/* Capability facts we can actually defend — not fabricated outcome
+          stats. (Previously claimed "50% fewer no-shows" and "99.9% uptime
+          SLA" with zero customers to source them from, and contradicted the
+          hero's own 8-hours number.) */}
       <div className="container grid grid-cols-1 md:grid-cols-4 gap-8">
-        <Metric value={50}   suffix="%"   label="Fewer no-shows"   sub="across the marketplace" />
-        <Metric value={12}   suffix="+ hrs" label="Saved per manager" sub="every week" />
-        <Metric value={5}                 suffix=" min" label="Setup time"      sub="with industry templates" />
-        <Metric value={99.9} suffix="%"   decimals={1} label="Uptime SLA"   sub="Pro & Business plans" />
+        <Metric value={12}  suffix="+"     label="Industries supported" sub="templates out of the box" />
+        <Metric value={6}                  label="Compliance rule families" sub="checked before every publish" />
+        <Metric value={5}   suffix=" min"  label="Setup time"      sub="with industry templates" />
+        <Metric value={3}   suffix=" waves" label="Open-shift auto-offers" sub="first to claim wins" />
       </div>
     </section>
   );
@@ -1143,7 +1147,7 @@ function Pricing() {
       cta: "Start 7-day trial",
       ctaPrimary: false,
       popular: false,
-      features: ["Everything in Pro", "Multi-location dashboard", "Custom compliance jurisdictions", "API + webhooks", "Google SSO", "Priority support · 99.9% SLA"],
+      features: ["Everything in Pro", "Multi-location dashboard", "Custom compliance jurisdictions", "API + webhooks", "Google SSO", "Priority support"],
     },
     {
       name: "Enterprise",
@@ -1153,7 +1157,7 @@ function Pricing() {
       cta: "Contact sales",
       ctaPrimary: false,
       popular: false,
-      features: ["Everything in Business", "Custom contract + DPA", "Custom onboarding", "Dedicated CSM", "24/7 support + Slack channel", "Audit logs · BAA · SOC 2 in progress"],
+      features: ["Everything in Business", "Custom contract + DPA", "Custom onboarding", "Dedicated CSM", "24/7 support + Slack channel", "Audit logs · advanced security"],
     },
   ];
   return (
@@ -1359,7 +1363,7 @@ function FinalCTA() {
               <Link href="/signup" className="btn-primary">
                 Start 7-day free trial <ArrowRight className="w-4 h-4 arrow" />
               </Link>
-              <a href="#features" className="btn-ghost">Talk to a human</a>
+              <a href="mailto:hi@shyftforce.com?subject=Question%20about%20ShyftForce" className="btn-ghost">Talk to a human</a>
             </div>
           </div>
         </Reveal>
@@ -1644,12 +1648,12 @@ function MarketingFooter() {
               <Wordmark className="text-[20px]" />
             </div>
             <p className="text-[14px] text-ink-300 leading-relaxed max-w-sm">
-              The workforce platform that runs itself. AI-first scheduling, compliance, and open-shift marketplace for modern teams.
+              Run your team on autopilot. AI-first scheduling, compliance, and an open-shift marketplace for modern teams.
             </p>
-            <div className="mt-4 flex items-center gap-3">
-              <span className="status status-success">All systems operational</span>
-            </div>
-            <div className="mt-3 text-[12px] text-ink-500">SOC 2 in progress · GDPR-ready · BAA available</div>
+            {/* Removed the hardcoded "All systems operational" badge (it stayed
+                green during any outage) and the "BAA available" claim (no BAA
+                terms exist — a HIPAA commitment we can't back). */}
+            <div className="mt-4 text-[12px] text-ink-500">GDPR &amp; CCPA-ready · Encrypted in transit &amp; at rest</div>
           </div>
           {cols.map(c => (
             <div key={c.title}>

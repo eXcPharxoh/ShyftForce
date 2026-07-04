@@ -15,10 +15,13 @@ type Policy = {
   active: boolean;
 };
 
+// Only the two accrual methods the engine actually implements. The
+// "per pay period" / "per hour worked" options were selectable and saved
+// fine, but src/lib/pto/service.ts only special-cases "unlimited" — every
+// other method falls through to annual-lump-sum math, so picking them
+// silently produced wrong balances. Hidden until they're real.
 const METHODS = [
   { v: "annual_lump_sum",  l: "Annual lump sum" },
-  { v: "per_pay_period",   l: "Per pay period (soon)" },
-  { v: "per_hour_worked",  l: "Per hour worked (soon)" },
   { v: "unlimited",        l: "Unlimited" },
 ];
 

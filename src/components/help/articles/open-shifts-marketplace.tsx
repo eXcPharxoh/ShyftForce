@@ -10,9 +10,9 @@ export default function Article() {
       <p>When you mark a shift as open (or auto-mark it via a callout), we send offers to your best-fit team members in <b>three waves</b>:</p>
 
       <Steps>
-        <li><b>Wave 1</b> — top 3 candidates based on availability, position match, and recent hours. They have 30 minutes to claim.</li>
-        <li><b>Wave 2</b> — next 5 candidates. Another 30 minutes.</li>
-        <li><b>Wave 3</b> — open to everyone qualified. 60 minutes.</li>
+        <li><b>Wave 1</b> — top 3 candidates based on availability, position match, and recent hours. They have 1 hour to claim.</li>
+        <li><b>Wave 2</b> — next 5 candidates. Another 2 hours.</li>
+        <li><b>Wave 3</b> — open to everyone qualified. 24 hours.</li>
       </Steps>
 
       <p>First person to tap <b>Claim</b> wins. We immediately confirm them, expire the other offers, and notify them they got it.</p>

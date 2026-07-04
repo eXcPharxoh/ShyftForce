@@ -24,15 +24,14 @@ export default function Article() {
       </Steps>
 
       <h3>How tips get into the pool</h3>
-      <p>Three ways, depending on your setup:</p>
+      <p>Two ways, depending on your setup:</p>
       <ul>
         <li><b>Daily entry</b> — a manager types in the total tips collected for the shift at end of day. We compute distributions overnight.</li>
-        <li><b>From POS sync</b> — if you've connected your register and your POS tracks tips per transaction, we pull them automatically.</li>
         <li><b>Per-employee entry</b> — for cash tips that go straight to staff, the employee enters their amount in the app at end of shift.</li>
       </ul>
 
       <h3>Tip-out reports for payroll</h3>
-      <p>End of each pay period, the Tip Pooling page generates a <b>tip distribution report</b> showing every employee's allocated tips, owed or owed-to amounts, and the calculation method. Export it as CSV for your payroll provider, or push directly via the Finch integration.</p>
+      <p>End of each pay period, the Tip Pooling page generates a <b>tip distribution report</b> showing every employee's allocated tips, owed or owed-to amounts, and the calculation method. Export it as CSV for your payroll provider.</p>
 
       <Callout kind="tip" title="IRS Form 8027 (Restaurants with 10+ employees)">
         US restaurants with 10+ tipped employees have to file IRS Form 8027 annually showing total receipts, charged tips, and allocated tips. We auto-generate the form data from your tip pool history — go to <Link href="/tips" className="text-brand-300 underline">Tip Pooling → Reports → IRS 8027</Link>. Saves a few hours every January.

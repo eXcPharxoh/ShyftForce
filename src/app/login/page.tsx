@@ -130,8 +130,8 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-10 flex items-center gap-4 text-xs text-white/50">
-            <span className="inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"/> SOC 2 in progress</span>
-            <span className="inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"/> 99.9% uptime</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"/> Encrypted end-to-end</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"/> 2-step verification</span>
             <span className="inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"/> GDPR-ready</span>
           </div>
         </div>

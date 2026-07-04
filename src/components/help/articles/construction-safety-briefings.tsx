@@ -4,47 +4,31 @@ import { Prose, Steps, Callout } from "../prose";
 export default function Article() {
   return (
     <Prose>
-      <p>If you run a construction site, daily safety briefings (sometimes called &quot;toolbox talks&quot;) aren't optional — OSHA requires them and your insurance carrier almost certainly does too. ShyftForce has a built-in briefing system: post the topic, your crew acknowledges it from the app before clocking in, and you get an audit-ready record.</p>
+      <p>If you run a construction site, daily safety briefings (sometimes called &quot;toolbox talks&quot;) aren&apos;t optional — OSHA expects them and your insurance carrier almost certainly does too. ShyftForce has a built-in briefing system: the foreman posts the day&apos;s topic, every crew member acknowledges it before they can clock in, and you get a dated record of who acknowledged what.</p>
 
       <h3>How a briefing day works</h3>
       <Steps>
-        <li>Morning of: the foreman creates today's briefing in the app. Picks a topic from the library (ladders, fall protection, hot work, confined space, etc.) or types a custom one.</li>
-        <li>The briefing details and any PDF (safety poster, MSDS, JSA) are attached.</li>
-        <li>When a crew member tries to clock in, they're prompted: <b>&quot;Acknowledge today's safety briefing?&quot;</b> with the topic and content shown.</li>
-        <li>They tap <b>I acknowledge</b>. They're clocked in. We log: which employee, which briefing, timestamp, GPS, optionally a typed initials field.</li>
-        <li>End of day: every clock-in has an acknowledgment attached. If anyone clocked in without acknowledging (rare — the modal blocks until done), the gap is flagged.</li>
+        <li>Morning of: a manager or foreman opens <b>Safety</b> and posts today&apos;s briefing — a short <b>topic</b> (e.g. &quot;Fall protection near grid 3&quot;) and a <b>details</b> note with whatever the crew needs to know.</li>
+        <li>When a crew member goes to clock in, ShyftForce checks for any briefing posted in the last 16 hours they haven&apos;t acknowledged. If there is one, the clock-in screen shows it and asks them to <b>acknowledge</b> first.</li>
+        <li>They tap <b>I acknowledge &amp; clock in</b>. We record who acknowledged, which briefing, and the timestamp — then complete their clock-in.</li>
+        <li>On the Safety page you see each briefing with a live list of who has acknowledged and who hasn&apos;t yet.</li>
       </Steps>
 
-      <h3>What's in the topic library</h3>
-      <p>We ship 30+ pre-written toolbox talks aligned to OSHA's most-cited construction topics:</p>
-      <ul>
-        <li>Fall protection (the #1 OSHA cited topic)</li>
-        <li>Scaffolding</li>
-        <li>Ladders</li>
-        <li>Eye and face protection</li>
-        <li>Respiratory protection</li>
-        <li>Hazard communication (HazCom)</li>
-        <li>Lockout/tagout</li>
-        <li>Excavation</li>
-        <li>Hot work and welding</li>
-        <li>Heat illness prevention (required in CA, WA, OR, NV, CO)</li>
-        <li>Plus topics for confined space, electrical, cranes, demolition, asbestos, lead, silica, noise</li>
-      </ul>
-
-      <p>Each is a short markdown document you can edit before posting. Add your site-specific notes (&quot;today watch for the rebar exposed near grid 3&quot;) without rewriting the whole thing.</p>
-
-      <h3>Custom topics</h3>
-      <p>For something specific (a JSA for a particular task, a near-miss debrief, an incident-driven retraining), create a custom topic. Same flow — write the content, attach any documents, post.</p>
-
-      <Callout kind="tip" title="Run by foreman, not corporate">
-        Safety culture works best when the foreman owns the briefing. We default to letting any manager-role create briefings. If you want it foreman-only (no office-based managers), use a custom role (Settings → Roles &amp; permissions) and remove the permission from the corporate role.
+      <Callout kind="tip" title="It really blocks the clock-in">
+        This isn&apos;t a reminder they can dismiss. If a briefing is posted and unacknowledged, the person can&apos;t clock themselves in until they acknowledge it. (A manager correcting someone else&apos;s punch is never blocked by it.)
       </Callout>
 
-      <h3>The OSHA paper trail</h3>
-      <p>If you're inspected, the Compliance Reports page exports a per-day, per-site briefing log showing the topic, attendees, and acknowledgment timestamps. Comes as PDF, printable. Usually accepted as-is by OSHA inspectors and your insurance carrier's auditor.</p>
+      <h3>Writing the briefing</h3>
+      <p>The topic and details are free text — write whatever fits today&apos;s site. A near-miss debrief, a JSA summary for a specific task, a weather note, an incident-driven retraining. Keep it short; the crew reads it on their phone at clock-in.</p>
+
+      <h3>Who can post</h3>
+      <p>Any manager-role can post a briefing. If you want it foreman-only (no office-based managers), create a custom role in <Link href="/settings" className="text-brand-300 underline">Settings → Roles &amp; permissions</Link> and remove the permission from the corporate role.</p>
+
+      <h3>The paper trail</h3>
+      <p>Every acknowledgment is stored with the member and timestamp, so if you&apos;re asked to show that the crew was briefed, the Safety page has the record per briefing. Acknowledgments stay attached to each day&apos;s briefing.</p>
 
       <Callout kind="warn" title="Acknowledgment isn't training">
-        A toolbox talk acknowledgment is NOT a substitute for documented OSHA 10 or 30 training. Workers still need their certifications, and we track those separately in the <Link href="/help/healthcare-permits-licences" className="text-brand-300 underline">Permits and licenses</Link> section.
+        A toolbox-talk acknowledgment is NOT a substitute for documented OSHA 10 or 30 training. Workers still need their certifications — track those in the <Link href="/help/healthcare-permits-licences" className="text-brand-300 underline">Certifications and licenses</Link> section.
       </Callout>
     </Prose>
   );

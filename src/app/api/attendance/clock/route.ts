@@ -62,6 +62,33 @@ export async function POST(req: Request) {
   // Applies only to employees punching for THEMSELVES. Managers/admins (who can
   // also correct other people's punches) are exempt to avoid GPS lockouts.
   const selfPunch = memberId === u.memberId;
+
+  // ---- Daily safety-briefing gate (construction) ----
+  // The Safety page promises "every crew member must acknowledge before clocking
+  // in." Enforce it here rather than leave it a facade: if a foreman posted a
+  // briefing in the last 16h (timezone-robust "today") that this crew member
+  // hasn't acknowledged, block the clock-in and hand back the briefing so the
+  // app can prompt them to acknowledge, then retry. Scoped to self clock-ins so
+  // a manager correcting someone else's punch is never blocked by it.
+  if (selfPunch && type === "clock_in") {
+    const since = new Date(Date.now() - 16 * 3600 * 1000);
+    const todays = await prisma.safetyBriefing.findMany({
+      where: { organizationId: u.organizationId, postedAt: { gte: since } },
+      select: { id: true, topic: true, details: true, acks: { where: { memberId }, select: { id: true } } },
+      orderBy: { postedAt: "desc" },
+    });
+    const unacked = todays.filter((b) => b.acks.length === 0);
+    if (unacked.length > 0) {
+      return NextResponse.json({
+        error: unacked.length === 1
+          ? `Acknowledge today's safety briefing ("${unacked[0].topic}") before clocking in.`
+          : `Acknowledge today's ${unacked.length} safety briefings before clocking in.`,
+        code: "safety_ack_required",
+        safetyBriefings: unacked.map((b) => ({ id: b.id, topic: b.topic, details: b.details })),
+      }, { status: 409 });
+    }
+  }
+
   if (u.role === "EMPLOYEE" && selfPunch) {
     // (2) A selfie is required to clock in. The photo is stored for manager
     //     review (face-match is a later tier); requiring it deters a friend.

@@ -27,9 +27,6 @@ export default function Article() {
 
       <h3>Declining</h3>
       <p>If you have to say no, add a reason — even something short like &quot;Already approved 3 people for that week, need to balance.&quot; Saves a follow-up conversation and helps the employee plan a different date.</p>
-
-      <h3>Bulk approval</h3>
-      <p>If you have 5+ requests piling up, the Time off page has a <b>Select all</b> checkbox and a <b>Bulk approve</b> action. Good for clearing the queue when nothing's controversial.</p>
     </Prose>
   );
 }

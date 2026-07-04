@@ -4,44 +4,39 @@ import { Prose, Steps, Callout } from "../prose";
 export default function Article() {
   return (
     <Prose>
-      <p>Upgrading, downgrading, adding seats, or cancelling — all of it happens in one place: <Link href="/settings/billing" className="text-brand-300 underline">Settings → Billing &amp; plan</Link>. Changes take effect immediately and we pro-rate the bill so you only pay for what you used.</p>
+      <p>Upgrading, changing plans, updating your card, cancelling, and grabbing invoices all start in one place: <Link href="/settings/billing" className="text-brand-300 underline">Settings → Billing &amp; plan</Link>. Payments run through Stripe, so your card details never touch our systems.</p>
+
+      <h3>What you&apos;ll see</h3>
+      <p>The Billing &amp; plan page shows your current plan, your monthly cost, and your seat usage. Below that is a <b>Change plan</b> grid comparing Pro, Business, and Enterprise with the price at your current headcount, so you can see exactly what each would cost before you switch.</p>
 
       <h3>Upgrading</h3>
       <Steps>
         <li>Go to <Link href="/settings/billing" className="text-brand-300 underline">Settings → Billing &amp; plan</Link>.</li>
-        <li>Click <b>Compare plans</b>.</li>
-        <li>Pick the plan you want (Pro or Business).</li>
-        <li>Click <b>Upgrade</b>. We hand you to Stripe's secure checkout. Your card info never touches our systems.</li>
-        <li>Pay. You're back in ShyftForce in 30 seconds. The new features unlock immediately.</li>
+        <li>Click <b>Upgrade to Pro</b> or <b>Upgrade to Business</b>.</li>
+        <li>You&apos;re handed to Stripe&apos;s secure checkout. Pay there.</li>
+        <li>You land back in ShyftForce and the new plan&apos;s limits unlock right away.</li>
       </Steps>
 
-      <h3>Downgrading</h3>
-      <p>Same place. Pick the lower plan and click <b>Downgrade</b>. The change takes effect at the end of your current billing period — you don't lose access to the higher-plan features mid-month.</p>
-      <p>If you downgrade past a feature you're using (e.g. you're on Business with 4 locations and downgrade to Pro which only includes 1), we don't delete your data. The feature just becomes read-only until you re-upgrade or remove what's over the limit.</p>
-
-      <h3>Adding or removing seats</h3>
-      <p>Your seat count auto-adjusts based on how many active employees you have. Add 5 employees, your next bill includes those 5 seats. Deactivate 3 employees, your next bill is smaller. No need to manage seats manually.</p>
-      <p>If a seat charge happens on the same day as a deactivation, we pro-rate to the hour — you don't pay for a seat you didn't really use.</p>
-
-      <Callout kind="tip" title="Seasonal businesses">
-        If you're a seasonal operation (summer-only restaurant, holiday retail), you can <b>pause your workspace</b> instead of cancelling. Pausing keeps your data intact for $5/month and reactivates instantly when you're ready. Cancelling deletes everything after 30 days.
+      <Callout kind="tip" title="On the free trial?">
+        During the trial every feature is already unlocked and no card is required. You only need to pick a plan when the trial ends — until then you can explore everything.
       </Callout>
 
-      <h3>Cancelling</h3>
-      <Steps>
-        <li>Settings → Billing &amp; plan.</li>
-        <li>Scroll to the bottom. Click <b>Cancel subscription</b>.</li>
-        <li>You'll be asked why (helps us improve) but you can skip it.</li>
-        <li>Confirm. Your subscription ends at the end of the current billing period — you keep access until then.</li>
-        <li>After it ends, you have <b>30 days</b> to download a full export of your data or reactivate. After 30 days, your workspace is permanently deleted.</li>
-      </Steps>
+      <h3>Changing plans, updating your card, or cancelling</h3>
+      <p>Once you have a paid subscription, the Billing page shows a <b>Manage subscription</b> button. It opens the Stripe billing portal — Stripe&apos;s own secure page — where you can:</p>
+      <ul>
+        <li>Switch to a different plan</li>
+        <li>Update your card or billing details</li>
+        <li>Cancel your subscription</li>
+        <li>Download past invoices as PDF for your accountant</li>
+      </ul>
+      <p>Cancelling in the portal ends the subscription at the end of your current billing period, so you keep access until then.</p>
 
-      <Callout kind="warn" title="What about employee records you're required to keep?">
-        Wage and timesheet records have a legal retention period (typically 3–7 years in the US). When you cancel, you can request an extended retention plan that keeps just those records (no active features) for the required period at a reduced rate. Message <a href="mailto:support@shyftforce.com" className="text-brand-300 underline">support</a> if you need this.
+      <h3>Seats</h3>
+      <p>Each plan includes a set number of seats and a per-seat price above that. The Billing page shows your seat usage and the cost at your current headcount, and the plan grid previews what any plan would cost as your team grows.</p>
+
+      <Callout kind="warn" title="Enterprise pricing">
+        Enterprise is a custom volume contract rather than a self-serve checkout. Use <b>Contact sales for Enterprise</b> on the Billing page (or email <a href="mailto:sales@shyftforce.com" className="text-brand-300 underline">sales@shyftforce.com</a>) and we&apos;ll set it up.
       </Callout>
-
-      <h3>Invoices</h3>
-      <p>Every charge shows up in <b>Settings → Billing &amp; plan → Invoices</b>. Each one is downloadable as PDF for your accountant.</p>
     </Prose>
   );
 }
