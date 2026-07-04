@@ -39,9 +39,12 @@ export function RunPayrollButton({ finchConnected, payPeriodId, unapprovedCount 
       toast.error("Payroll push failed", { description: data.error ?? "Try again." });
       return;
     }
-    const errorPart = data.errors?.length ? ` · ${data.errors.length} error${data.errors.length === 1 ? "" : "s"}` : "";
+    const bits: string[] = [];
+    if (data.unapprovedSkipped > 0) bits.push(`${data.unapprovedSkipped} unapproved entr${data.unapprovedSkipped === 1 ? "y" : "ies"} skipped`);
+    if (data.skipped > 0) bits.push(`${data.skipped} member${data.skipped === 1 ? "" : "s"} skipped (no payroll ID)`);
+    if (data.errors?.length) bits.push(`${data.errors.length} error${data.errors.length === 1 ? "" : "s"}`);
     toast.success(`Pushed ${data.pushed} member${data.pushed === 1 ? "" : "s"} to payroll`, {
-      description: `${data.skipped} skipped${errorPart}.`,
+      description: bits.length ? bits.join(" · ") + "." : "All approved hours sent.",
     });
     r.refresh();
   }

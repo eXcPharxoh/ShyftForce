@@ -4,9 +4,10 @@ import { requireUser, requireManagerOrAdmin } from "@/lib/session";
 import { unresolvedPredictabilityForOrg } from "@/lib/compliance/predictability";
 import { audit } from "@/lib/audit";
 
-// GET /api/compliance/predictability → unresolved ledger
+// GET /api/compliance/predictability → unresolved ledger (contains per-member
+// pay-owed amounts, so manager/admin only).
 export async function GET() {
-  const u = await requireUser();
+  const u = await requireManagerOrAdmin();
   const summary = await unresolvedPredictabilityForOrg(u.organizationId);
   return NextResponse.json({
     totalOwedCents: summary.totalOwedCents,

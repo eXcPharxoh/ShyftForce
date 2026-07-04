@@ -86,7 +86,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               {member.phone && <Chip icon={Phone} label={member.phone} href={`tel:${member.phone}`} />}
               <Chip icon={Calendar} label={`Hired ${dateLabel(member.hireDate)}`} />
               {member.birthday && <Chip icon={Cake} label={member.birthday.toLocaleDateString("en-US", { month: "short", day: "numeric" })} />}
-              {member.hourlyRate != null && <Chip icon={Briefcase} label={`${fmtMoney(member.hourlyRate)}/h`} />}
+              {/* Pay rate is visible only to managers, or the person viewing
+                  their own profile — never to a coworker viewing someone else. */}
+              {member.hourlyRate != null && (isManager || member.id === u.memberId) && <Chip icon={Briefcase} label={`${fmtMoney(member.hourlyRate)}/h`} />}
             </div>
           </div>
         </div>

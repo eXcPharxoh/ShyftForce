@@ -26,6 +26,7 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
 
   const [applying, setApplying] = useState(false);
   const [done, setDone] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   const tpl = INDUSTRY_TEMPLATES.find((t) => t.key === industry);
 
@@ -62,27 +63,43 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
   async function applyTemplate() {
     if (!industry) return;
     setApplying(true);
-    await fetch("/api/onboarding/apply-template", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        industry,
-        firstLocation: firstLocation.trim()
-          ? { name: firstLocation.trim(), address: firstLocationAddress.trim() || undefined }
-          : undefined,
-        // User-customized values — the API uses these instead of the template
-        // defaults if provided.
-        positions,
-        shiftBlocks,
-        geofenceMeters,
-        compliance: {
-          mealBreakRequiredAfterHours: mealBreakHours,
-          predictiveSchedulingDays: predictiveSchedulingDays || undefined,
-        },
-      }),
-    });
-    setApplying(false);
-    setDone(true);
-    setStep(4);
+    setSetupError(null);
+    // Only celebrate on a real success. Previously we set done=true and
+    // showed confetti unconditionally — so a 400 (e.g. a blank/too-long
+    // shift-block name) or a 500 mid-seed left the manager staring at
+    // "You're all set!" over a completely empty workspace, and a network
+    // throw left the Finish button spinning forever.
+    try {
+      const res = await fetch("/api/onboarding/apply-template", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          industry,
+          firstLocation: firstLocation.trim()
+            ? { name: firstLocation.trim(), address: firstLocationAddress.trim() || undefined }
+            : undefined,
+          // User-customized values — the API uses these instead of the template
+          // defaults if provided.
+          positions,
+          shiftBlocks,
+          geofenceMeters,
+          compliance: {
+            mealBreakRequiredAfterHours: mealBreakHours,
+            predictiveSchedulingDays: predictiveSchedulingDays || undefined,
+          },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setApplying(false);
+      if (!res.ok) {
+        setSetupError(data.error ?? "Setup hit a snag — nothing was lost. Please try again.");
+        return;
+      }
+      setDone(true);
+      setStep(4);
+    } catch {
+      setApplying(false);
+      setSetupError("Couldn't reach the server — check your connection and try again.");
+    }
   }
 
   return (
@@ -188,6 +205,7 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
                     className="input flex-1 text-sm py-1.5"
                     placeholder="Add a position (e.g. Barista)"
                     value={newPosition}
+                    maxLength={60}
                     onChange={(e) => setNewPosition(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPosition(); } }}
                   />
@@ -206,6 +224,7 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
                       <input
                         className="input flex-1 text-sm py-1.5"
                         value={b.name}
+                        maxLength={40}
                         onChange={(e) => updateShiftBlock(i, { name: e.target.value })}
                         placeholder="Block name"
                       />
@@ -325,6 +344,12 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
           </section>
         )}
       </div>
+
+      {step === 3 && setupError && (
+        <div className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-200">
+          {setupError}
+        </div>
+      )}
 
       <footer className="flex items-center justify-between mt-6">
         {step > 1 && step < 4 ? (

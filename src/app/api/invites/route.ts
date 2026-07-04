@@ -51,6 +51,7 @@ export async function POST(req: Request) {
   }
 
   const created: any[] = [];
+  const emailFailures: string[] = []; // recipients whose invite row was made but email didn't send
   for (const inv of parsed.data.invitations) {
     const token = randomBytes(32).toString("hex");
     const rec = await prisma.invitation.upsert({
@@ -75,19 +76,34 @@ export async function POST(req: Request) {
         },
       });
     });
-    await sendEmail({
+    // sendEmail never throws — it returns { ok:false } on Resend failure or
+    // when email is unconfigured in prod. Track failures so we don't tell
+    // the manager "5 invitations sent ✨" when zero emails actually left.
+    const mail = await sendEmail({
       to: inv.email,
       subject: `${inviterName} invited you to ${org.name} on shyftforce`,
       html: Email.invite({ orgName: org.name, inviterName, token: rec.token }),
     });
+    if (!mail.ok) emailFailures.push(inv.email);
     await audit({
       organizationId: u.organizationId, actorId: u.id,
       action: "member.invite", entityType: "Invitation", entityId: rec.id,
-      metadata: { email: inv.email, role: inv.role },
+      metadata: { email: inv.email, role: inv.role, emailSent: mail.ok },
     });
     created.push({ id: rec.id, email: rec.email, role: rec.role, expiresAt: rec.expiresAt });
   }
-  return NextResponse.json({ ok: true, invited: created.length, invitations: created });
+  const emailed = created.length - emailFailures.length;
+  return NextResponse.json({
+    ok: true,
+    invited: created.length,
+    emailed,
+    emailFailures,
+    invitations: created,
+    // A truthful note the UI can surface when some/all emails didn't send.
+    warning: emailFailures.length > 0
+      ? `${emailFailures.length} invite${emailFailures.length === 1 ? "" : "s"} saved but the email couldn't be sent — the recipient(s) won't get a link. Contact support if this persists.`
+      : undefined,
+  });
 }
 
 // GET: list pending invites for this org

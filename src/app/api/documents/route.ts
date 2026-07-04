@@ -53,13 +53,19 @@ export async function POST(req: Request) {
   return NextResponse.json(doc);
 }
 
-// List org documents (with optional memberId filter)
+// List org documents (with optional memberId filter).
+// Employees only ever see their OWN documents — the org-wide list (with
+// every colleague's HR files) is manager/admin only. Previously any
+// employee could enumerate the whole org's document metadata.
 export async function GET(req: Request) {
   const u = await requireUser();
   const url = new URL(req.url);
-  const memberId = url.searchParams.get("memberId");
+  const memberIdParam = url.searchParams.get("memberId");
+  const isManager = u.role === "ADMIN" || u.role === "MANAGER";
+  // Employees are hard-scoped to their own memberId regardless of the query.
+  const memberFilter = isManager ? (memberIdParam ? { memberId: memberIdParam } : {}) : { memberId: u.memberId };
   const docs = await prisma.document.findMany({
-    where: { organizationId: u.organizationId, ...(memberId ? { memberId } : {}) },
+    where: { organizationId: u.organizationId, ...memberFilter },
     select: { id: true, name: true, category: true, mimeType: true, sizeBytes: true, uploadedAt: true, memberId: true,
               member: { select: { user: { select: { name: true } } } } },
     orderBy: { uploadedAt: "desc" },

@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { requireManagerOrAdmin } from "@/lib/session";
 import { csvResponse, toCsv } from "@/lib/csv";
 
 // GET /api/reports/export?type=timesheets|members|shifts
+// Manager/admin only — these exports contain every colleague's pay rate,
+// email and phone. Gating on requireUser() (as before) let any hourly
+// employee download the whole org's wage + PII roster.
 export async function GET(req: Request) {
-  const u = await requireUser();
+  const u = await requireManagerOrAdmin();
   const url = new URL(req.url);
   const type = url.searchParams.get("type") ?? "timesheets";
 

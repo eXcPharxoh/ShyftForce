@@ -45,7 +45,9 @@ export default async function MembersPage() {
               <th>Position</th>
               <th className="hidden sm:table-cell">Location</th>
               <th className="hidden md:table-cell">Hired</th>
-              <th className="text-right">Rate</th>
+              {/* Pay rate is manager/admin only — employees must never see
+                  the whole team's wages (a workplace incident + churn event). */}
+              {isManager && <th className="text-right">Rate</th>}
               <th className="text-center">Role</th>
             </tr>
           </thead>
@@ -69,7 +71,7 @@ export default async function MembersPage() {
                 <td className="text-ink-300">{m.position ?? "—"}</td>
                 <td className="text-ink-300 hidden sm:table-cell">{m.location?.name ?? "—"}</td>
                 <td className="text-ink-400 hidden md:table-cell">{dateLabel(m.hireDate)}</td>
-                <td className="text-right tabular-nums text-ink-50 font-medium">{fmtMoney(m.hourlyRate ?? 0)}/h</td>
+                {isManager && <td className="text-right tabular-nums text-ink-50 font-medium">{fmtMoney(m.hourlyRate ?? 0)}/h</td>}
                 <td className="text-center">
                   {m.role === "ADMIN" && <span className="badge-orange">Admin</span>}
                   {m.role === "MANAGER" && <span className="badge-blue">Manager</span>}

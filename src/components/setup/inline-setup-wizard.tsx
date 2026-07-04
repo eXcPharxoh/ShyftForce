@@ -14,13 +14,12 @@ import { MapPin, Users, CalendarPlus, Check, Loader2, ArrowRight, Sparkles } fro
  *   so the location is map-ready on day one.
  *
  * Step 2 — Team
- *   POSTs to /api/invitations one at a time. The user adds emails to a
- *   small list, optionally with name + role, and we send invite emails.
+ *   POSTs to /api/invites once with { invitations: [{ email, role }] }.
+ *   The user adds emails to a small list and we send invite emails.
  *
  * Step 3 — First shift
- *   POSTs to /api/shifts with the chosen day + time + position. Sets it
- *   to "open" so any teammate can claim, since we don't know who's
- *   working yet.
+ *   POSTs to /api/schedule/bulk-create with a single open draft shift for
+ *   the chosen day/time/position, so the schedule has something to show.
  *
  * When all three steps are done, we redirect to /dashboard which will
  * stop showing QuietDayOne (since hasLocation && hasTeam && hasShift)
@@ -103,44 +102,70 @@ export function InlineSetupWizard({
       return;
     }
     setTeamBusy(true); setTeamError(null);
-    let sent = 0;
-    for (const inv of real) {
-      const r = await fetch("/api/invitations", {
+    // Single call to the REAL invites endpoint with its expected shape:
+    // { invitations: [{ email, role }] }. (Previously posted per-row to
+    // /api/invitations — a route that doesn't exist — so every invite 404'd
+    // and the user was falsely told to "check the email addresses".)
+    try {
+      const res = await fetch("/api/invites", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inv.email.trim(), name: inv.name?.trim() || undefined, role: inv.role }),
+        body: JSON.stringify({
+          invitations: real.map(i => ({ email: i.email.trim(), role: i.role })),
+        }),
       });
-      if (r.ok) sent++;
+      const data = await res.json().catch(() => ({}));
+      setTeamBusy(false);
+      if (!res.ok) {
+        // Surface the real reason (e.g. plan-cap 402 message) instead of
+        // blaming the user's valid email addresses.
+        setTeamError(data.error ?? "Couldn't send the invites. Please try again.");
+        return;
+      }
+      setTeamSent(data.emailed ?? data.invited ?? real.length);
+      // If some invites saved but the email couldn't be sent, tell the truth
+      // rather than showing a clean success.
+      if (data.warning) setTeamError(data.warning);
+      setHasTeam(true);
+    } catch {
+      setTeamBusy(false);
+      setTeamError("Couldn't reach the server — check your connection and try again.");
     }
-    setTeamBusy(false);
-    setTeamSent(sent);
-    if (sent === 0) { setTeamError("Couldn't send any invites — check the email addresses."); return; }
-    setHasTeam(true);
   }
 
   async function submitShift(e: React.FormEvent) {
     e.preventDefault();
     if (!shiftLocId) { setShiftError("Pick a location first."); return; }
     setShiftBusy(true); setShiftError(null);
-    const startsAt = new Date(`${shiftDate}T${shiftStart}:00`);
-    const endsAt   = new Date(`${shiftDate}T${shiftEnd}:00`);
-    if (endsAt <= startsAt) endsAt.setDate(endsAt.getDate() + 1); // overnight wrap
-    const res = await fetch("/api/shifts", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        locationId: shiftLocId,
-        startsAt: startsAt.toISOString(),
-        endsAt: endsAt.toISOString(),
-        position: shiftPosition.trim() || "Shift",
-        isOpen: true,
-        status: "draft",
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    setShiftBusy(false);
-    if (!res.ok) { setShiftError(data.error ?? "Failed to create shift"); return; }
-    setHasShift(true);
-    // Done — bounce to dashboard
-    setTimeout(() => router.push("/dashboard"), 800);
+    // Use the real bulk-create endpoint (POST /api/shifts never existed).
+    // One open shift as a draft, so the schedule has something to show.
+    try {
+      const res = await fetch("/api/schedule/bulk-create", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publish: false,
+          shifts: [{
+            memberId: null,
+            locationId: shiftLocId,
+            date: shiftDate,
+            startTime: shiftStart,
+            endTime: shiftEnd,
+            position: shiftPosition.trim() || "Shift",
+          }],
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setShiftBusy(false);
+      if (!res.ok || (data.created ?? 0) < 1) {
+        setShiftError(data.error ?? "Couldn't create the shift. Please try again.");
+        return;
+      }
+      setHasShift(true);
+      // Done — bounce to dashboard
+      setTimeout(() => router.push("/dashboard"), 800);
+    } catch {
+      setShiftBusy(false);
+      setShiftError("Couldn't reach the server — check your connection and try again.");
+    }
   }
 
   return (

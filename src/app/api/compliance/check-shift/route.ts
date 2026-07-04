@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { requireManagerOrAdmin } from "@/lib/session";
 import { checkCompliance } from "@/lib/compliance/engine";
 import { getOrCreateComplianceSettings } from "@/lib/compliance/settings";
 import { calcPredictability } from "@/lib/compliance/predictability";
@@ -12,8 +12,9 @@ import { addDays } from "@/lib/utils";
 // Lightweight pre-save check — returns the violations a single proposed change would create
 // for the affected member's surrounding 28-day window, plus predictability-pay impact.
 export async function POST(req: Request) {
-  const u = await requireUser();
-  const body = await req.json();
+  // Returns member hourlyRate + predictability-pay amounts — manager/admin only.
+  const u = await requireManagerOrAdmin();
+  const body = await req.json().catch(() => ({}));
   const proposed = body.shift;
   if (!proposed?.memberId || !proposed?.startsAt || !proposed?.endsAt) {
     return NextResponse.json({ error: "shift.memberId, startsAt, endsAt required" }, { status: 400 });

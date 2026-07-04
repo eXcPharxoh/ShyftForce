@@ -136,7 +136,10 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
                   <div className="text-[11px] text-ink-500">{role}</div>
                 </div>
               </div>
-              <MenuLink href="/hr/members"       icon={UserIcon}   label="Profile" />
+              {/* "Profile" opens the user's OWN profile (was pointing at
+                  /hr/members — the whole team roster — which is both wrong
+                  for employees and the only profile entry point on mobile). */}
+              <MenuLink href="/worker/profile"   icon={UserIcon}   label="Profile" />
               <MenuLink href="/settings/billing" icon={CreditCard} label="Billing & plan" />
               <MenuLink href="/more"             icon={Settings}   label="Settings" />
               {/* Help center deep-link from the profile menu — most

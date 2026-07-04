@@ -6,9 +6,17 @@ import { prisma } from "@/lib/prisma";
 import { requireManagerOrAdmin } from "@/lib/session";
 import { audit } from "@/lib/audit";
 import { PLANS, effectivePlanKey } from "@/lib/stripe";
+import { geocodeAddress } from "@/lib/geo/geocode";
 
 const CreateSchema = z.object({
   name:                 z.string().min(2).max(80),
+  // A free-text street address the caller can send instead of raw lat/lng
+  // (the setup wizard does this). When present and lat/lng aren't given,
+  // we geocode it server-side so GPS clock-in works on day one. Previously
+  // the schema was .strict() with no address key, so the wizard's
+  // { name, address } POST failed with "Invalid input" — a hard onboarding
+  // blocker.
+  address:              z.string().max(300).optional(),
   latitude:             z.number().min(-90).max(90).optional().nullable(),
   longitude:            z.number().min(-180).max(180).optional().nullable(),
   geofenceRadiusMeters: z.number().int().min(10).max(50_000).default(100),
@@ -54,13 +62,23 @@ export async function POST(req: Request) {
     if (!client) return NextResponse.json({ error: "Client not found in this org" }, { status: 404 });
   }
 
+  // If the caller sent a free-text address and no explicit coordinates,
+  // geocode it so GPS clock-in has a center point on day one. Best-effort:
+  // geocodeAddress returns null on failure and we simply store without coords.
+  let lat = parsed.data.latitude ?? null;
+  let lng = parsed.data.longitude ?? null;
+  if (lat == null && lng == null && parsed.data.address) {
+    const geo = await geocodeAddress(parsed.data.address).catch(() => null);
+    if (geo) { lat = geo.lat; lng = geo.lng; }
+  }
+
   try {
     const created = await prisma.location.create({
       data: {
         organizationId: u.organizationId,
         name: parsed.data.name,
-        latitude: parsed.data.latitude ?? null,
-        longitude: parsed.data.longitude ?? null,
+        latitude: lat,
+        longitude: lng,
         geofenceRadiusMeters: parsed.data.geofenceRadiusMeters,
         // Dual-write: dollars (legacy) + cents (canonical).
         weeklyBudget:          parsed.data.weeklyBudget ?? null,

@@ -21,16 +21,27 @@ export async function POST(req: Request) {
 
   const { payPeriodId } = (await req.json().catch(() => ({}))) as { payPeriodId?: string };
   // Always scope to org — even when payPeriodId is provided.
+  // ONLY pull APPROVED timesheet entries. Unapproved / disputed hours must
+  // never be paid: the confirm dialog explicitly promises "unapproved entries
+  // will be skipped." Previously entries were loaded with no approved filter,
+  // so a manager running payroll paid out real money on unverified time.
+  const entriesInclude = { entries: { where: { approved: true }, include: { member: true } } };
   const period = payPeriodId
     ? await prisma.payPeriod.findFirst({
         where: { id: payPeriodId, organizationId: org.id },
-        include: { entries: { include: { member: true } } },
+        include: entriesInclude,
       })
     : await prisma.payPeriod.findFirst({
         where: { organizationId: org.id, status: "open" },
-        include: { entries: { include: { member: true } } },
+        include: entriesInclude,
       });
   if (!period) return NextResponse.json({ error: "No pay period" }, { status: 404 });
+
+  // Count how many entries we intentionally skipped because they weren't
+  // approved, so the response can report it truthfully.
+  const unapprovedSkipped = await prisma.timesheetEntry.count({
+    where: { payPeriodId: period.id, approved: false },
+  });
 
   // Per-member rate + external payroll ID lookup, and the day-level hour
   // entries OT needs (overtime is computed per member-week, not per period total).
@@ -79,8 +90,10 @@ export async function POST(req: Request) {
   await audit({
     organizationId: org.id, actorId: u.id,
     action: "billing.checkout", entityType: "Finch.payroll",
-    metadata: { payPeriodId: period.id, pushed, skipped, errors: errors.length },
+    metadata: { payPeriodId: period.id, pushed, skipped, unapprovedSkipped, errors: errors.length },
   });
 
-  return NextResponse.json({ pushed, skipped, errors });
+  // `skipped` = members missing an external payroll id; `unapprovedSkipped`
+  // = timesheet entries left out because they weren't approved.
+  return NextResponse.json({ pushed, skipped, unapprovedSkipped, errors });
 }

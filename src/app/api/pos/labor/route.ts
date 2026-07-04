@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/session";
+import { requireManagerOrAdmin } from "@/lib/session";
 import { featureGuard } from "@/lib/feature-guard";
 import { liveLabor, type LaborWindow } from "@/lib/pos/labor";
 
 const VALID: LaborWindow[] = ["today", "now_4h", "this_week"];
 
 export async function GET(req: Request) {
-  const u = await requireUser();
+  // Live labor cost / spend figures — manager/admin only.
+  const u = await requireManagerOrAdmin();
   const denied = await featureGuard(u.organizationId, "pos_integrations");
   if (denied) return denied;
   const url = new URL(req.url);
