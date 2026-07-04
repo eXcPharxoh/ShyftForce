@@ -119,7 +119,7 @@ export default function LoginPage() {
               { icon: Sparkles,    title: "AI Co-pilot",          desc: "Plain-English commands" },
               { icon: Workflow,    title: "Auto-Scheduler",       desc: "Full week from rules" },
               { icon: ShieldCheck, title: "Compliance",           desc: "OT, breaks, Fair Workweek" },
-              { icon: Zap,         title: "Open-Shift Marketplace", desc: "30-50% fewer no-shows" },
+              { icon: Zap,         title: "Open-Shift Marketplace", desc: "Auto-fill callouts in waves" },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="rounded-2xl bg-white/[0.06] border border-white/10 backdrop-blur p-4 hover:bg-white/[0.10] transition">
                 <Icon className="w-5 h-5 text-brand-300 mb-2" />
