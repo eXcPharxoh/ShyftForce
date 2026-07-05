@@ -458,11 +458,18 @@ export async function runTool(name: string, input: any, user: SessionUser) {
       const members = await prisma.member.findMany({
         where, include: { user: true, location: true }, take: 25, orderBy: { user: { name: "asc" } },
       });
+      // Pay rate + email are manager-only everywhere else (reports/export gates
+      // them behind requireManagerOrAdmin). This tool is also handed to the
+      // employee-facing AI replier (and the SMS bot, which forces role
+      // EMPLOYEE), so strip wage + email for non-managers — otherwise any
+      // employee could ask the assistant for the whole org's wage roster.
+      const mgr = isManager(user);
       return {
         members: members.map(m => ({
-          id: m.id, name: m.user.name, email: m.user.email,
+          id: m.id, name: m.user.name,
+          ...(mgr ? { email: m.user.email, hourlyRate: m.hourlyRate } : {}),
           role: m.role, position: m.position,
-          location: m.location?.name ?? null, hourlyRate: m.hourlyRate,
+          location: m.location?.name ?? null,
         })),
       };
     }
@@ -580,6 +587,10 @@ export async function runTool(name: string, input: any, user: SessionUser) {
     }
 
     case "get_metrics": {
+      // Manager-only: returns org-wide payroll cost + per-employee wage/hours.
+      // Without this gate the employee-facing AI replier (and the SMS bot) would
+      // hand whole-org labor spend and named per-person cost to any employee.
+      if (!isManager(user)) return forbid();
       const period = await prisma.payPeriod.findFirst({
         where: { organizationId: orgId, status: "open" },
         include: { entries: { include: { member: { include: { location: true, user: true } } } } },
@@ -625,6 +636,9 @@ export async function runTool(name: string, input: any, user: SessionUser) {
     }
 
     case "list_pending_approvals": {
+      // Manager-only: exposes other employees' pending time-off/expense rows
+      // (names + expense amounts). Not for the employee-facing assistant.
+      if (!isManager(user)) return forbid();
       const [timeOff, expenses, flagged, drafts] = await Promise.all([
         prisma.timeOffRequest.findMany({
           where: { member: { organizationId: orgId }, status: "pending" },

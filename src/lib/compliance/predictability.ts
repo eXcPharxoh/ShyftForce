@@ -50,6 +50,23 @@ export async function recordPredictabilityIfOwed(input: PredictabilityCalcInput)
   const result = calcPredictability(input);
   if (!result.triggered) return result;
 
+  // Idempotency (as the docstring promises): a manager who saves the same edit
+  // twice — or two rapid edits of the same kind — must not stack a second
+  // predictability-pay liability for the same shift+change+member. A DIFFERENT
+  // change type, or the same change an hour+ later, still records normally.
+  const dupSince = new Date(Date.now() - 60 * 60 * 1000);
+  const already = await prisma.predictabilityPayEvent.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      shiftId: input.shiftId,
+      memberId: input.memberId,
+      changeType: input.changeType,
+      occurredAt: { gte: dupSince },
+    },
+    select: { id: true },
+  });
+  if (already) return result;
+
   await prisma.predictabilityPayEvent.create({
     data: {
       organizationId: input.organizationId,

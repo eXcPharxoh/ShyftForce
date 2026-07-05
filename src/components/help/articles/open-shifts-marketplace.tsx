@@ -20,8 +20,8 @@ export default function Article() {
       <h3>Why waves instead of mass-blasting?</h3>
       <p>Mass-blasts train your team to ignore notifications. The wave system gives your most reliable people first dibs and only escalates when needed. It also prevents 14 people from all claiming the same shift in the same minute.</p>
 
-      <Callout kind="tip" title="Auto-callout for no-shows">
-        If you turn on <b>Coverage Autopilot</b> in <Link href="/schedule/coverage" className="text-brand-300 underline">Coverage Center</Link>, we'll automatically convert any no-show into an open shift and start the wave process. Your phone doesn't ring at 5am.
+      <Callout kind="tip" title="No-shows show up in the Coverage Center">
+        When someone doesn&apos;t clock in, the <Link href="/schedule/coverage" className="text-brand-300 underline">Coverage Center</Link> surfaces the gap with a one-tap <b>Find cover</b> button. Confirm it and we release the shift and start the wave process — so filling a no-show is one tap, not a series of phone calls.
       </Callout>
 
       <h3>What if nobody claims it?</h3>

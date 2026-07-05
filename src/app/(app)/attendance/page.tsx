@@ -84,7 +84,7 @@ export default async function AttendancePage() {
         subtitle={period ? `Pay period · ${dateLabel(period.startsOn)} → ${dateLabel(period.endsOn)}` : "No active pay period"}
       >
         {isManager && <Link href="/attendance/review" className="btn-outline"><ShieldCheck className="w-3.5 h-3.5" /> Review flagged</Link>}
-        <Link href="#tipping" className="btn-outline">Tip Management</Link>
+        {isManager && <Link href="/tips" className="btn-outline">Tip pooling</Link>}
         {isManager && (
           <RunPayrollButton
             finchConnected={!!org?.finchAccessToken}
@@ -407,23 +407,15 @@ export default async function AttendancePage() {
         </section>
       )}
 
-      <section id="tipping" className="card p-5">
-        <h3 className="text-sm font-semibold mb-1">Tip Management</h3>
-        <p className="text-xs text-ink-500 mb-3">Automated calculation & distribution. Configure your pool rules and let the engine handle the rest.</p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[
-            ["Pool method", "Hours-weighted"],
-            ["Frequency", "Per pay period"],
-            ["Distributed last period", "$3,420.50"],
-            ["Pending distribution", "$1,184.20"],
-          ].map(([k, v]) => (
-            <div key={k} className="rounded-xl border border-ink-200 p-3">
-              <div className="text-[11px] uppercase text-ink-500 font-medium">{k}</div>
-              <div className="text-base font-semibold mt-0.5">{v}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {isManager && (
+        <section className="card p-5 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-sm font-semibold mb-1">Tip pooling</h3>
+            <p className="text-xs text-ink-500">Set your pool method, enter tips, and generate a per-employee distribution report for payroll.</p>
+          </div>
+          <Link href="/tips" className="btn-primary shrink-0">Open Tip Pooling</Link>
+        </section>
+      )}
     </div>
   );
 }

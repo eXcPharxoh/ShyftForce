@@ -102,7 +102,9 @@ export async function deduct(memberId: string, policyId: string, hours: number) 
   if (remaining < 0 && !policy?.allowNegative) {
     throw new Error(`Insufficient ${policy?.name ?? "PTO"} — ${(balance.hoursAccrued - balance.hoursUsed).toFixed(1)}h available, ${hours}h requested`);
   }
-  return prisma.ptoBalance.update({ where: { id: balance.id }, data: { hoursUsed: newUsed } });
+  // Atomic increment (not a read-then-write of a stale value) so two
+  // deductions for the same member can't lose each other's update.
+  return prisma.ptoBalance.update({ where: { id: balance.id }, data: { hoursUsed: { increment: hours } } });
 }
 
 /** Refund hours back into the balance (e.g. when an approved request is rescinded). */

@@ -127,24 +127,33 @@ export function JobCloseoutClient({ recentShifts, preselected }: { recentShifts:
     if (hasSignature && canvasRef.current) {
       signatureData = canvasRef.current.toDataURL("image/png");
     }
-    const res = await fetch("/api/job-closeouts", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        shiftId: preselected.id,
-        customerName: customerName.trim() || null,
-        customerEmail: customerEmail.trim() || null,
-        signatureData,
-        rating,
-        notes: notes.trim() || null,
-        photoData,
-        partsCostCents: partsDollars === "" ? null : Math.round(Number(partsDollars) * 100),
-      }),
-    });
-    const d = await res.json();
-    setBusy(false);
-    if (!res.ok) { setError(d.error ?? "Failed"); return; }
-    setDone(true);
-    setTimeout(() => r.refresh(), 800);
+    // try/catch + guarded parse so a dropped mobile signal or a non-JSON
+    // 502/413 never leaves the button stuck spinning and the customer's
+    // signature/photo (state-only) silently lost. On failure we keep the
+    // captured data in state so a retry re-sends it.
+    try {
+      const res = await fetch("/api/job-closeouts", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shiftId: preselected.id,
+          customerName: customerName.trim() || null,
+          customerEmail: customerEmail.trim() || null,
+          signatureData,
+          rating,
+          notes: notes.trim() || null,
+          photoData,
+          partsCostCents: partsDollars === "" ? null : Math.round(Number(partsDollars) * 100),
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setBusy(false);
+      if (!res.ok) { setError(d.error ?? "Couldn't save the closeout — please try again."); return; }
+      setDone(true);
+      setTimeout(() => r.refresh(), 800);
+    } catch {
+      setBusy(false);
+      setError("Couldn't reach the server — check your connection and try again. Your sign-off hasn't been lost.");
+    }
   }
 
   function fmt(d: string) {

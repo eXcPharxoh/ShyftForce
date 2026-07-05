@@ -29,18 +29,54 @@ export async function POST(req: Request) {
   }
 
   const provider = await getProviderForOrg(u.organizationId);
-  // 1) Create the row first so we have an ID to pass to the provider
-  const w = await prisma.ewaWithdrawal.create({
-    data: {
-      memberId: u.memberId,
-      organizationId: u.organizationId,
-      amountCents: parsed.data.amountCents,
-      feeCentsCharged: bal.feeCentsPerWithdrawal,
-      payoutMethod: parsed.data.payoutMethod,
-      payPeriodId: bal.payPeriodId,
-      status: "pending",
-    },
-  });
+
+  // 1) Create the row, then RE-VERIFY the period total inside the same
+  //    serializable transaction. The availableCents check above is a
+  //    read-then-write (TOCTOU): two near-simultaneous withdrawals each read
+  //    the balance before either row exists and both pass, over-drawing past
+  //    the cap. Re-summing inside a Serializable tx (and rolling back if the
+  //    new total exceeds the period ceiling) makes the check-and-insert atomic.
+  const ceilingCents = Math.min(bal.accessibleCents, bal.capCents);
+  const periodStart = bal.payPeriodStartsOn ?? new Date(Date.now() - 14 * 86400_000);
+  class EwaCapError extends Error {}
+  let w;
+  try {
+    w = await prisma.$transaction(async (tx) => {
+      const created = await tx.ewaWithdrawal.create({
+        data: {
+          memberId: u.memberId,
+          organizationId: u.organizationId,
+          amountCents: parsed.data.amountCents,
+          feeCentsCharged: bal.feeCentsPerWithdrawal,
+          payoutMethod: parsed.data.payoutMethod,
+          payPeriodId: bal.payPeriodId,
+          status: "pending",
+        },
+      });
+      const agg = await tx.ewaWithdrawal.aggregate({
+        where: {
+          memberId: u.memberId,
+          organizationId: u.organizationId,
+          requestedAt: { gte: periodStart },
+          status: { in: ["pending", "processing", "settled"] },
+        },
+        _sum: { amountCents: true },
+      });
+      if ((agg._sum.amountCents ?? 0) > ceilingCents) throw new EwaCapError();
+      return created;
+    }, { isolationLevel: "Serializable" });
+  } catch (e: any) {
+    // Cap exceeded, or a concurrent withdrawal forced a serialization failure
+    // (Prisma P2034 / Postgres 40001). Either way: another request beat us to
+    // the balance — ask the employee to refresh.
+    if (e instanceof EwaCapError || e?.code === "P2034") {
+      return NextResponse.json(
+        { error: "That would exceed your available balance for this pay period. Refresh and try again." },
+        { status: 409 },
+      );
+    }
+    throw e;
+  }
   // 2) Hand off to provider
   let result;
   try {

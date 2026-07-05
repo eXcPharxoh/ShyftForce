@@ -877,6 +877,10 @@
 .text-ink-900                                   { color: rgb(236,241,251) !important; }
 .text-ink-800                                   { color: rgb(221,229,243) !important; }
 .text-ink-700                                   { color: rgb(176,187,209) !important; }
+/* ink-600 was left unmapped; #44506b renders ~2.3:1 on the dark cards — below
+   WCAG AA. Legacy pages use it for real data (e.g. timesheet dates/locations),
+   so remap it to a legible muted tone (~6:1) that's still clearly secondary. */
+.text-ink-600                                   { color: rgb(152,163,186) !important; }
 .text-brand-700,
 .text-brand-800,
 .text-brand-900                                 { color: rgb(141,185,255) !important; }

@@ -19,37 +19,46 @@ export function TwoFactorClient({ initialEnabled, email }: { initialEnabled: boo
   const [error, setError]     = useState<string | null>(null);
   const [copied, setCopied]   = useState<"secret" | "codes" | null>(null);
 
+  // Each handler is wrapped in try/catch with a guarded parse so an offline
+  // fetch or a non-JSON edge error (502/504) can't leave the button stuck in
+  // its disabled spinner state with no error shown.
   async function start() {
     setBusy(true); setError(null);
-    const res = await fetch("/api/me/2fa", { method: "POST" });
-    const d = await res.json();
-    setBusy(false);
-    if (!res.ok) { setError(d.error ?? "Failed"); return; }
-    setEnroll(d); setStep("enroll");
+    try {
+      const res = await fetch("/api/me/2fa", { method: "POST" });
+      const d = await res.json().catch(() => ({}));
+      setBusy(false);
+      if (!res.ok) { setError(d.error ?? "Couldn't start setup — try again."); return; }
+      setEnroll(d); setStep("enroll");
+    } catch { setBusy(false); setError("Couldn't reach the server — try again."); }
   }
 
   async function verify() {
     setBusy(true); setError(null);
-    const res = await fetch("/api/me/2fa", {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
-    const d = await res.json();
-    setBusy(false);
-    if (!res.ok) { setError(d.error ?? "Invalid code"); return; }
-    setEnabled(true); setStep("idle"); setEnroll(null); setCode("");
+    try {
+      const res = await fetch("/api/me/2fa", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setBusy(false);
+      if (!res.ok) { setError(d.error ?? "Invalid code"); return; }
+      setEnabled(true); setStep("idle"); setEnroll(null); setCode("");
+    } catch { setBusy(false); setError("Couldn't reach the server — try again."); }
   }
 
   async function disable() {
     setBusy(true); setError(null);
-    const res = await fetch("/api/me/2fa", {
-      method: "DELETE", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: disableCode }),
-    });
-    const d = await res.json();
-    setBusy(false);
-    if (!res.ok) { setError(d.error ?? "Invalid code"); return; }
-    setEnabled(false); setDisableCode("");
+    try {
+      const res = await fetch("/api/me/2fa", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: disableCode }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setBusy(false);
+      if (!res.ok) { setError(d.error ?? "Invalid code"); return; }
+      setEnabled(false); setDisableCode("");
+    } catch { setBusy(false); setError("Couldn't reach the server — try again."); }
   }
 
   async function copy(text: string, which: "secret" | "codes") {

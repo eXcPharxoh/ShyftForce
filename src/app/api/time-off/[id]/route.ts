@@ -32,26 +32,59 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   let hoursDeducted = existing.hoursDeducted;
 
-  try {
-    // Approving (was not approved): deduct
-    if (status === "approved" && existing.status !== "approved" && policy) {
-      const hours = existing.hoursRequested ?? hoursForRequest(existing.startsOn, existing.endsOn, policy.hoursPerDay);
-      await deduct(existing.memberId, policy.id, hours);
-      hoursDeducted = hours;
+  // Make the state transition ATOMIC so two concurrent approvals (two managers,
+  // or one double-click) can't both deduct the member's PTO. updateMany with a
+  // status guard means exactly ONE request flips the state and therefore exactly
+  // one deduct()/refund() runs; the loser is an idempotent no-op.
+  const isApproving = status === "approved" && existing.status !== "approved";
+  const isReverting = status !== "approved" && existing.status === "approved";
+
+  if (isApproving) {
+    const hours = policy
+      ? (existing.hoursRequested ?? hoursForRequest(existing.startsOn, existing.endsOn, policy.hoursPerDay))
+      : 0;
+    const claimed = await prisma.timeOffRequest.updateMany({
+      where: { id, status: { not: "approved" } },
+      data: { status, decidedAt: new Date(), decidedById: u.id, hoursDeducted: policy ? hours : existing.hoursDeducted },
+    });
+    if (claimed.count === 0) {
+      // Lost the race — already approved by a concurrent request. Don't deduct again.
+      return NextResponse.json(await prisma.timeOffRequest.findUnique({ where: { id } }));
     }
-    // Reverting from approved → not approved: refund
-    if (status !== "approved" && existing.status === "approved" && policy && existing.hoursDeducted) {
-      await refund(existing.memberId, policy.id, existing.hoursDeducted);
-      hoursDeducted = null;
+    if (policy) {
+      try {
+        await deduct(existing.memberId, policy.id, hours);
+        hoursDeducted = hours;
+      } catch (e: any) {
+        // Insufficient balance — roll the status back to what it was.
+        await prisma.timeOffRequest.updateMany({
+          where: { id, status: "approved" },
+          data: { status: existing.status, hoursDeducted: existing.hoursDeducted },
+        });
+        return NextResponse.json({ error: e.message ?? "balance update failed" }, { status: 400 });
+      }
     }
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message ?? "balance update failed" }, { status: 400 });
+  } else if (isReverting) {
+    const claimed = await prisma.timeOffRequest.updateMany({
+      where: { id, status: "approved" },
+      data: { status, decidedAt: new Date(), decidedById: u.id, hoursDeducted: null },
+    });
+    if (claimed.count === 0) {
+      return NextResponse.json(await prisma.timeOffRequest.findUnique({ where: { id } }));
+    }
+    if (policy && existing.hoursDeducted) {
+      await refund(existing.memberId, policy.id, existing.hoursDeducted).catch(() => {});
+    }
+    hoursDeducted = null;
+  } else {
+    // No balance-affecting change (e.g. pending, or the same status re-sent).
+    await prisma.timeOffRequest.update({
+      where: { id },
+      data: { status, decidedAt: new Date(), decidedById: u.id, hoursDeducted },
+    });
   }
 
-  const r = await prisma.timeOffRequest.update({
-    where: { id },
-    data: { status, decidedAt: new Date(), decidedById: u.id, hoursDeducted },
-  });
+  const r = (await prisma.timeOffRequest.findUnique({ where: { id } }))!;
 
   await audit({
     organizationId: u.organizationId, actorId: u.id,

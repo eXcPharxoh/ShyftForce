@@ -34,9 +34,14 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Pr
   const [incidents, locations] = await Promise.all([
     prisma.incidentReport.findMany({
       where,
-      include: {
-        location: true,
-        reportedBy: { include: { user: { select: { name: true, avatar: true } } } },
+      // Only the fields the list renders — deliberately omit photoData (a base64
+      // image up to ~500KB per row) and other unused columns, matching the
+      // audit's batch-7 over-fetch pattern. The detail page loads photoData.
+      select: {
+        id: true, title: true, severity: true, category: true, status: true,
+        occurredAt: true, body: true,
+        location: { select: { name: true } },
+        reportedBy: { select: { user: { select: { name: true, avatar: true } } } },
       },
       orderBy: { occurredAt: "desc" },
       take: 100,
