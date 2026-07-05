@@ -20,23 +20,29 @@ export function BillingActions({
 
   async function checkout(plan: "pro" | "business") {
     setError(null); setLoading(plan);
-    const res = await fetch("/api/billing/checkout", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
-    });
-    const data = await res.json();
-    setLoading(null);
-    if (!res.ok) { setError(data.error ?? "Failed"); return; }
-    location.href = data.url;
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setLoading(null);
+      if (!res.ok) { setError(data.error ?? "Couldn't start checkout — please try again."); return; }
+      if (!data.url) { setError("Couldn't start checkout — please try again."); return; }
+      location.href = data.url;
+    } catch { setLoading(null); setError("Couldn't reach the server — please try again."); }
   }
 
   async function openPortal() {
     setError(null); setLoading("portal");
-    const res = await fetch("/api/billing/portal", { method: "POST" });
-    const data = await res.json();
-    setLoading(null);
-    if (!res.ok) { setError(data.error ?? "Failed"); return; }
-    location.href = data.url;
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      setLoading(null);
+      if (!res.ok) { setError(data.error ?? "Couldn't open billing — please try again."); return; }
+      if (!data.url) { setError("Couldn't open billing — please try again."); return; }
+      location.href = data.url;
+    } catch { setLoading(null); setError("Couldn't reach the server — please try again."); }
   }
 
   if (!stripeConfigured) {

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { initials, relTime } from "@/lib/utils";
-import { Send, Search, MessageCircle } from "lucide-react";
+import { Send, Search, MessageCircle, ChevronLeft } from "lucide-react";
 
 type Contact = { id: string; name: string; avatar: string | null; role: string; location?: string };
 type Msg = { id: string; fromId: string; toId: string; body: string; createdAt: string };
@@ -53,7 +53,10 @@ export function MessengerClient({
 
   return (
     <div className="card overflow-hidden grid grid-cols-1 md:grid-cols-[300px_1fr] h-[calc(100vh-12rem)] min-h-[480px]">
-      <aside className="border-r border-ink-200 dark:border-ink-800 overflow-y-auto scroll-thin bg-ink-50/30 dark:bg-ink-900/40">
+      {/* On phones show ONE pane at a time (grid-cols-1 would otherwise cram both
+          into one fixed-height box): the list when no conversation is open, the
+          conversation when one is. Desktop (md+) always shows both. */}
+      <aside className={`border-r border-ink-200 dark:border-ink-800 overflow-y-auto scroll-thin bg-ink-50/30 dark:bg-ink-900/40 ${active ? "hidden md:block" : "block"}`}>
         <div className="p-3 border-b border-ink-100 dark:border-ink-800 sticky top-0 bg-white dark:bg-ink-900 z-10">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
@@ -97,10 +100,13 @@ export function MessengerClient({
         </ul>
       </aside>
 
-      <section className="flex flex-col min-h-0 bg-white dark:bg-ink-950">
+      <section className={`flex-col min-h-0 bg-white dark:bg-ink-950 ${active ? "flex" : "hidden md:flex"}`}>
         {active ? (
           <>
             <header className="p-3 border-b border-ink-200 dark:border-ink-800 flex items-center gap-2.5 bg-white dark:bg-ink-900">
+              <button onClick={() => setActive(null)} className="md:hidden -ml-1 p-1 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 text-ink-500" aria-label="Back to conversations">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
               {active.avatar
                 ? <img src={active.avatar} className="w-9 h-9 rounded-full ring-1 ring-ink-200 dark:ring-ink-700" alt="" />
                 : <div className="w-9 h-9 rounded-full bg-ink-200 dark:bg-ink-800 text-ink-700 dark:text-ink-200 text-xs font-semibold flex items-center justify-center">{initials(active.name)}</div>}

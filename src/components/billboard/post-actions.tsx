@@ -3,10 +3,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, Loader2 } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toaster";
 
 export function PostDeleteButton({ id, title }: { id: string; title: string }) {
   const r = useRouter();
   const confirm = useConfirm();
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
 
   async function go() {
@@ -18,9 +20,21 @@ export function PostDeleteButton({ id, title }: { id: string; title: string }) {
     });
     if (!ok) return;
     setBusy(true);
-    await fetch(`/api/billboard/${id}`, { method: "DELETE" });
-    setBusy(false);
-    r.refresh();
+    // Check the result — previously this refreshed regardless, so a failed
+    // delete looked identical to a successful one (post still there, no error).
+    try {
+      const res = await fetch(`/api/billboard/${id}`, { method: "DELETE" });
+      setBusy(false);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error("Couldn't delete the post", { description: data.error ?? "Please try again." });
+        return;
+      }
+      r.refresh();
+    } catch {
+      setBusy(false);
+      toast.error("Couldn't reach the server", { description: "Check your connection and try again." });
+    }
   }
 
   return (

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/session";
 import { runTool, TOOLS } from "@/lib/copilot/tools";
+import { rateLimit } from "@/lib/rate-limit";
 
 const MODEL = "claude-sonnet-4-6";
 const MAX_TURNS = 8;
@@ -58,6 +59,11 @@ Format your final answer as conversational text (you may use light **bold** and 
 
 export async function POST(req: Request) {
   const user = await requireUser();
+  // Throttle the expensive LLM endpoint per user — each request fans out to up
+  // to MAX_TURNS paid model calls on the operator's shared Anthropic key, so an
+  // unthrottled loop could exhaust the org's credits (cost DoS).
+  const rl = rateLimit({ key: `copilot:${user.id}`, max: 20, windowMs: 60_000 });
+  if (!rl.allowed) return NextResponse.json({ error: "You're sending requests too fast — give it a few seconds." }, { status: 429 });
   if (!process.env.SHYFTFORCE_AI_KEY) {
     return NextResponse.json({ error: "AI Co-pilot isn't configured on this workspace yet." }, { status: 503 });
   }

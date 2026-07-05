@@ -37,6 +37,23 @@ export async function POST(req: Request) {
       });
   if (!period) return NextResponse.json({ error: "No pay period" }, { status: 404 });
 
+  // ---- Idempotency guard (prevents paying everyone TWICE) ----
+  // Atomically CLAIM the period by flipping open -> paid before pushing. A
+  // second POST (double-click past the client busy flag, a retry after a
+  // partial-failure response, or any re-run) finds status != "open", so the
+  // updateMany matches 0 rows and we refuse. Without this the endpoint was
+  // freely re-callable and re-pushed a full second set of pay statements.
+  const claim = await prisma.payPeriod.updateMany({
+    where: { id: period.id, status: "open" },
+    data: { status: "paid" },
+  });
+  if (claim.count === 0) {
+    return NextResponse.json(
+      { error: "This pay period has already been run. Payroll for it was pushed earlier — re-running is blocked so nobody gets paid twice." },
+      { status: 409 },
+    );
+  }
+
   // Count how many entries we intentionally skipped because they weren't
   // approved, so the response can report it truthfully.
   const unapprovedSkipped = await prisma.timesheetEntry.count({
@@ -85,6 +102,17 @@ export async function POST(req: Request) {
     } catch (e: any) {
       errors.push(`${memberId}: ${e.message ?? "push failed"}`);
     }
+  }
+
+  // If literally nothing was pushed (every member skipped for a missing payroll
+  // id, or every push errored), release the period back to "open" so a fixed
+  // retry can run. If ANY push succeeded we keep it "paid" — re-running must
+  // never re-pay the members who already went through.
+  if (pushed === 0) {
+    await prisma.payPeriod.updateMany({
+      where: { id: period.id, status: "paid" },
+      data: { status: "open" },
+    });
   }
 
   await audit({

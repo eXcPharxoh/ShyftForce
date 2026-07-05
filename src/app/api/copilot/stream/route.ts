@@ -23,6 +23,7 @@ import type { ContentBlock, MessageParam } from "@anthropic-ai/sdk/resources/mes
 import { z } from "zod";
 import { requireUser } from "@/lib/session";
 import { runTool, TOOLS } from "@/lib/copilot/tools";
+import { rateLimit } from "@/lib/rate-limit";
 
 const MODEL = "claude-sonnet-4-6";
 const MAX_TURNS = 8;
@@ -52,6 +53,11 @@ Format: conversational text (light **bold** + short bullets ok). Never paste raw
 
 export async function POST(req: Request) {
   const user = await requireUser();
+
+  // Throttle per user — this streams up to MAX_TURNS paid model calls on the
+  // operator's shared Anthropic key; an unthrottled loop is a cost DoS.
+  const rl = rateLimit({ key: `copilot:${user.id}`, max: 20, windowMs: 60_000 });
+  if (!rl.allowed) return sseError("You're sending requests too fast — give it a few seconds.");
 
   if (!process.env.SHYFTFORCE_AI_KEY) {
     return sseError("SHYFTFORCE_AI_KEY not set in .env");

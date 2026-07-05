@@ -343,7 +343,7 @@ export const VERTICALS: Record<VerticalKey, VerticalConfig> = {
       { ...M.customRoles, role: "manager" },
     ],
     dashboardWidgets: ["onCallToday", "coverageOpen", "upcomingShifts", "ewaPending"],
-    promoCard: { title: "Patient ratio guard", subtitle: "Scheduler refuses any assignment that breaches CA Title 22", href: "/settings/patient-ratios", emoji: "🩺" },
+    promoCard: { title: "Patient ratio guard", subtitle: "Blocks manual shift assignments that breach CA Title 22 ratios", href: "/settings/patient-ratios", emoji: "🩺" },
   },
   field_service: {
     key: "field_service", label: "Field Service", emoji: "🛠️",

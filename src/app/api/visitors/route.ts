@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { audit } from "@/lib/audit";
 import { addDays } from "@/lib/utils";
+import { sendPush } from "@/lib/push";
 
 const CreateSchema = z.object({
   name:         z.string().min(1).max(120),
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
 
   const host = await prisma.member.findFirst({
     where: { id: parsed.data.hostMemberId, organizationId: u.organizationId },
-    select: { id: true, user: { select: { name: true } } },
+    select: { id: true, userId: true, user: { select: { name: true } } },
   });
   if (!host) return NextResponse.json({ error: "Host not in org" }, { status: 404 });
 
@@ -66,6 +67,17 @@ export async function POST(req: Request) {
     action: "shift.create", entityType: "Visitor", entityId: v.id,
     metadata: { name: v.name, host: host.user.name },
   });
+
+  // Actually notify the host they have a guest waiting — the page promises this.
+  // Best-effort push (reaches hosts who enabled notifications); never blocks
+  // the sign-in.
+  sendPush(host.userId, {
+    title: "A visitor is here to see you",
+    body: `${v.name}${v.company ? ` (${v.company})` : ""} just signed in at reception.`,
+    url: "/visitors",
+    tag: `visitor-${v.id}`,
+  }).catch(() => {});
+
   return NextResponse.json({ ok: true, visitor: v });
 }
 

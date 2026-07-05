@@ -61,10 +61,22 @@ export async function GET(req: Request) {
   });
   const grossReceiptsCents = posRevenue.reduce((a, r) => a + (r.netSalesCents ?? r.grossSalesCents), 0);
 
-  // Total tips distributed via tip pools for the year
-  const tipPools = await prisma.tipPool.findMany({
-    where: { locationId: { in: locIds }, date: { gte: start, lt: end } },
+  // Total tips distributed via tip pools for the year. Only FINALIZED pools are
+  // reported income — drafts are what-if previews. And because a day can end up
+  // with more than one finalized pool (no DB uniqueness on (location,date)), we
+  // dedupe to one pool per (location, date) so a re-finalized day isn't counted
+  // twice on the IRS workpaper.
+  const rawPools = await prisma.tipPool.findMany({
+    where: { locationId: { in: locIds }, date: { gte: start, lt: end }, status: "finalized" },
     include: { distributions: { include: { member: { include: { user: true } } } } },
+    orderBy: { date: "asc" },
+  });
+  const seenPoolDays = new Set<string>();
+  const tipPools = rawPools.filter((p) => {
+    const key = `${p.locationId}|${p.date.toISOString().slice(0, 10)}`;
+    if (seenPoolDays.has(key)) return false;
+    seenPoolDays.add(key);
+    return true;
   });
   const totalReportedTipsCents = tipPools.reduce((a, p) => a + p.totalTipsCents, 0);
 

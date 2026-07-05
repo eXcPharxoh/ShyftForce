@@ -79,14 +79,18 @@ async function handler(req: Request) {
     let bucket: number | "expired" | null = null;
     if (days < 0 && !p.reminderExpiredSentAt) bucket = "expired";
     else if (days >= 0) {
-      for (const t of REMINDER_DAYS) {
-        if (days <= t) {
-          const flagField = `reminder${t}dSentAt` as
-            | "reminder60dSentAt" | "reminder30dSentAt" | "reminder14dSentAt" | "reminder7dSentAt";
-          const dayField = "reminderDaySentAt";
-          if (t === 0 && p.reminderDaySentAt == null) { bucket = 0; break; }
-          if (t > 0 && (p as any)[flagField] == null) { bucket = t; break; }
-        }
+      // Tightest applicable threshold = the SMALLEST t in REMINDER_DAYS with
+      // days <= t. (REMINDER_DAYS is [60,30,14,7,0] descending, so we scan it
+      // ascending.) Previously we broke on the first descending match, which
+      // picked the LOOSEST bucket — so a permit that entered the system already
+      // within the window got the calm 60-day copy and NO urgent SMS on time.
+      const applicable = [...REMINDER_DAYS].sort((a, b) => a - b).filter((t) => days <= t);
+      const tightest = applicable[0]; // undefined only when days > max threshold
+      if (tightest !== undefined) {
+        const flagSet = tightest === 0
+          ? p.reminderDaySentAt != null
+          : (p as any)[`reminder${tightest}dSentAt`] != null;
+        if (!flagSet) bucket = tightest;
       }
     }
     if (bucket === null) { skipped++; continue; }
@@ -197,11 +201,20 @@ async function handler(req: Request) {
       text: c.subj,
     }).catch(() => {});
 
-    // Mark the bucket fired
+    // Mark the fired bucket AND every LOOSER (higher-day) bucket as sent, so a
+    // permit that entered inside the window doesn't fire the calmer reminders
+    // out of order on later runs.
     const update: any = {};
-    if (bucket === "expired") update.reminderExpiredSentAt = now;
-    else if (bucket === 0)    update.reminderDaySentAt = now;
-    else                      update[`reminder${bucket}dSentAt`] = now;
+    if (bucket === "expired") {
+      update.reminderExpiredSentAt = now;
+    } else {
+      for (const t of REMINDER_DAYS) {
+        if (t >= (bucket as number)) {
+          if (t === 0) update.reminderDaySentAt = now;
+          else update[`reminder${t}dSentAt`] = now;
+        }
+      }
+    }
     await prisma.permit.update({ where: { id: p.id }, data: update });
     fired++;
   }

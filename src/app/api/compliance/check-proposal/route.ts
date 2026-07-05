@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { checkCompliance, type ShiftLite } from "@/lib/compliance/engine";
@@ -11,6 +12,19 @@ type ProposedShift = {
   endTime: string;    // HH:MM
 };
 
+// Validate + BOUND the proposal. Without this the handler crashed on a missing
+// `shifts` key / bad date (NaN -> Invalid Date -> Prisma throw) and had no array
+// cap (memory/CPU DoS). 500 matches the sibling bulk endpoints' .max(500).
+const Schema = z.object({
+  shifts: z.array(z.object({
+    memberId:  z.string().nullable(),
+    date:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/),
+    endTime:   z.string().regex(/^\d{2}:\d{2}$/),
+  })).min(1).max(500),
+  weekStart: z.string().optional(),
+});
+
 function combine(date: string, time: string): Date {
   const [y, mo, d] = date.split("-").map(Number);
   const [h, mi]    = time.split(":").map(Number);
@@ -21,7 +35,9 @@ function combine(date: string, time: string): Date {
 // so that adding new shifts on top of already-saved ones surfaces realistic violations.
 export async function POST(req: Request) {
   const u = await requireUser();
-  const body = await req.json().catch(() => ({})) as { shifts: ProposedShift[]; weekStart?: string };
+  const parsed = Schema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
+  const body = parsed.data;
 
   // Pull current org members + existing shifts in a +/- 1 week window around the proposal
   const proposalDates = body.shifts.map(s => +new Date(s.date));

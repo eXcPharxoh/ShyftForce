@@ -13,6 +13,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const existing = await prisma.recurringShift.findUnique({ where: { id }, include: { member: true } });
   if (!existing || existing.member.organizationId !== u.organizationId) return NextResponse.json({ error: "not found" }, { status: 404 });
+
+  // If the caller is repointing the shift at a location, verify it belongs to
+  // THEIR org — otherwise a manager could attach their shift to another org's
+  // location (cross-tenant write). Mirrors the POST handler's guard.
+  if (typeof update.locationId === "string") {
+    const loc = await prisma.location.findFirst({
+      where: { id: update.locationId, organizationId: u.organizationId },
+      select: { id: true },
+    });
+    if (!loc) return NextResponse.json({ error: "location not in your organization" }, { status: 404 });
+  }
+
   const r = await prisma.recurringShift.update({ where: { id }, data: update });
   return NextResponse.json(r);
 }

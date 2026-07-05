@@ -23,7 +23,7 @@ export default async function PatientRatiosPage() {
         eyebrow="Healthcare"
         icon={Activity}
         title="Patient-to-staff ratio rules"
-        subtitle="Set the legal floor for each (unit, role). The scheduler refuses to assign shifts that would breach."
+        subtitle="Set the legal floor for each (unit, role). Assigning someone to a shift that would breach it is blocked when you edit a shift."
       />
 
       <section className="card p-5">

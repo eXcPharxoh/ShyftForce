@@ -40,12 +40,14 @@ export function AvailabilityEditor() {
       <button onClick={() => setOpen(true)} className="btn-primary"><Plus className="w-4 h-4" /> Add rule</button>
       {open && (
         <div className="fixed inset-0 z-50 bg-ink-900/50 dark:bg-black/70 backdrop-blur-[2px] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white dark:bg-ink-900 rounded-2xl shadow-2xl w-full max-w-md flex flex-col text-ink-900 dark:text-ink-50 animate-scale-in">
+          <div className="bg-white dark:bg-ink-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col text-ink-900 dark:text-ink-50 animate-scale-in">
             <header className="px-5 h-14 border-b border-ink-200 dark:border-ink-800 flex items-center justify-between shrink-0">
               <div className="font-semibold text-sm">When are you unavailable?</div>
               <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 text-ink-500 dark:text-ink-400"><X className="w-4 h-4" /></button>
             </header>
-            <div className="p-5 space-y-3">
+            {/* Scroll the body (max-h on the card) so the sticky header X and
+                footer Save stay reachable on short/landscape phones. */}
+            <div className="p-5 space-y-3 overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="label">Type</label>
                 <div className="flex gap-2">

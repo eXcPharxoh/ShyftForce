@@ -34,16 +34,23 @@ export function WithdrawModal({ balance, onClose, onDone }: { balance: Balance; 
 
   async function go() {
     setBusy(true); setError(null);
-    const res = await fetch("/api/ewa/withdraw", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amountCents: cents, payoutMethod: "demo" }),
-    });
-    const data = await res.json();
-    setBusy(false);
-    if (!res.ok || !data.ok) { setError(data.error ?? data.withdrawal?.failureReason ?? "Failed"); return; }
-    setDone(true);
-    onDone();
-    setTimeout(() => { onClose(); r.refresh(); }, 1400);
+    // try/catch + guarded parse so a non-JSON 500/gateway error on this MONEY
+    // action never leaves the button stuck spinning with no error or retry.
+    try {
+      const res = await fetch("/api/ewa/withdraw", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountCents: cents, payoutMethod: "demo" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setBusy(false);
+      if (!res.ok || !data.ok) { setError(data.error ?? data.withdrawal?.failureReason ?? "Couldn't complete the withdrawal — please try again."); return; }
+      setDone(true);
+      onDone();
+      setTimeout(() => { onClose(); r.refresh(); }, 1400);
+    } catch {
+      setBusy(false);
+      setError("Couldn't reach the server — check your connection and try again.");
+    }
   }
 
   return (
