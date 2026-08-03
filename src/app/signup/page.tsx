@@ -22,11 +22,20 @@ export default function SignupPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, orgName }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Sign up failed"); setLoading(false); return; }
+      // Guarded parse: a bodyless/non-JSON error response used to throw here and
+      // surface the raw JS message ("Unexpected end of JSON input") to the user.
+      const data = await res.json().catch(() => ({} as any));
+      if (!res.ok) {
+        setError(data.error ?? "We couldn't create your workspace. Please try again.");
+        setLoading(false);
+        return;
+      }
       await signIn("credentials", { email, password, redirect: false });
       r.push("/onboarding");
-    } catch (e: any) { setError(e.message ?? "Network error"); setLoading(false); }
+    } catch {
+      setError("Couldn't reach the server — check your connection and try again.");
+      setLoading(false);
+    }
   }
 
   return (

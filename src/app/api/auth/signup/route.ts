@@ -31,6 +31,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten().fieldErrors }, { status: 400 });
   const { name, email, password, orgName } = parsed.data;
 
+  try {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });
 
@@ -67,10 +68,20 @@ export async function POST(req: Request) {
       include: { member: true },
     });
     return { org, user };
+  }, {
+    // Neon serverless can take seconds to wake a cold branch. Prisma's default
+    // interactive-transaction budget (maxWait 2s / timeout 5s) is easily blown
+    // on the first signup after idle, which threw and produced a bodyless 500.
+    maxWait: 15_000,
+    timeout: 30_000,
   });
 
-  // Seed default PTO policies for new org
-  await ensureDefaultPolicies(result.org.id);
+  // Seed default PTO policies for the new org. Non-fatal: the account already
+  // exists at this point, so a failure here must NOT 500 the request and strand
+  // the user with an account they can't get back into.
+  await ensureDefaultPolicies(result.org.id).catch((e) => {
+    console.error("[signup] ensureDefaultPolicies failed (non-fatal):", e);
+  });
 
   // Send verification email. We do NOT swallow the result: if outbound mail
   // is unconfigured in production, the user account would otherwise be
@@ -78,21 +89,24 @@ export async function POST(req: Request) {
   // app is broken. Surface the failure to the client so the signup form
   // can render a real error instead of bouncing them to /verify-email
   // where the email never arrives.
+  // The account now EXISTS. Everything below is best-effort: a failure here
+  // must never turn a created account into an error the user can't recover
+  // from (they'd retry and just get "email already exists").
   const token = randomBytes(32).toString("hex");
-  await prisma.emailVerification.create({
-    data: { userId: result.user.id, token, expiresAt: new Date(Date.now() + 24*3600*1000) },
-  });
-  const mail = await sendEmail({
-    to: result.user.email,
-    subject: "Verify your shyftforce email",
-    html: Email.verify({ name: result.user.name, token }),
-  });
-  if (!mail.ok) {
-    console.error("[signup] verification email failed to send:", mail.error);
-    return NextResponse.json({
-      error: "Your account was created, but we couldn't send the verification email. Please contact support@shyftforce.com — we'll verify you manually.",
-      partial: true,
-    }, { status: 502 });
+  let emailSent = false;
+  try {
+    await prisma.emailVerification.create({
+      data: { userId: result.user.id, token, expiresAt: new Date(Date.now() + 24 * 3600 * 1000) },
+    });
+    const mail = await sendEmail({
+      to: result.user.email,
+      subject: "Verify your ShyftForce email",
+      html: Email.verify({ name: result.user.name, token }),
+    });
+    emailSent = mail.ok;
+    if (!mail.ok) console.error("[signup] verification email failed to send:", mail.error);
+  } catch (e) {
+    console.error("[signup] verification-email step failed (non-fatal):", e);
   }
 
   await audit({
@@ -110,5 +124,39 @@ export async function POST(req: Request) {
     organization: { id: result.org.id, name: result.org.name, slug: result.org.slug },
     user: { id: result.user.id, email: result.user.email, name: result.user.name },
     requiresVerification: true,
+    // Signup no longer HARD-FAILS when outbound mail is unconfigured (which is
+    // the current prod state until RESEND_API_KEY is set). The workspace is
+    // created and the user is signed in; the verify-email banner nudges them.
+    emailSent,
   });
+
+  } catch (e: any) {
+    // Any unhandled throw used to escape the handler, and Next returns a 500
+    // with an EMPTY body — the client's res.json() then died with
+    // "Unexpected end of JSON input" instead of showing a real message.
+    // Always log the real cause and always answer with JSON.
+    console.error("[signup] failed:", e);
+    const code = e?.code as string | undefined;
+
+    if (code === "P2002") {
+      return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });
+    }
+    if (code === "P1001" || code === "P1002" || code === "P1008" || code === "P1017" || code === "P2024") {
+      return NextResponse.json(
+        { error: "We couldn't reach the database just now. Please try again in a moment.", code },
+        { status: 503 },
+      );
+    }
+    if (code === "P2021" || code === "P2022") {
+      // Schema drift: the deployed app expects a table/column prod doesn't have.
+      return NextResponse.json(
+        { error: "Signup is temporarily unavailable (database is being updated). Please try again shortly or contact support@shyftforce.com.", code },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json(
+      { error: "Something went wrong creating your workspace. Please try again — if it keeps happening, contact support@shyftforce.com.", code: code ?? null },
+      { status: 500 },
+    );
+  }
 }
