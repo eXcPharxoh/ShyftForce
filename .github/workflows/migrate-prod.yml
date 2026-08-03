@@ -10,6 +10,12 @@ name: Migrate production database
 #   PROD_DIRECT_URL   — direct Neon URL used by migrate (no pooler)
 
 on:
+  # Manual trigger. Without this there was NO way to re-run a migration that
+  # failed (or never fired), so prod could silently drift from the schema —
+  # which is exactly what happened: the ux_mode migration never landed, and
+  # every Organization read/write 500'd with
+  # "The column `uxMode` does not exist in the current database" (P2022).
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
