@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Sparkles, Check, ChevronRight, ChevronLeft, Loader2, ArrowRight, X, Plus } from "lucide-react";
 import { INDUSTRY_TEMPLATES } from "@/lib/industry-templates";
 import { Confetti } from "./confetti";
@@ -9,6 +10,7 @@ type ShiftBlock = { name: string; startTime: string; endTime: string };
 
 export function OnboardingWizard({ orgName, userName }: { orgName: string; userName: string }) {
   const r = useRouter();
+  const { update: updateSession } = useSession();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [industry, setIndustry] = useState<string | null>(null);
   const [firstLocation, setFirstLocation] = useState("");
@@ -94,6 +96,13 @@ export function OnboardingWizard({ orgName, userName }: { orgName: string; userN
         setSetupError(data.error ?? "Setup hit a snag — nothing was lost. Please try again.");
         return;
       }
+      // Refresh the NextAuth session so the newly-chosen industry is in the
+      // JWT. Every industry-aware surface (sidebar, /more, dashboard widgets,
+      // hero tools) reads organizationIndustry from the token, which was minted
+      // at signup — before this choice existed. Without this the whole app
+      // stayed on the generic "default" vertical until the user happened to log
+      // out and back in, silently undoing step 1 of onboarding.
+      await updateSession().catch(() => {});
       setDone(true);
       setStep(4);
     } catch {

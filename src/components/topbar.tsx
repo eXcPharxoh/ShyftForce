@@ -140,7 +140,11 @@ export function Topbar({ name, role, image, showPlatformAdmin = false }: { name:
                   /hr/members — the whole team roster — which is both wrong
                   for employees and the only profile entry point on mobile). */}
               <MenuLink href="/worker/profile"   icon={UserIcon}   label="Profile" />
-              <MenuLink href="/settings/billing" icon={CreditCard} label="Billing & plan" />
+              {/* The EMPLOYER's subscription — owners only. This menu is
+                  identical for every role, so a cashier opening their own
+                  profile saw "Billing & plan" and could read the org's plan,
+                  seat count and monthly spend. */}
+              {role === "ADMIN" && <MenuLink href="/settings/billing" icon={CreditCard} label="Billing & plan" />}
               <MenuLink href="/more"             icon={Settings}   label="Settings" />
               {/* Help center deep-link from the profile menu — most
                   discoverable surface for users who never noticed the

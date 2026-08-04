@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/session";
+import { requireManagerOrAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { PLANS, calculateMonthlyCost, effectivePlanKey, isTrialActive, normalizePlanKey } from "@/lib/stripe";
 import { BillingActions } from "@/components/billing/billing-actions";
@@ -6,7 +6,7 @@ import { CreditCard, Sparkles, Users, Building2, Check } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 
 export default async function BillingPage() {
-  const u = await requireUser();
+  const u = await requireManagerOrAdmin();
   const [org, memberCount, locationCount] = await Promise.all([
     prisma.organization.findUnique({ where: { id: u.organizationId } }),
     prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
