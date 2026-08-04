@@ -87,6 +87,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const trialExpired = !!org?.trialEndsAt && org.trialEndsAt < new Date();
   const noActiveSub  = !org?.stripeSubscriptionId || !["active", "trialing"].includes(org?.subscriptionStatus ?? "");
   const showGate     = trialExpired && noActiveSub && (u.role === "ADMIN" || u.role === "MANAGER") && !showPlatformAdmin;
+  // Who a non-billing viewer should chase. Only looked up when the gate shows.
+  const ownerEmail   = showGate && u.role !== "ADMIN"
+    ? (await prisma.member.findFirst({
+        where: { organizationId: u.organizationId, role: "ADMIN", status: "active" },
+        select: { user: { select: { email: true } } },
+      }))?.user.email ?? null
+    : null;
   const daysExpired  = org?.trialEndsAt ? Math.max(0, Math.floor((Date.now() - +org.trialEndsAt) / 86400000)) : 0;
 
   // Suspension is now enforced in requireUser() (redirects to /suspended for
@@ -126,7 +133,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* Trial-expired hard gate (managers only) — full-screen modal blocks
           the workspace until they subscribe or contact sales. */}
       {showGate && (
-        <TrialExpiredGate daysExpired={daysExpired} activeMembers={activeMembers} />
+        <TrialExpiredGate
+          daysExpired={daysExpired}
+          activeMembers={activeMembers}
+          /* Only ADMINs hold billing.write by default. A MANAGER shown the
+             purchase buttons got a 403 from both — a full-screen wall with no
+             exit. They now get the "ask your owner" variant instead. */
+          canPay={u.role === "ADMIN"}
+          ownerEmail={ownerEmail}
+        />
       )}
     </div>
     </ToastProvider>

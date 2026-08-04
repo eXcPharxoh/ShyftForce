@@ -28,7 +28,14 @@ export async function POST(req: Request) {
 
   const prices = stripePricesForPlan(plan);
   if (!prices?.basePriceId) {
-    return NextResponse.json({ error: `No Stripe price configured for plan "${plan}". Set STRIPE_PRICE_${plan.toUpperCase()}_BASE.` }, { status: 400 });
+    // Never show the customer an operator instruction. This is a config gap on
+    // OUR side (503), not something they did wrong — and it's the current prod
+    // state, so a paywalled admin was reading "Set STRIPE_PRICE_BUSINESS_BASE".
+    console.error(`[billing] missing STRIPE_PRICE_${plan.toUpperCase()}_BASE — checkout unavailable`);
+    return NextResponse.json(
+      { error: "Subscriptions aren't live on this workspace yet. Email sales@shyftforce.com and we'll get you set up right away." },
+      { status: 503 },
+    );
   }
 
   const org = await prisma.organization.findUnique({ where: { id: u.organizationId } });

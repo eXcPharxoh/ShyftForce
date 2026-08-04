@@ -17,9 +17,16 @@ import { ArrowRight, Loader2, Check } from "lucide-react";
 export function TrialExpiredGate({
   daysExpired,
   activeMembers,
+  canPay = true,
+  ownerEmail,
 }: {
   daysExpired: number;
   activeMembers: number;
+  /** Viewer holds billing.write. MANAGERs do NOT by default — showing them the
+   *  purchase buttons bricked them behind a full-screen wall whose only two
+   *  actions both returned 403 with no way out. */
+  canPay?: boolean;
+  ownerEmail?: string | null;
 }) {
   const [busy, setBusy] = useState<"pro" | "business" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,11 +71,29 @@ export function TrialExpiredGate({
             Your trial ended {daysExpired === 0 ? "today" : `${daysExpired} day${daysExpired === 1 ? "" : "s"} ago`}
           </h1>
           <p className="text-[16px] text-ink-300 mt-2 max-w-[560px] mx-auto">
-            Pick a plan to keep your team running. You can change or cancel anytime in Settings → Billing.
+            {canPay
+              ? "Pick a plan to keep your team running. You can change or cancel anytime in Settings → Billing."
+              : "Your workspace owner needs to add a payment method to reactivate the workspace."}
           </p>
         </div>
 
-        {/* Plan cards */}
+        {/* Viewers without billing permission (managers by default) get a real
+            explanation instead of two buttons that always fail with 403. */}
+        {!canPay && (
+          <div className="card p-6 text-center max-w-[560px] mx-auto">
+            <p className="text-[15px] text-ink-200">
+              You don&rsquo;t have billing access on this workspace, so you can&rsquo;t start a
+              subscription yourself.
+            </p>
+            <p className="text-[14px] text-ink-400 mt-2">
+              Ask {ownerEmail ? <a className="text-brand-300 underline" href={`mailto:${ownerEmail}`}>{ownerEmail}</a> : "your workspace owner"} to
+              add a payment method — everything comes straight back once they do.
+            </p>
+          </div>
+        )}
+
+        {/* Plan cards — only for viewers who can actually pay. */}
+        {canPay && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
           {/* Pro */}
           <div className="card p-6 flex flex-col">
@@ -144,6 +169,7 @@ export function TrialExpiredGate({
             </ul>
           </div>
         </div>
+        )}
 
         {error && (
           <div className="card p-3 bg-rose-500/10 border-rose-500/30 text-rose-300 text-sm text-center mb-4">

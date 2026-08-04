@@ -63,7 +63,11 @@ export function ClockInDialog({
   // Mirror the server's anti-buddy-punch rules so the user sees what's needed
   // instead of getting a 422 after submitting.
   const hasGeofence = assignedLocation?.latitude != null && assignedLocation?.longitude != null;
-  const needsPhoto = action === "clock_in";
+  // If the camera is genuinely unavailable we must NOT block the punch — the
+  // overlay already tells the user they can clock in without a photo (it'll be
+  // marked unverified for manager review). Blocking here meant a broken camera
+  // stopped someone from starting their shift at all.
+  const needsPhoto = action === "clock_in" && !photoError;
   const needsOnSite = (action === "clock_in" || action === "clock_out") && hasGeofence;
   const faceActive = action === "clock_in" && faceMode !== "off" && faceEnrolled;
   const blockReason =

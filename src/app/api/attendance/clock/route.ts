@@ -90,13 +90,25 @@ export async function POST(req: Request) {
   }
 
   if (u.role === "EMPLOYEE" && selfPunch) {
-    // (2) A selfie is required to clock in. The photo is stored for manager
-    //     review (face-match is a later tier); requiring it deters a friend.
+    // (2) A selfie deters buddy-punching — but a hard requirement locked people
+    //     OUT of work entirely whenever the camera was unavailable (permission
+    //     denied, camera in use, older in-app browser, no camera at all). For a
+    //     frontline workforce app that's worse than an unverified punch, and the
+    //     dialog itself promised "you can clock in without a photo".
+    //     So: only orgs running strict face verification ("block") hard-require
+    //     it. Everyone else records the punch with verified=false, which lands
+    //     it in the manager's flagged-review queue.
     if (type === "clock_in" && !photo) {
-      return NextResponse.json(
-        { error: "A photo is required to clock in.", code: "photo_required" },
-        { status: 422 },
-      );
+      const orgPolicy = await prisma.organization.findUnique({
+        where: { id: u.organizationId },
+        select: { faceVerification: true },
+      });
+      if (normalizeFaceMode(orgPolicy?.faceVerification) === "block") {
+        return NextResponse.json(
+          { error: "A photo is required to clock in at this workspace. Allow camera access and try again.", code: "photo_required" },
+          { status: 422 },
+        );
+      }
     }
     // (1) Geofence — enforced only when the site has one configured (lat/lng set),
     //     so orgs without geofences are unaffected.
