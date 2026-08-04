@@ -163,13 +163,17 @@ export default async function AttendancePage() {
         );
       })()}
 
-      {/* Secondary stats — payroll-focused */}
+      {/* Secondary stats — payroll-focused. MANAGER-ONLY: this row exposes the
+          org's total labour cost. /attendance is a core EMPLOYEE nav item (the
+          "Clock" tab), so an employee was seeing the whole company's payroll. */}
+      {isManager && (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard label="Hours this period"   value={fmtHours(totalHours)} tone="info"   small />
         <KpiCard label="Estimated payroll"   value={fmtMoney(totalCost)}  tone="info"   small />
         <KpiCard label="Flagged entries"     value={String(flagged)}      tone={flagged > 0 ? "danger" : "info"} small />
         <KpiCard label="Unapproved"          value={String(unapproved)}   tone={unapproved > 0 ? "warn" : "info"} small />
       </div>
+      )}
 
       {/* Live geofence — shows currently-clocked-in employees plotted around
           the location centre based on their most recent clock-in coords. */}
@@ -269,6 +273,7 @@ export default async function AttendancePage() {
         </section>
       )}
 
+      {isManager && (
       <section className="card overflow-hidden">
         <header className="px-5 py-3 border-b border-ink-100 flex items-center justify-between">
           <div>
@@ -320,6 +325,7 @@ export default async function AttendancePage() {
           </table>
         </div>
       </section>
+      )}
 
       {/* Selfie verification grid — visual showcase of the 3 most recent
           photo-verified clock-ins (design spec). */}

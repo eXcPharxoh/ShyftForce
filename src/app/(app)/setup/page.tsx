@@ -22,10 +22,17 @@ export default async function SetupPage() {
   const u = await requireUser();
   if (u.role !== "ADMIN" && u.role !== "MANAGER") redirect("/dashboard");
 
-  const [locationCount, memberCount, shiftCount, locations] = await Promise.all([
+  const [locationCount, memberCount, shiftCount, pendingInvites, locations] = await Promise.all([
     prisma.location.count({ where: { organizationId: u.organizationId } }),
     prisma.member.count({ where: { organizationId: u.organizationId, status: "active" } }),
     prisma.shift.count({ where: { location: { organizationId: u.organizationId } } }),
+    // Invites that have been SENT but not yet accepted still count as "you did
+    // the team step". Without this a new owner who invites their whole crew is
+    // bounced straight back here — nobody can accept until they sign up, so the
+    // gate could never open and setup became an inescapable loop.
+    prisma.invitation.count({
+      where: { organizationId: u.organizationId, acceptedAt: null, expiresAt: { gt: new Date() } },
+    }),
     prisma.location.findMany({
       where: { organizationId: u.organizationId },
       select: { id: true, name: true },
@@ -33,8 +40,10 @@ export default async function SetupPage() {
     }),
   ]);
 
+  const hasTeamStep = memberCount > 1 || pendingInvites > 0;
+
   // Already done? Bounce to dashboard so this isn't a stale screen.
-  if (locationCount > 0 && memberCount > 1 && shiftCount > 0) {
+  if (locationCount > 0 && hasTeamStep && shiftCount > 0) {
     redirect("/dashboard");
   }
 

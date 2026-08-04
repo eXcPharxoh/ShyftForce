@@ -49,7 +49,12 @@ export async function POST(req: Request) {
     const org = await tx.organization.create({
       data: {
         name: orgName, slug,
-        plan: "business",
+        // The STORED plan is the post-trial fallback, not the trial grant.
+        // effectivePlanKey() returns "business" for the whole trial window via
+        // isTrialActive(). Storing "business" here meant that when the trial
+        // ended, the fallback was still business — so every paid feature stayed
+        // unlocked forever behind a paywall that blocked nothing.
+        plan: "free",
         trialEndsAt,
         subscriptionStatus: "trialing",
       },

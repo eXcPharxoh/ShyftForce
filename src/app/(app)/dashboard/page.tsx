@@ -22,8 +22,14 @@ function colorForId(id: string): string {
   return PALETTE[h % PALETTE.length];
 }
 
-export default async function Dashboard() {
+export default async function Dashboard({
+  searchParams,
+}: { searchParams: Promise<{ full?: string }> }) {
   const u = await requireUser();
+  // ?full=1 — the "show me the full dashboard anyway" escape hatch on the
+  // day-one screen. Handled here (server side) because that screen is rendered
+  // INSTEAD of the dashboard, so client-side state could only blank the page.
+  const forceFull = (await searchParams)?.full === "1";
   const orgId = u.organizationId;
   const now = new Date();
   const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
@@ -153,7 +159,7 @@ export default async function Dashboard() {
   // Extra counts for the Today Priorities hero card — kept separate from the
   // big Promise.all above because they're cheap, lightweight, and dialing
   // them in here means we don't have to thread them through HomeShell.
-  const [draftShiftsThisWeek, pendingTimeOffCount] = await Promise.all([
+  const [draftShiftsThisWeek, pendingTimeOffCount, pendingInviteCount, anyShiftCount] = await Promise.all([
     prisma.shift.count({
       where: {
         location: { organizationId: orgId },
@@ -164,6 +170,15 @@ export default async function Dashboard() {
     prisma.timeOffRequest.count({
       where: { member: { organizationId: orgId }, status: "pending" },
     }),
+    // Sent-but-unaccepted invites count as "the team step is done" — see below.
+    prisma.invitation.count({
+      where: { organizationId: orgId, acceptedAt: null, expiresAt: { gt: now } },
+    }),
+    // ANY shift in the org, ever — the day-one checklist previously only looked
+    // at assigned shifts in the current week, but the onboarding wizard seeds
+    // unassigned sample shifts and the setup wizard creates them unassigned too,
+    // so "Drop a shift" could never check off.
+    prisma.shift.count({ where: { location: { organizationId: orgId } } }),
   ]);
 
   // ---------- KPIs ----------
@@ -290,9 +305,13 @@ export default async function Dashboard() {
   // dashboard takes over the moment any meaningful data exists. Employees
   // skip this — they don't set up the workspace.
   const hasLocation = locations.length > 0;
-  const hasTeam     = members.length > 1; // owner + at least one other
-  const hasShift    = weekShifts.length > 0 || todayShifts.length > 0;
-  const showQuietDayOne = isManager && (!hasLocation || !hasTeam || !hasShift);
+  // A sent invite counts. Otherwise a solo owner — or one whose crew hasn't
+  // signed up yet — is pinned to this screen forever, because nothing they can
+  // do from here creates a Member row.
+  const hasTeam     = members.length > 1 || pendingInviteCount > 0;
+  // Any shift at all, not just assigned ones in the current week.
+  const hasShift    = anyShiftCount > 0;
+  const showQuietDayOne = isManager && !forceFull && (!hasLocation || !hasTeam || !hasShift);
 
   if (showQuietDayOne) {
     return (

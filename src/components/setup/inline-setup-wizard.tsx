@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Users, CalendarPlus, Check, Loader2, ArrowRight, Sparkles } from "lucide-react";
 
@@ -74,6 +74,15 @@ export function InlineSetupWizard({
     !hasTeam     ? "team" :
     !hasShift    ? "shift" :
                    "done";
+
+  // Actually go. The done state promised "Taking you to your dashboard…" but
+  // nothing ever navigated, so anyone who finished (or skipped the invite step)
+  // sat on a celebration screen forever.
+  useEffect(() => {
+    if (current !== "done") return;
+    const t = setTimeout(() => { router.push("/dashboard"); router.refresh(); }, 1200);
+    return () => clearTimeout(t);
+  }, [current, router]);
 
   async function submitLocation(e: React.FormEvent) {
     e.preventDefault();
@@ -341,6 +350,7 @@ export function InlineSetupWizard({
         <div className="card p-6 text-center mt-4">
           <div className="text-3xl mb-2">🎉</div>
           <div className="font-semibold">All set! Taking you to your dashboard…</div>
+          <a href="/dashboard" className="btn-primary mt-4 inline-flex">Go to dashboard</a>
         </div>
       )}
     </div>

@@ -142,7 +142,10 @@ export default async function BillingPage() {
           <div className="mt-5 pt-5 border-t border-brand-200/60 dark:border-brand-500/20">
             <BillingActions
               hasSubscription={!!org.stripeSubscriptionId}
-              currentPlan={plan as any}
+              /* The PAID plan, not the effective trial plan. Passing the
+                 effective plan hid "Upgrade to Business" from every trial user
+                 — i.e. nobody could buy the tier they were actually trialing. */
+              currentPlan={storedPlan as any}
               stripeConfigured={!!process.env.STRIPE_SECRET_KEY}
             />
           </div>

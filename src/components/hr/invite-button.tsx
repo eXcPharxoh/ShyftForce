@@ -13,6 +13,12 @@ export function InviteButton({ locations }: { locations: Loc[] }) {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Truthful send result: how many emails ACTUALLY went out, plus the join
+  // links so the manager can share them directly when mail is unconfigured.
+  const [result, setResult] = useState<
+    { invited: number; emailed: number; warning?: string; invitations: { email: string; joinUrl?: string }[] } | null
+  >(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const addRow = () => setRows(rs => [...rs, { email: "", role: "EMPLOYEE", position: "", locationId: locations[0]?.id ?? "" }]);
   const setField = (i: number, k: keyof Row, v: string) => setRows(rs => rs.map((r, idx) => idx === i ? { ...r, [k]: v } as Row : r));
@@ -26,15 +32,35 @@ export function InviteButton({ locations }: { locations: Loc[] }) {
       locationId: r.locationId || undefined,
     }));
     if (invitations.length === 0) { setError("Add at least one email"); setSending(false); return; }
-    const res = await fetch("/api/invites", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ invitations }),
-    });
-    const data = await res.json();
-    setSending(false);
-    if (!res.ok) { setError(data.error ?? "Failed"); return; }
-    setDone(data.invited);
-    setTimeout(() => { setOpen(false); setDone(null); setRows([{ email: "", role: "EMPLOYEE", position: "", locationId: locations[0]?.id ?? "" }]); r.refresh(); }, 1400);
+    try {
+      const res = await fetch("/api/invites", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invitations }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setSending(false);
+      if (!res.ok) { setError(data.error ?? "Couldn't send the invitations. Please try again."); return; }
+
+      setResult({
+        invited: data.invited ?? invitations.length,
+        emailed: data.emailed ?? 0,
+        warning: data.warning,
+        invitations: data.invitations ?? [],
+      });
+      setDone(data.emailed ?? 0);
+      r.refresh();
+      // Only auto-close when everything genuinely sent. If any email failed the
+      // manager needs to stay and copy the join links.
+      if ((data.emailed ?? 0) === (data.invited ?? 0)) {
+        setTimeout(() => {
+          setOpen(false); setDone(null); setResult(null);
+          setRows([{ email: "", role: "EMPLOYEE", position: "", locationId: locations[0]?.id ?? "" }]);
+        }, 1600);
+      }
+    } catch {
+      setSending(false);
+      setError("Couldn't reach the server — check your connection and try again.");
+    }
   }
 
   return (
@@ -81,10 +107,37 @@ export function InviteButton({ locations }: { locations: Loc[] }) {
                 </div>
               ))}
               <button onClick={addRow} className="btn-outline text-xs"><Plus className="w-4 h-4" /> Add another</button>
+
+              {/* When email didn't go out, hand the manager the join links so
+                  they can share them directly — otherwise the invite is a
+                  dead end and the workspace can never onboard anyone. */}
+              {result && result.emailed < result.invited && (
+                <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/10 p-3 space-y-2">
+                  <div className="text-[12px] text-amber-800 dark:text-amber-200">
+                    {result.warning ?? `Saved ${result.invited} invitation${result.invited === 1 ? "" : "s"}, but ${result.invited - result.emailed} email${result.invited - result.emailed === 1 ? "" : "s"} couldn't be sent.`}
+                    {" "}Share these links directly instead — each one lets that person join:
+                  </div>
+                  {result.invitations.filter(i => i.joinUrl).map((inv) => (
+                    <div key={inv.email} className="flex items-center gap-2">
+                      <span className="text-[11px] text-ink-600 dark:text-ink-300 w-40 truncate shrink-0">{inv.email}</span>
+                      <code className="input h-8 flex-1 text-[11px] font-mono truncate select-all">{inv.joinUrl}</code>
+                      <button
+                        type="button"
+                        onClick={() => { navigator.clipboard?.writeText(inv.joinUrl!); setCopied(inv.email); setTimeout(() => setCopied(null), 1500); }}
+                        className="btn-outline h-8 text-[11px] shrink-0"
+                      >
+                        {copied === inv.email ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <footer className="border-t border-ink-200 dark:border-ink-800 p-4 flex items-center justify-between shrink-0">
               {error && <div className="text-rose-600 dark:text-rose-400 text-xs">{error}</div>}
-              {done != null && <div className="text-emerald-700 dark:text-emerald-300 text-xs">{done} invitation{done === 1 ? "" : "s"} sent ✨</div>}
+              {done != null && result && result.emailed === result.invited && (
+                <div className="text-emerald-700 dark:text-emerald-300 text-xs">{done} invitation{done === 1 ? "" : "s"} sent ✨</div>
+              )}
               <div className="ml-auto flex gap-2">
                 <button onClick={() => setOpen(false)} className="btn-ghost">Cancel</button>
                 <button onClick={send} disabled={sending} className="btn-primary">

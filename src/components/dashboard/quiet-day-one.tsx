@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+
 import { MapPin, Users, CalendarPlus, ArrowRight, Sparkles, MessagesSquare } from "lucide-react";
 
 /**
@@ -34,8 +34,6 @@ export function QuietDayOne({
    *  the global Cmd+K palette via the keyboard shortcut if not provided. */
   onAskCopilot?: (prompt: string) => void;
 }) {
-  const [skipped, setSkipped] = useState(false);
-  if (skipped) return null;
 
   function ask(prompt?: string) {
     if (onAskCopilot) { onAskCopilot(prompt ?? ""); return; }
@@ -133,13 +131,17 @@ export function QuietDayOne({
 
       {/* Power-user escape hatch */}
       <div className="text-center pt-4 border-t border-white/[0.06]">
-        <button
-          onClick={() => setSkipped(true)}
+        {/* Navigates instead of just unmounting. Setting local state hid this
+            component, but the dashboard had already returned early with it as
+            its ONLY child — so "skip" produced a completely blank page. The
+            server component reads ?full=1 and renders the real dashboard. */}
+        <Link
+          href="/dashboard?full=1"
           className="text-[12px] text-ink-500 hover:text-ink-300 inline-flex items-center gap-1.5 transition"
         >
           <MessagesSquare className="w-3 h-3" />
           Skip — show me the full dashboard anyway
-        </button>
+        </Link>
         <div className="text-[11px] text-ink-600 mt-1">
           You can always come back here from the home tab.
         </div>

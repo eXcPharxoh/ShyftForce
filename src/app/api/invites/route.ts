@@ -4,6 +4,7 @@ import { requireManagerOrAdmin } from "@/lib/session";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { Email, sendEmail } from "@/lib/email";
+import { appUrl } from "@/lib/app-url";
 import { audit } from "@/lib/audit";
 import { PLANS, effectivePlanKey } from "@/lib/stripe";
 
@@ -90,7 +91,15 @@ export async function POST(req: Request) {
       action: "member.invite", entityType: "Invitation", entityId: rec.id,
       metadata: { email: inv.email, role: inv.role, emailSent: mail.ok },
     });
-    created.push({ id: rec.id, email: rec.email, role: rec.role, expiresAt: rec.expiresAt });
+    // Return the join link. Email delivery is not guaranteed (and is currently
+    // unconfigured in prod), so the inviting manager needs a way to hand the
+    // link over directly — otherwise a workspace can never onboard anyone.
+    // Only managers/admins of this org reach this route, and it's their own
+    // org's invite, so exposing it here is appropriate.
+    created.push({
+      id: rec.id, email: rec.email, role: rec.role, expiresAt: rec.expiresAt,
+      joinUrl: `${appUrl("/accept-invite")}?token=${rec.token}`,
+    });
   }
   const emailed = created.length - emailFailures.length;
   return NextResponse.json({
