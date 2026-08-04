@@ -321,6 +321,13 @@ export default async function AttendancePage() {
                   <td className="px-4 py-2 text-right"><TimesheetActions entryId={e.id} approved={e.approved} /></td>
                 </tr>
               ))}
+              {entries.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-sm text-ink-500">
+                    No timesheet entries yet — they appear here automatically once your team clocks out.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

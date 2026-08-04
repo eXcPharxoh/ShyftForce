@@ -26,7 +26,7 @@ export default async function MembersPage() {
         eyebrow="Team"
         icon={Users}
         title="Members"
-        subtitle={`${members.length} ${members.length === 1 ? "person" : "people"} across ${new Set(members.map(m=>m.locationId)).size} location${new Set(members.map(m=>m.locationId)).size === 1 ? "" : "s"}`}
+        subtitle={`${members.length} ${members.length === 1 ? "person" : "people"} across ${new Set(members.map(m=>m.locationId).filter(Boolean)).size} location${new Set(members.map(m=>m.locationId).filter(Boolean)).size === 1 ? "" : "s"}`}
       >
         {isManager && <ExportButton type="members" label="Members CSV" />}
         {isManager && <ImportCsvButton locations={locations.map(l => ({ id: l.id, name: l.name }))} />}

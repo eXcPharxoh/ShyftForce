@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { distanceMeters } from "@/lib/geo";
 import { parseDescriptor, isValidDescriptor, compareFaces, normalizeFaceMode } from "@/lib/face/match";
+import { syncTimesheetForDay } from "@/lib/payroll/timesheets";
 import { z } from "zod";
 
 const Schema = z.object({
@@ -229,6 +230,14 @@ export async function POST(req: Request) {
         faceDistance,
       },
     });
+
+    // Turn the completed shift into payable hours. Without this, punches only
+    // ever became AttendanceLog rows and every payroll/labour-cost surface
+    // stayed permanently empty. Non-fatal by construction — bookkeeping must
+    // never stop someone from clocking out.
+    if (type === "clock_out" || type === "break_end") {
+      await syncTimesheetForDay(memberId, u.organizationId, log.at);
+    }
 
     return NextResponse.json({
       ok: true,

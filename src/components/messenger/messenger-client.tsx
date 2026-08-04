@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { initials, relTime } from "@/lib/utils";
 import { Send, Search, MessageCircle, ChevronLeft } from "lucide-react";
 
@@ -94,7 +95,18 @@ export function MessengerClient({
               </li>
             );
           })}
-          {filteredContacts.length === 0 && (
+          {/* Two genuinely different states. A brand-new solo workspace has no
+              teammates at all — showing it a "no results for ''" search message
+              read as a bug. */}
+          {filteredContacts.length === 0 && contacts.length === 0 && (
+            <li className="px-4 py-8 text-center text-xs text-ink-500 dark:text-ink-400 space-y-2">
+              <div>No teammates yet.</div>
+              <Link href="/hr/members" className="text-brand-400 hover:text-brand-300 underline">
+                Invite your team to start messaging
+              </Link>
+            </li>
+          )}
+          {filteredContacts.length === 0 && contacts.length > 0 && (
             <li className="px-4 py-6 text-center text-xs text-ink-500 dark:text-ink-400">No teammates match &quot;{query}&quot;.</li>
           )}
         </ul>
